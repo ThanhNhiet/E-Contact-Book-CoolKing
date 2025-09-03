@@ -1,0 +1,17 @@
+# Ignore build/output
+Coolking_Mobile/node_modules/
+Coolking_Web/node_modules/
+Coolking_Server/node_modules/
+
+# Ignore file tmp
+*.log
+*.tmp
+*.swp
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore env
+.env
+.env.local
