@@ -1,5 +1,6 @@
 const express = require("express");
 const sequelize = require("./src/config/mariadb.conf");
+const initMongoDB = require("./src/databases/mongodb");
 const { authenticateJWT } = require('./src/middlewares/jwt.middleware');
 require('dotenv').config();
 
@@ -27,18 +28,28 @@ app.use('/api', authenticateJWT, routes);
 const PORT = process.env.PORT || 3000;
 
 // Kết nối DB trước khi start server
-
-sequelize.authenticate()
-  .then(async () => {
-    console.log("Connected to MariaDB successfully!");
+async function startServer() {
+  try {
+    // Kết nối MariaDB
+    await sequelize.authenticate();
+    console.log("✅ Connected to MariaDB successfully!");
     await sequelize.sync();
-    console.log("Database synced");
+    console.log("✅ MariaDB tables synced");
     await sequelize.sync({ alter: true }); 
-    console.log("Tables updated");
+    console.log("✅ MariaDB tables updated");
+    
+    // Kết nối MongoDB
+    const mongoModels = await initMongoDB();
+    console.log("✅ Connected to MongoDB successfully!");
+    
+    // Khởi động server sau khi kết nối cả hai database
     app.listen(PORT, () => {
-      console.log(`Server running at http://localhost:${PORT}`);
+      console.log(`🚀 Server running at http://localhost:${PORT}`);
     });
-  })
-  .catch(err => {
-    console.error("Unable to connect to MariaDB:", err);
-  });
+  } catch (err) {
+    console.error("❌ Database connection error:", err);
+    process.exit(1);
+  }
+}
+
+startServer();
