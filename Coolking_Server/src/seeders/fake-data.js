@@ -15,26 +15,7 @@ async function seed() {
         status: 'ACTIVE'
     });
 
-    // 1. Clazz
-    const clazzes = [];
-    for (let i = 0; i < 50; i++) {
-        clazzes.push(await models.Clazz.create({
-            id: uuidv4(),
-            name: faker.commerce.department()
-        }));
-    }
-
-    // 2. Session
-    const sessions = [];
-    for (let i = 0; i < 50; i++) {
-        sessions.push(await models.Session.create({
-            id: uuidv4(),
-            name: 'HK' + faker.number.int({ min: 1, max: 3 }),
-            years: `${faker.number.int({ min: 2018, max: 2025 })}-${faker.number.int({ min: 2018, max: 2025 })}`
-        }));
-    }
-
-    // 3. Faculty
+    // 1. Faculty
     const faculties = [];
     const facultyIds = new Set();
     for (let i = 0; i < 50; i++) {
@@ -51,6 +32,74 @@ async function seed() {
             phone: faker.phone.number(),
             email: faker.internet.email(),
             address: faker.location.streetAddress()
+        }));
+    }
+
+    // 1b. Major
+    const majors = [];
+    const majorIds = new Set();
+    
+    // Danh sách các tên ngành học mẫu (tiếng Anh để tránh lỗi encoding)
+    const majorNames = [
+        'Information Technology', 'Software Engineering', 'Information Security',
+        'Artificial Intelligence', 'Data Science', 'Information Systems',
+        'Computer Networks', 'Business Administration', 'Marketing',
+        'Accounting', 'Finance and Banking', 'International Economics',
+        'Economic Law', 'International Law', 'Electronics Engineering',
+        'Electrical Engineering', 'Mechanical Engineering', 'Automotive Engineering',
+        'Civil Engineering', 'Architecture', 'General Medicine',
+        'Pharmacy', 'Nursing', 'Dentistry',
+        'English Language', 'Japanese Language', 'Chinese Language',
+        'Korean Language', 'French Language', 'Mathematics Education',
+        'Physics Education', 'Chemistry Education', 'Biology Education',
+        'Literature Education', 'History Education', 'Geography Education',
+        'Biomedical Engineering', 'Biotechnology', 'Environmental Science',
+        'Engineering Physics', 'Chemistry', 'Chemical Engineering',
+        'Applied Mathematics', 'Graphic Design', 'Public Relations',
+        'Journalism', 'Multimedia Communications', 'Tourism',
+        'Hotel Management', 'Restaurant Management'
+    ];
+    
+    for (let i = 0; i < 50; i++) {
+        const faculty = faculties[faker.number.int({ min: 0, max: faculties.length - 1 })];
+        
+        let major_id;
+        do {
+            major_id = 'M' + faker.number.int({ min: 1000, max: 9999 });
+        } while (majorIds.has(major_id));
+        majorIds.add(major_id);
+        
+        // Lấy tên ngành học ngẫu nhiên từ danh sách
+        const majorName = i < majorNames.length 
+            ? majorNames[i] 
+            : majorNames[faker.number.int({ min: 0, max: majorNames.length - 1 })];
+        
+        majors.push(await models.Major.create({
+            id: uuidv4(),
+            major_id: major_id,
+            name: majorName,
+            faculty_id: faculty.faculty_id
+        }));
+    }
+
+    // 2. Clazz
+    const clazzes = [];
+    for (let i = 0; i < 50; i++) {
+        const faculty = faculties[faker.number.int({ min: 0, max: faculties.length - 1 })];
+        clazzes.push(await models.Clazz.create({
+            id: uuidv4(),
+            name: faker.commerce.department(),
+            faculty_id: faculty.faculty_id
+        }));
+    }
+
+    // 3. Session
+    const sessions = [];
+    for (let i = 0; i < 50; i++) {
+        sessions.push(await models.Session.create({
+            id: uuidv4(),
+            name: 'HK' + faker.number.int({ min: 1, max: 3 }),
+            years: `${faker.number.int({ min: 2018, max: 2025 })}-${faker.number.int({ min: 2018, max: 2025 })}`
         }));
     }
 
@@ -130,7 +179,10 @@ async function seed() {
     const studentIds = new Set();
     for (let i = 0; i < 50; i++) {
         const clazz = clazzes[faker.number.int({ min: 0, max: clazzes.length - 1 })];
-        const faculty = faculties[faker.number.int({ min: 0, max: faculties.length - 1 })];
+        // 80% sinh viên có chuyên ngành, 20% chưa chọn chuyên ngành (major_id = null)
+        const hasMajor = faker.datatype.boolean(0.8);
+        const major = hasMajor ? majors[faker.number.int({ min: 0, max: majors.length - 1 })] : null;
+        
         let student_id;
         do {
             student_id = 'ST' + faker.number.int({ min: 1000, max: 9999 });
@@ -147,7 +199,7 @@ async function seed() {
             email: faker.internet.email(),
             address: faker.location.streetAddress(),
             clazz_id: clazz.id,
-            faculty_id: faculty.faculty_id
+            major_id: hasMajor ? major.id : null
         }));
     }
 
