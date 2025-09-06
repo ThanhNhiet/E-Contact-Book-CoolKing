@@ -8,6 +8,7 @@ var _CourseSection = require("./CourseSection");
 var _Faculty = require("./Faculty");
 var _Lecturer = require("./Lecturer");
 var _LecturerCourseSection = require("./Lecturer_CourseSection");
+var _Major = require("./Major");
 var _Parent = require("./Parent");
 var _RefreshToken = require("./RefreshToken");
 var _Score = require("./Score");
@@ -23,6 +24,7 @@ function initModels(sequelize) {
   const Faculty = _Faculty(sequelize, DataTypes);
   const Lecturer = _Lecturer(sequelize, DataTypes);
   const LecturerCourseSection = _LecturerCourseSection(sequelize, DataTypes);
+  const Major = _Major(sequelize, DataTypes);
   const Parent = _Parent(sequelize, DataTypes);
   const Score = _Score(sequelize, DataTypes);
   const Session = _Session(sequelize, DataTypes);
@@ -67,13 +69,21 @@ function initModels(sequelize) {
   Lecturer.belongsTo(Faculty, { as: "faculty", foreignKey: "faculty_id" });
   Faculty.hasMany(Lecturer, { as: "lecturers", foreignKey: "faculty_id" });
 
-  // Faculty - Student
-  Student.belongsTo(Faculty, { as: "faculty", foreignKey: "faculty_id" });
-  Faculty.hasMany(Student, { as: "students", foreignKey: "faculty_id" });
+  // Faculty - Clazz
+  Clazz.belongsTo(Faculty, { as: "faculty", foreignKey: "faculty_id" });
+  Faculty.hasMany(Clazz, { as: "clazzes", foreignKey: "faculty_id" });
 
   // Faculty - Subject
   Subject.belongsTo(Faculty, { as: "faculty", foreignKey: "faculty_id" });
   Faculty.hasMany(Subject, { as: "subjects", foreignKey: "faculty_id" });
+
+  // Faculty - Major
+  Major.belongsTo(Faculty, { as: "faculty", foreignKey: "faculty_id" });
+  Faculty.hasMany(Major, { as: "majors", foreignKey: "faculty_id" });
+  
+  // Major - Student
+  Student.belongsTo(Major, { as: "major", foreignKey: "major_id" });
+  Major.hasMany(Student, { as: "students", foreignKey: "major_id" });
 
   // Faculty - Dean (Lecturer)
   Faculty.belongsTo(Lecturer, { as: "dean", foreignKey: "dean_id" });
@@ -127,6 +137,7 @@ function initModels(sequelize) {
     Faculty,
     Lecturer,
     LecturerCourseSection,
+    Major,
     Parent,
     RefreshToken,
     Score,

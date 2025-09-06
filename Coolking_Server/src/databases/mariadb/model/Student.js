@@ -48,12 +48,12 @@ module.exports = function(sequelize, DataTypes) {
         key: 'id'
       }
     },
-    faculty_id: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
+    major_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
       references: {
-        model: 'faculties',
-        key: 'faculty_id'
+        model: 'majors',
+        key: 'id'
       }
     },
     isDeleted: {
@@ -82,17 +82,17 @@ module.exports = function(sequelize, DataTypes) {
         ]
       },
       {
-        name: "faculty_id",
-        using: "BTREE",
-        fields: [
-          { name: "faculty_id" },
-        ]
-      },
-      {
         name: "clazz_id",
         using: "BTREE",
         fields: [
           { name: "clazz_id" },
+        ]
+      },
+      {
+        name: "major_id",
+        using: "BTREE",
+        fields: [
+          { name: "major_id" },
         ]
       },
     ]
