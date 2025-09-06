@@ -10,6 +10,13 @@ const sequelize = new Sequelize(
     dialect: "mariadb",
     port: process.env.DB_PORT || 3306,
     logging: false, // true for logging query
+    dialectOptions: {
+      charset: "utf8mb4",
+    },
+    define: {
+      charset: "utf8mb4",
+      collate: "utf8mb4_unicode_ci",
+    },
   }
 );
 
