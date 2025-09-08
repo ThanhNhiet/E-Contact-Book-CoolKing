@@ -3,11 +3,39 @@ const initModels = require("../databases/mariadb/model/init-models");
 const models = initModels(sequelize);
 const bcrypt = require("bcrypt");
 
-const login = async (user_id, password) => {
+const login = async (username, password) => {
   try {
-    const account = await models.Account.findOne({ where: { user_id } });
+    // Phân loại username dựa trên định dạng
+    let whereClause = {};
+    
+    // Kiểm tra xem username có phải là email không
+    if (username.includes('@') && username.includes('.')) {
+      whereClause = { email: username };
+    } 
+    // Kiểm tra xem username có phải là số điện thoại không (chỉ chứa số, dấu + và dấu -)
+    else if (/^[0-9+\-\s]+$/.test(username)) {
+      whereClause = { phone_number: username };
+    } 
+    // Kiểm tra xem username có phải là user_id không (bắt đầu bằng ST, PA, LE, AD)
+    else if (/^(ST|PA|LE|AD)/.test(username)) {
+      whereClause = { user_id: username };
+    } 
+    // Nếu không khớp với bất kỳ mẫu nào, thử tìm kiếm trong tất cả các trường
+    else {
+      const { Op } = require('sequelize');
+      whereClause = {
+        [Op.or]: [
+          { user_id: username },
+          { email: username },
+          { phone_number: username }
+        ]
+      };
+    }
+    
+    const account = await models.Account.findOne({ where: whereClause });
+    
     if (!account) throw new Error("Account not found");
-    if(account.status === 'INACTIVE') throw new Error("Account is not active");
+    if (account.status === 'INACTIVE') throw new Error("Account is not active");
     const isValid = await bcrypt.compare(password, account.password);
     if (!isValid) throw new Error("Invalid password");
     return account;

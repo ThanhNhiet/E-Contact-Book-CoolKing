@@ -6,10 +6,10 @@ const redisService = require('../services/redis.service');
 // POST /public/login
 exports.login = async (req, res, next) => {
 	try {
-		const { user_id, password } = req.body;
+		const { username, password } = req.body;
 
 		// Xác thực người dùng từ repo
-		const account = await accountRepo.login(user_id, password);
+		const account = await accountRepo.login(username, password);
 
 		// Nếu xác thực thành công, tạo token
 		const payload = {
@@ -22,11 +22,11 @@ exports.login = async (req, res, next) => {
 		const { accessToken, refreshToken } = jwtUtils.generateTokens(payload);
 
 		// Xóa refresh token cũ
-		await tokenRepo.deleteTokenByUserId(user_id);
+		await tokenRepo.deleteTokenByUserId(account.user_id);
 
 		// Lưu refresh token vào database
 		const ipAddress = req.ip || req.connection.remoteAddress;
-		await tokenRepo.saveToken(user_id, refreshToken, ipAddress);
+		await tokenRepo.saveToken(account.user_id, refreshToken, ipAddress);
 
 		// Trả về token cho client
 		res.json({
