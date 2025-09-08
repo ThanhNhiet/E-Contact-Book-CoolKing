@@ -2,7 +2,7 @@ var DataTypes = require("sequelize").DataTypes;
 
 var _Account = require("./Account");
 var _Attendance = require("./Attendance");
-var _Calendar = require("./Calendar");
+var _Schedule = require("./Schedule");
 var _Clazz = require("./Clazz");
 var _CourseSection = require("./CourseSection");
 var _Faculty = require("./Faculty");
@@ -32,7 +32,7 @@ function initModels(sequelize) {
   const StudentCourseSection = _StudentCourseSection(sequelize, DataTypes);
   const Subject = _Subject(sequelize, DataTypes);
   const Account = _Account(sequelize, DataTypes);
-  const Calendar = _Calendar(sequelize, DataTypes);
+  const Schedule = _Schedule(sequelize, DataTypes);
   const RefreshToken = _RefreshToken(sequelize, DataTypes);
 
   // ===== Associations =====
@@ -49,9 +49,9 @@ function initModels(sequelize) {
   Attendance.belongsTo(CourseSection, { as: "course_section", foreignKey: "course_section_id" });
   CourseSection.hasMany(Attendance, { as: "attendances", foreignKey: "course_section_id" });
 
-  // CourseSection - Calendar
-  Calendar.belongsTo(CourseSection, { as: "course_section", foreignKey: "course_section_id" });
-  CourseSection.hasMany(Calendar, { as: "calendars", foreignKey: "course_section_id" });
+  // CourseSection - Schedule
+  Schedule.belongsTo(CourseSection, { as: "course_section", foreignKey: "course_section_id" });
+  CourseSection.hasMany(Schedule, { as: "schedules", foreignKey: "course_section_id" });
 
   // CourseSection - LecturerCourseSection
   LecturerCourseSection.belongsTo(CourseSection, { as: "course_section", foreignKey: "course_section_id" });
@@ -131,7 +131,7 @@ function initModels(sequelize) {
   return {
     Account,
     Attendance,
-    Calendar,
+    Schedule,
     Clazz,
     CourseSection,
     Faculty,

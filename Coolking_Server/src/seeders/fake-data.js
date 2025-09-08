@@ -239,15 +239,32 @@ async function seed() {
     }
 
     // 11. Account
-    // Tạo Set để theo dõi các user_id đã sử dụng
+    // Tạo Set để theo dõi các user_id, email và phone_number đã sử dụng
     const usedUserIds = new Set();
+    const usedEmails = new Set();
+    const usedPhones = new Set();
     let accountCount = 0;
     
     // Tạo danh sách tất cả người dùng có thể
     const allUsers = [
-        ...students.map(s => ({ id: s.student_id, role: 'STUDENT' })),
-        ...lecturers.map(l => ({ id: l.lecturer_id, role: 'LECTURER' })),
-        ...parents.map(p => ({ id: p.parent_id, role: 'PARENT' }))
+        ...students.map(s => ({ 
+            id: s.student_id, 
+            role: 'STUDENT',
+            email: s.email,
+            phone: s.phone
+        })),
+        ...lecturers.map(l => ({ 
+            id: l.lecturer_id, 
+            role: 'LECTURER',
+            email: l.email,
+            phone: l.phone
+        })),
+        ...parents.map(p => ({ 
+            id: p.parent_id, 
+            role: 'PARENT',
+            email: p.email,
+            phone: p.phone
+        }))
     ];
     
     // Xáo trộn danh sách để chọn ngẫu nhiên
@@ -255,13 +272,36 @@ async function seed() {
     
     // Tạo tối đa 50 account hoặc cho đến khi hết người dùng
     for (let i = 0; i < Math.min(50, shuffledUsers.length); i++) {
-        const { id: user_id, role } = shuffledUsers[i];
+        const { id: user_id, role, email: originalEmail, phone: originalPhone } = shuffledUsers[i];
         
         if (!usedUserIds.has(user_id)) {
             usedUserIds.add(user_id);
+            
+            // Đảm bảo email là duy nhất
+            let email = originalEmail;
+            if (email && usedEmails.has(email)) {
+                // Nếu email đã được sử dụng, tạo email mới
+                do {
+                    email = faker.internet.email();
+                } while (usedEmails.has(email));
+            }
+            if (email) usedEmails.add(email);
+            
+            // Đảm bảo phone_number là duy nhất
+            let phone_number = originalPhone;
+            if (phone_number && usedPhones.has(phone_number)) {
+                // Nếu số điện thoại đã được sử dụng, tạo số điện thoại mới
+                do {
+                    phone_number = faker.phone.number();
+                } while (usedPhones.has(phone_number));
+            }
+            if (phone_number) usedPhones.add(phone_number);
+            
             await models.Account.create({
                 id: uuidv4(),
                 user_id,
+                email,
+                phone_number,
                 password: '123456',
                 role,
                 status: 'ACTIVE'
@@ -273,7 +313,7 @@ async function seed() {
     console.log(`Created ${accountCount} unique accounts`);
     
 
-    // 12. Calendar
+    // 12. Schedule
     // Lấy danh sách các user_id đã được tạo account
     const accountUsers = await models.Account.findAll();
     const validUserIds = accountUsers.map(account => account.user_id);
@@ -281,14 +321,14 @@ async function seed() {
     for (let i = 0; i < 50; i++) {
         // Chỉ sử dụng những user_id đã tồn tại trong bảng accounts
         if (validUserIds.length === 0) {
-            console.log("Không có user_id hợp lệ để tạo Calendar");
+            console.log("Không có user_id hợp lệ để tạo Schedule");
             break;
         }
         
         const user_id = faker.helpers.arrayElement(validUserIds);
         const courseSection = courseSections[faker.number.int({ min: 0, max: courseSections.length - 1 })];
         
-        await models.Calendar.create({
+        await models.Schedule.create({
             id: uuidv4(),
             user_id,
             course_section_id: courseSection.id,
