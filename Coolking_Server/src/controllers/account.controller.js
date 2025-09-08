@@ -21,9 +21,32 @@ exports.getAllAccounts = async (req, res) => {
 // GET /accounts/:id
 exports.getAccountById = async (req, res) => {
 	try {
+		const authHeader = req.headers['authorization'];
+		const token = authHeader && authHeader.split(' ')[1];
+		const decoded = jwtUtils.verifyAccessToken(token);
+		if (!decoded || decoded.role !== 'ADMIN') {
+			return res.status(403).json({ message: 'Forbidden' });
+		}
 		const account = await accountRepo.getAccountByUserId(req.params.id);
 		if (!account) return res.status(404).json({ message: 'Account not found' });
 		res.status(200).json(account);
+	} catch (err) {
+		res.status(500).json({ message: err.message });
+	}
+};
+
+// GET /accounts/search?keyword=&page=&pagesize=
+exports.searchAccounts = async (req, res) => {
+	try {
+		const authHeader = req.headers['authorization'];
+		const token = authHeader && authHeader.split(' ')[1];
+		const decoded = jwtUtils.verifyAccessToken(token);
+		if (!decoded || decoded.role !== 'ADMIN') {
+			return res.status(403).json({ message: 'Forbidden' });
+		}
+		const { keyword, page, pagesize } = req.query;
+		const accounts = await accountRepo.getAllAccounts_keyword(keyword || '', page || 1, pagesize || 10);
+		res.json(accounts);
 	} catch (err) {
 		res.status(500).json({ message: err.message });
 	}

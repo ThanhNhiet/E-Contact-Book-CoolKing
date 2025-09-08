@@ -5,6 +5,15 @@ const router = express.Router();
 //GET /accounts?page=&pageSize=
 router.get('/', accountController.getAllAccounts);
 
+//GET /accounts/search?keyword=&page=&pageSize=
+router.get('/search', accountController.searchAccounts);
+
+//POST /accounts/reset-password/:id => Chỉ admin mới được quyền reset
+router.post('/reset-password/:id', accountController.resetPassword4Admin);
+
+//POST /accounts/change-password => Người dùng tự đổi mật khẩu
+router.post('/change-password', accountController.changePassword);
+
 //GET /accounts/:id
 router.get('/:id', accountController.getAccountById);
 
@@ -16,11 +25,5 @@ router.put('/:id', accountController.updateAccount4Admin);
 
 //DELETE /accounts/:id  => Chỉ đặt trạng thái INACTIVE
 router.delete('/:id', accountController.deleteAccount);
-
-//POST /accounts/reset-password/:id => Chỉ admin mới được quyền reset
-router.post('/reset-password/:id', accountController.resetPassword4Admin);
-
-//POST /accounts/change-password => Người dùng tự đổi mật khẩu
-router.post('/change-password', accountController.changePassword);
 
 module.exports = router;
