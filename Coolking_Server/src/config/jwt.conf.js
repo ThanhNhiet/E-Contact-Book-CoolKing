@@ -4,7 +4,7 @@ require('dotenv').config();
 module.exports = {
   accessToken: {
     secret: process.env.ACCESS_TOKEN_SECRET || 'your-access-token-secret',
-    expiresIn: '150m' // 150 minutes
+    expiresIn: '60m' // 60 minutes
   },
   refreshToken: {
     secret: process.env.REFRESH_TOKEN_SECRET || 'your-refresh-token-secret',
