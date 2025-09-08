@@ -47,6 +47,7 @@ const login = async (username, password) => {
 const changePassword = async (user_id, oldPassword, newPassword) => {
   try {
     const account = await models.Account.findOne({ where: { user_id } });
+    console.log(account.user_id);
     if (!account) throw new Error("Account not found");
     const isValid = await bcrypt.compare(oldPassword, account.password);
     if (!isValid) throw new Error("Invalid old password");
@@ -123,6 +124,19 @@ const deleteAccount = async (user_id) => {
   }
 };
 
+const resetPassword4Admin = async (user_id) => {
+  try {
+    const account = await models.Account.findOne({ where: { user_id } });
+    if (!account) throw new Error("Account not found");
+    const newPassword = '12345678';
+    account.password = newPassword;
+    await account.save();
+    return newPassword;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   login,
   changePassword,
@@ -130,5 +144,6 @@ module.exports = {
   getAccountByUserId,
   createAccount,
   updateAccount,
-  deleteAccount
+  deleteAccount,
+  resetPassword4Admin
 };
