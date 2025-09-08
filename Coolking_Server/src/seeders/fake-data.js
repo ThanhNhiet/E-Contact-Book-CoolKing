@@ -121,7 +121,8 @@ async function seed() {
             faculty_id: faculty.faculty_id,
             name: faker.commerce.productName(),
             theo_credit: faker.number.int({ min: 1, max: 5 }),
-            pra_credit: faker.number.int({ min: 0, max: 3 })
+            pra_credit: faker.number.int({ min: 0, max: 3 }),
+            isDeleted: false
         }));
     }
 
@@ -135,7 +136,8 @@ async function seed() {
             id: uuidv4(),
             clazz_id: clazz.id,
             subject_id: subject.subject_id,
-            session_id: session.id
+            session_id: session.id,
+            isDeleted: false
         }));
     }
 
@@ -159,7 +161,8 @@ async function seed() {
             phone: faker.phone.number(),
             email: faker.internet.email(),
             address: faker.location.streetAddress(),
-            faculty_id: faculty.faculty_id
+            faculty_id: faculty.faculty_id,
+            isDeleted: false
         }));
     }
 
@@ -199,7 +202,8 @@ async function seed() {
             email: faker.internet.email(),
             address: faker.location.streetAddress(),
             clazz_id: clazz.id,
-            major_id: hasMajor ? major.id : null
+            major_id: hasMajor ? major.id : null,
+            isDeleted: false
         }));
     }
 
@@ -234,7 +238,8 @@ async function seed() {
             avatar: faker.image.avatar(),
             phone: faker.phone.number(),
             email: faker.internet.email(),
-            address: faker.location.streetAddress()
+            address: faker.location.streetAddress(),
+            isDeleted: false
         }));
     }
 

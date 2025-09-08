@@ -58,7 +58,7 @@ module.exports = function(sequelize, DataTypes) {
     },
     isDeleted: {
       type: DataTypes.BOOLEAN,
-      allowNull: true
+      allowNull: false
     }
   }, {
     sequelize,
