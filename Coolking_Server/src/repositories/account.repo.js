@@ -3,7 +3,8 @@ const initModels = require("../databases/mariadb/model/init-models");
 const models = initModels(sequelize);
 const bcrypt = require("bcrypt");
 const datetimeFormatter = require("../utils/format/datetime-formatter");
-const { raw } = require("express");
+const emailService = require("../services/email.service");
+const redisService = require('../services/redis.service');
 
 const login = async (username, password) => {
   try {
@@ -221,6 +222,38 @@ const resetPassword4Admin = async (user_id) => {
   }
 };
 
+const checkAccountByEmail = async (email) => {
+  try {
+    const account = await models.Account.findOne({ where: { email } });
+    if (!account) return 0; // Tài khoản không tồn tại
+    
+    const result = await emailService.sendOTP(email);
+    if (!result.success) return -1; // Gửi OTP thất bại
+
+    return 1; // Gửi OTP thành công
+  } catch (error) {
+    console.error('Error in checkAccountByEmail:', error);
+    return -1; // Lỗi xảy ra
+  }
+};
+
+const changePassword_ByEmail = async (email, resetToken, oldPassword, newPassword) => {
+  try {
+    const account = await models.Account.findOne({ where: { email } });
+    if (!account) throw new Error("Account not found");
+    const storedToken = await redisService.get(`reset:${email}`);
+    if (storedToken !== resetToken) return 0;
+    const isValid = await bcrypt.compare(oldPassword, account.password);
+    if (!isValid) throw new Error("Invalid old password");
+    account.password = newPassword;
+    await account.save();
+    await redisService.del(`reset:${email}`);
+    return account;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   login,
   changePassword,
@@ -230,5 +263,7 @@ module.exports = {
   updateAccount,
   deleteAccount,
   resetPassword4Admin,
-  getAllAccounts_keyword
+  getAllAccounts_keyword,
+  checkAccountByEmail,
+  changePassword_ByEmail
 };

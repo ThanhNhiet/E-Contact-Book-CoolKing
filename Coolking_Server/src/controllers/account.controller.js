@@ -1,6 +1,7 @@
 const accountRepo = require('../repositories/account.repo');
 const tokenRepo = require('../repositories/token.repo');
 const jwtUtils = require('../utils/jwt.utils');
+const emailService = require("../services/email.service");
 
 // GET /accounts
 exports.getAllAccounts = async (req, res) => {
@@ -134,5 +135,150 @@ exports.changePassword = async (req, res) => {
 		res.status(200).json({ message: 'Password changed successfully' });
 	} catch (err) {
 		res.status(500).json({ message: err.message });
+	}
+};
+
+// POST /public/verify-otp
+exports.verifyOTP = async (req, res) => {
+	try {
+		const { email, otp } = req.body;
+
+		// Kiểm tra các trường bắt buộc
+		if (!email || !otp) {
+			return res.status(400).json({
+				success: false,
+				message: 'Email và OTP là bắt buộc'
+			});
+		}
+
+		// Kiểm tra format email
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(email)) {
+			return res.status(400).json({
+				success: false,
+				message: 'Email không hợp lệ'
+			});
+		}
+
+		// Kiểm tra format OTP (6 số)
+		const otpRegex = /^\d{6}$/;
+		if (!otpRegex.test(otp)) {
+			return res.status(400).json({
+				success: false,
+				message: 'OTP phải là 6 chữ số'
+			});
+		}
+
+		const result = await emailService.verifyOTP(email, otp);
+
+		if (result.success) {
+			res.status(200).json({
+				success: true,
+				message: result.message,
+				data: {
+					email: email,
+					verified: true,
+					resetToken: result.resetToken
+				}
+			});
+		} else {
+			res.status(400).json({
+				success: false,
+				message: result.message
+			});
+		}
+
+	} catch (error) {
+		console.error('Error in verifyOTP controller:', error);
+		res.status(500).json({
+			success: false,
+			message: error.message || 'Lỗi server khi xác thực OTP'
+		});
+	}
+};
+
+// POST /public/check-email/:email
+exports.checkAccountByEmail = async (req, res) => {
+	try {
+		const { email } = req.params;
+
+		// Kiểm tra email có được cung cấp không
+		if (!email) {
+			return res.status(400).json({
+				success: false,
+				message: 'Email là bắt buộc'
+			});
+		}
+
+		// Kiểm tra format email
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(email)) {
+			return res.status(400).json({
+				success: false,
+				message: 'Email không hợp lệ'
+			});
+		}
+
+		const result = await accountRepo.checkAccountByEmail(email);
+
+		if (result === 0) {
+			return res.status(404).json({
+				success: false,
+				message: 'Không tìm thấy tài khoản với email này'
+			});
+		} else if (result === -1) {
+			return res.status(500).json({
+				success: false,
+				message: 'Lỗi khi gửi OTP. Vui lòng thử lại sau'
+			});
+		} else {
+			return res.status(200).json({
+				success: true,
+				message: 'Tìm thấy tài khoản. OTP đã được gửi đến email của bạn',
+				data: {
+					email: email,
+					accountExists: true,
+					otpSent: true
+				}
+			});
+		}
+
+	} catch (error) {
+		console.error('Error in checkAccountByEmail controller:', error);
+		res.status(500).json({
+			success: false,
+			message: error.message || 'Lỗi server khi kiểm tra email'
+		});
+	}
+};
+
+// POST /public/change-password-by-email
+exports.changePasswordByEmail = async (req, res) => {
+	try {
+		const { email, resetToken, oldPassword, newPassword } = req.body;
+		if (!email || !resetToken || !oldPassword || !newPassword) {
+			return res.status(400).json({
+				success: false,
+				message: 'Email, resetToken, oldPassword và newPassword là bắt buộc'
+			});
+		}
+		const result = await accountRepo.changePassword_ByEmail(email, resetToken, oldPassword, newPassword);
+		if (result === 0) {
+			return res.status(400).json({
+				success: false,
+				message: 'Token đặt lại không hợp lệ hoặc đã hết hạn'
+			});
+		} else {
+			return res.status(200).json({
+				success: true,
+				message: 'Đổi mật khẩu thành công'
+			});
+		}
+	} catch (error) {
+		console.error('Error in changePasswordByEmail controller:', error);
+		res.status(500).json({
+			success: false,
+			message: error.message || 'Lỗi server'
+		});
 	}
 };
