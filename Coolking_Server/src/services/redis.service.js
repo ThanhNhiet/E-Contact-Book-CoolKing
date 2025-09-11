@@ -73,6 +73,77 @@ const getAllBlacklistedTokens = async () => {
   }
 };
 
+/**
+ * Set giá trị với thời gian hết hạn
+ * @param {String} key - Key
+ * @param {Number} seconds - Thời gian hết hạn (giây)
+ * @param {String} value - Giá trị
+ */
+const setex = async (key, seconds, value) => {
+  try {
+    return await redis.setex(key, seconds, value);
+  } catch (error) {
+    console.error('Redis error when setting key with expiration:', error);
+    throw error;
+  }
+};
+
+/**
+ * Lấy giá trị theo key
+ * @param {String} key - Key
+ * @returns {String|null} - Giá trị hoặc null nếu không tồn tại
+ */
+const get = async (key) => {
+  try {
+    return await redis.get(key);
+  } catch (error) {
+    console.error('Redis error when getting key:', error);
+    throw error;
+  }
+};
+
+/**
+ * Xóa key
+ * @param {String} key - Key cần xóa
+ * @returns {Number} - Số key đã xóa
+ */
+const del = async (key) => {
+  try {
+    return await redis.del(key);
+  } catch (error) {
+    console.error('Redis error when deleting key:', error);
+    throw error;
+  }
+};
+
+/**
+ * Kiểm tra key có tồn tại hay không
+ * @param {String} key - Key cần kiểm tra
+ * @returns {Number} - 1 nếu tồn tại, 0 nếu không
+ */
+const exists = async (key) => {
+  try {
+    return await redis.exists(key);
+  } catch (error) {
+    console.error('Redis error when checking key existence:', error);
+    throw error;
+  }
+};
+
+/**
+ * Lấy thời gian còn lại của key (TTL)
+ * @param {String} key - Key cần kiểm tra
+ * @returns {Number} - TTL tính bằng giây, -1 nếu không có TTL, -2 nếu key không tồn tại
+ */
+const ttl = async (key) => {
+  try {
+    return await redis.ttl(key);
+  } catch (error) {
+    console.error('Redis error when getting TTL:', error);
+    throw error;
+  }
+};
+
 // Kiểm tra kết nối Redis khi khởi động
 redis.on('connect', () => {
   console.log('✅ Connected to Redis server');
@@ -87,5 +158,10 @@ module.exports = {
   addToBlacklist,
   isBlacklisted,
   removeFromBlacklist,
-  getAllBlacklistedTokens
+  getAllBlacklistedTokens,
+  setex,
+  get,
+  del,
+  exists,
+  ttl
 };
