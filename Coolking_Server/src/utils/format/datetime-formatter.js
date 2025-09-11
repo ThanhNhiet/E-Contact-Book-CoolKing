@@ -10,7 +10,7 @@ const formatDateTimeVN = (isoString) => {
   const mm = String(date.getMinutes()).padStart(2, '0');
   const ss = String(date.getSeconds()).padStart(2, '0');
 
-  return `${dd}/${MM}/${yyyy} ${hh}:${mm}:${ss}`;
+  return `${dd}-${MM}-${yyyy} ${hh}:${mm}:${ss}`;
 };
 
 const formatDateVN = (isoString) => {
@@ -25,7 +25,12 @@ const formatDateVN = (isoString) => {
   const mm = String(date.getMinutes()).padStart(2, '0');
   const ss = String(date.getSeconds()).padStart(2, '0');
 
-  return `${dd}/${MM}/${yyyy}`;
+  return `${dd}-${MM}-${yyyy}`;
 };
 
-module.exports = { formatDateTimeVN, formatDateVN };
+const convertddMMyyyy2yyyyMMdd = (dateString) => {
+  const [dd, MM, yyyy] = dateString.split('-');
+  return `${yyyy}-${MM}-${dd}`;
+};
+
+module.exports = { formatDateTimeVN, formatDateVN, convertddMMyyyy2yyyyMMdd };
