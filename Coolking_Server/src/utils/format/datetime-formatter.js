@@ -25,7 +25,7 @@ const formatDateVN = (isoString) => {
   const mm = String(date.getMinutes()).padStart(2, '0');
   const ss = String(date.getSeconds()).padStart(2, '0');
 
-  return `${dd}/${MM}/${yyyy} ${hh}:${mm}:${ss}`;
+  return `${dd}/${MM}/${yyyy}`;
 };
 
 module.exports = { formatDateTimeVN, formatDateVN };

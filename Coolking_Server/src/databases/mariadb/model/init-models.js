@@ -66,60 +66,60 @@ function initModels(sequelize) {
   CourseSection.hasMany(StudentCourseSection, { as: "students_course_sections", foreignKey: "course_section_id" });
 
   // Faculty - Lecturer
-  Lecturer.belongsTo(Faculty, { as: "faculty", foreignKey: "faculty_id" });
-  Faculty.hasMany(Lecturer, { as: "lecturers", foreignKey: "faculty_id" });
+  Lecturer.belongsTo(Faculty, { as: "faculty", foreignKey: "faculty_id", targetKey: "faculty_id" });
+  Faculty.hasMany(Lecturer, { as: "lecturers", foreignKey: "faculty_id", sourceKey: "faculty_id" });
 
   // Faculty - Clazz
-  Clazz.belongsTo(Faculty, { as: "faculty", foreignKey: "faculty_id" });
-  Faculty.hasMany(Clazz, { as: "clazzes", foreignKey: "faculty_id" });
+  Clazz.belongsTo(Faculty, { as: "faculty", foreignKey: "faculty_id", targetKey: "faculty_id" });
+  Faculty.hasMany(Clazz, { as: "clazzes", foreignKey: "faculty_id", sourceKey: "faculty_id" });
 
   // Faculty - Subject
-  Subject.belongsTo(Faculty, { as: "faculty", foreignKey: "faculty_id" });
-  Faculty.hasMany(Subject, { as: "subjects", foreignKey: "faculty_id" });
+  Subject.belongsTo(Faculty, { as: "faculty", foreignKey: "faculty_id", targetKey: "faculty_id" });
+  Faculty.hasMany(Subject, { as: "subjects", foreignKey: "faculty_id", sourceKey: "faculty_id" });
 
   // Faculty - Major
-  Major.belongsTo(Faculty, { as: "faculty", foreignKey: "faculty_id" });
-  Faculty.hasMany(Major, { as: "majors", foreignKey: "faculty_id" });
-  
+  Major.belongsTo(Faculty, { as: "faculty", foreignKey: "faculty_id", targetKey: "faculty_id" });
+  Faculty.hasMany(Major, { as: "majors", foreignKey: "faculty_id", sourceKey: "faculty_id" });
+
   // Major - Student
-  Student.belongsTo(Major, { as: "major", foreignKey: "major_id" });
-  Major.hasMany(Student, { as: "students", foreignKey: "major_id" });
+  Student.belongsTo(Major, { as: "major", foreignKey: "major_id", targetKey: "major_id" });
+  Major.hasMany(Student, { as: "students", foreignKey: "major_id", sourceKey: "major_id" });
 
   // Faculty - Dean (Lecturer)
-  Faculty.belongsTo(Lecturer, { as: "dean", foreignKey: "dean_id" });
-  Lecturer.hasMany(Faculty, { as: "faculties", foreignKey: "dean_id" });
+  Faculty.belongsTo(Lecturer, { as: "dean", foreignKey: "dean_id", targetKey: "lecturer_id" });
+  Lecturer.hasMany(Faculty, { as: "faculties", foreignKey: "dean_id", sourceKey: "lecturer_id" });
 
   // Lecturer - LecturerCourseSection
-  LecturerCourseSection.belongsTo(Lecturer, { as: "lecturer", foreignKey: "lecturer_id" });
-  Lecturer.hasMany(LecturerCourseSection, { as: "lecturers_course_sections", foreignKey: "lecturer_id" });
+  LecturerCourseSection.belongsTo(Lecturer, { as: "lecturer", foreignKey: "lecturer_id", targetKey: "lecturer_id" });
+  Lecturer.hasMany(LecturerCourseSection, { as: "lecturers_course_sections", foreignKey: "lecturer_id", sourceKey: "lecturer_id" });
 
   // Lecturer - Attendance (created_by)
-  Attendance.belongsTo(Lecturer, { as: "created_by_lecturer", foreignKey: "created_by" });
-  Lecturer.hasMany(Attendance, { as: "attendances", foreignKey: "created_by" });
+  Attendance.belongsTo(Lecturer, { as: "created_by_lecturer", foreignKey: "created_by", targetKey: "lecturer_id" });
+  Lecturer.hasMany(Attendance, { as: "attendances", foreignKey: "created_by", sourceKey: "lecturer_id" });
 
   // Session - CourseSection
   CourseSection.belongsTo(Session, { as: "session", foreignKey: "session_id" });
   Session.hasMany(CourseSection, { as: "course_sections", foreignKey: "session_id" });
 
   // Student - Attendance
-  Attendance.belongsTo(Student, { as: "student", foreignKey: "student_id" });
-  Student.hasMany(Attendance, { as: "attendances", foreignKey: "student_id" });
+  Attendance.belongsTo(Student, { as: "student", foreignKey: "student_id", targetKey: "student_id" });
+  Student.hasMany(Attendance, { as: "attendances", foreignKey: "student_id", sourceKey: "student_id" });
 
   // Student - Parent
-  Parent.belongsTo(Student, { as: "student", foreignKey: "student_id" });
-  Student.hasMany(Parent, { as: "parents", foreignKey: "student_id" });
+  Parent.belongsTo(Student, { as: "student", foreignKey: "student_id", targetKey: "student_id" });
+  Student.hasMany(Parent, { as: "parents", foreignKey: "student_id", sourceKey: "student_id" });
 
   // Student - Score
-  Score.belongsTo(Student, { as: "student", foreignKey: "student_id" });
-  Student.hasMany(Score, { as: "scores", foreignKey: "student_id" });
+  Score.belongsTo(Student, { as: "student", foreignKey: "student_id", targetKey: "student_id" });
+  Student.hasMany(Score, { as: "scores", foreignKey: "student_id", sourceKey: "student_id" });
 
   // Student - StudentCourseSection
-  StudentCourseSection.belongsTo(Student, { as: "student", foreignKey: "student_id" });
-  Student.hasMany(StudentCourseSection, { as: "students_course_sections", foreignKey: "student_id" });
+  StudentCourseSection.belongsTo(Student, { as: "student", foreignKey: "student_id", targetKey: "student_id" });
+  Student.hasMany(StudentCourseSection, { as: "students_course_sections", foreignKey: "student_id", sourceKey: "student_id" });
 
   // Subject - CourseSection
-  CourseSection.belongsTo(Subject, { as: "subject", foreignKey: "subject_id" });
-  Subject.hasMany(CourseSection, { as: "course_sections", foreignKey: "subject_id" });
+  CourseSection.belongsTo(Subject, { as: "subject", foreignKey: "subject_id", targetKey: "subject_id" });
+  Subject.hasMany(CourseSection, { as: "course_sections", foreignKey: "subject_id", sourceKey: "subject_id" });
 
   // Account không quan hệ trực tiếp với Student/Lecturer/Parent
   // vì user_id có thể map đến nhiều bảng khác nhau → xử lý bằng hook trong Account.js
