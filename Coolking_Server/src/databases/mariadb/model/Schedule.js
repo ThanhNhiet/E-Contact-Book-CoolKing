@@ -24,34 +24,26 @@ module.exports = function(sequelize, DataTypes) {
       }
     },
 
-    // Loại lịch: lịch thường, lịch bù, thi
-    type: {
-      type: DataTypes.ENUM('REGULAR', 'MAKEUP', 'EXAM'),
+    // Có phải lịch thi hay không
+    isExam: {
+      type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: 'REGULAR'
+      defaultValue: false
     },
 
-    // Thứ trong tuần (1-7), chỉ áp dụng cho lịch thường
+    // Thứ trong tuần (1-7)
     day_of_week: {
       type: DataTypes.INTEGER,
       allowNull: true
     },
 
-    // Trường hợp nếu bị cancel -> hoặc là ngày thi hoặc lịch bù
+    // Áp dụng cho lịch thi
     date: {
       type: DataTypes.DATEONLY,
       allowNull: true
     },
     room: {
       type: DataTypes.STRING(255),
-      allowNull: false
-    },
-    start_date: {
-      type: DataTypes.DATEONLY,
-      allowNull: false
-    },
-    end_date: {
-      type: DataTypes.DATEONLY,
       allowNull: false
     },
     start_lesson: {
@@ -62,10 +54,22 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.INTEGER,
       allowNull: false
     },
-    status: {
-      type: DataTypes.ENUM('SCHEDULED', 'COMPLETED', 'CANCELED'),
+
+    //Ngày bắt đầu lớp học phần
+    start_date: {
+      type: DataTypes.DATEONLY,
+      allowNull: false
+    },
+    //Ngày kết thúc lớp học phần
+    end_date: {
+      type: DataTypes.DATEONLY,
+      allowNull: false
+    },
+
+    isCompleted: {
+      type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: 'SCHEDULED'
+      defaultValue: false
     }
   }, {
     sequelize,

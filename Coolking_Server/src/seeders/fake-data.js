@@ -319,6 +319,7 @@ async function seed() {
 
 
     // 12. Schedule
+    const schedules = [];
     // Lấy danh sách các user_id đã được tạo account
     const accountUsers = await models.Account.findAll();
     const validUserIds = accountUsers.map(account => account.user_id);
@@ -333,30 +334,97 @@ async function seed() {
         const user_id = faker.helpers.arrayElement(validUserIds);
         const courseSection = courseSections[faker.number.int({ min: 0, max: courseSections.length - 1 })];
 
-        const type = faker.helpers.arrayElement(['REGULAR', 'MAKEUP', 'EXAM']);
+        // Tạo ngày bắt đầu và kết thúc cho học phần
         const startDate = faker.date.future({ years: 1 });
         const endDate = faker.date.future({ years: 1, refDate: startDate });
 
         const startLesson = faker.number.int({ min: 1, max: 10 });
         const endLesson = faker.number.int({ min: startLesson, max: 12 });
 
-        await models.Schedule.create({
+        // 80% là lịch thường (isExam = false), 20% là lịch thi (isExam = true)
+        const isExam = faker.datatype.boolean(0.2);
+
+        const schedule = await models.Schedule.create({
             id: uuidv4(),
             user_id,
             course_section_id: courseSection.id,
-            type,
-            day_of_week: type === 'REGULAR' ? faker.number.int({ min: 1, max: 7 }) : null,
-            date: type !== 'REGULAR' ? startDate : null,
+            isExam,
+            // Lịch thường có day_of_week, lịch thi có date
+            day_of_week: !isExam ? faker.number.int({ min: 1, max: 7 }) : null,
+            date: isExam ? faker.date.future({ years: 1 }) : null,
             room: `Room ${faker.number.int({ min: 100, max: 499 })}`,
-            start_date: startDate,
-            end_date: endDate,
             start_lesson: startLesson,
             end_lesson: endLesson,
-            status: faker.helpers.arrayElement(['SCHEDULED', 'COMPLETED', 'CANCELED'])
+            start_date: startDate,
+            end_date: endDate,
+            isCompleted: faker.datatype.boolean(0.3) // 30% đã hoàn thành
+        });
+
+        schedules.push(schedule);
+    }
+
+    // 13. ScheduleException
+    // Tạo exception cho một số schedule (khoảng 30% schedule có exception)
+    const schedulesWithExceptions = faker.helpers.arrayElements(schedules, Math.floor(schedules.length * 0.3));
+
+    for (const schedule of schedulesWithExceptions) {
+        const exceptionType = faker.helpers.arrayElement(['CANCELED', 'MAKEUP', 'ROOM_CHANGED', 'LECTURER_CHANGED']);
+        
+        // Tạo ngày exception trong khoảng thời gian của schedule
+        const originalDate = faker.date.between({ 
+            from: schedule.start_date, 
+            to: schedule.end_date 
+        });
+
+        let newDate = null;
+        let newRoom = null;
+        let newStartLesson = null;
+        let newEndLesson = null;
+        let newLecturerId = null;
+
+        // Tùy theo loại exception, tạo dữ liệu tương ứng
+        switch (exceptionType) {
+            case 'MAKEUP':
+                // Lịch học bù: có ngày mới, có thể có phòng mới và tiết mới
+                newDate = faker.date.future({ years: 1, refDate: originalDate });
+                if (faker.datatype.boolean(0.7)) { // 70% trường hợp đổi phòng khi học bù
+                    newRoom = `Room ${faker.number.int({ min: 500, max: 699 })}`;
+                }
+                if (faker.datatype.boolean(0.5)) { // 50% trường hợp đổi tiết khi học bù
+                    newStartLesson = faker.number.int({ min: 1, max: 10 });
+                    newEndLesson = faker.number.int({ min: newStartLesson, max: 12 });
+                }
+                break;
+                
+            case 'ROOM_CHANGED':
+                // Đổi phòng: giữ nguyên ngày, chỉ đổi phòng
+                newRoom = `Room ${faker.number.int({ min: 500, max: 699 })}`;
+                break;
+                
+            case 'LECTURER_CHANGED':
+                // Đổi giảng viên: chọn một giảng viên khác
+                newLecturerId = lecturers[faker.number.int({ min: 0, max: lecturers.length - 1 })].lecturer_id;
+                break;
+                
+            case 'CANCELED':
+                // Hủy lịch: không cần thông tin mới
+                break;
+        }
+
+        await models.ScheduleException.create({
+            id: uuidv4(),
+            schedule_id: schedule.id,
+            exception_type: exceptionType,
+            original_date: originalDate,
+            new_date: newDate,
+            new_room: newRoom,
+            new_start_lesson: newStartLesson,
+            new_end_lesson: newEndLesson,
+            new_lecturer_id: newLecturerId
         });
     }
 
-    // 13. Score
+    // 14. Score
     // Lấy tất cả các student_course_section để đảm bảo mối quan hệ hợp lệ
     const studentCourseSections = await models.StudentCourseSection.findAll({
         include: [
