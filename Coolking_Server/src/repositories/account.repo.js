@@ -4,6 +4,7 @@ const models = initModels(sequelize);
 const bcrypt = require("bcrypt");
 const datetimeFormatter = require("../utils/format/datetime-formatter");
 const emailService = require("../services/email.service");
+const smsService = require("../services/sms.service");
 const redisService = require('../services/redis.service');
 
 const login = async (username, password) => {
@@ -254,6 +255,36 @@ const changePassword_ByEmail = async (email, resetToken, oldPassword, newPasswor
   }
 };
 
+const checkAccountByPhoneNumber = async (phoneNumber) => {
+  try {
+    const account = await models.Account.findOne({ where: { phone_number: phoneNumber } });
+    if (!account) return 0; // Tài khoản không tồn tại
+    const result = await smsService.sendOTP(phoneNumber);
+    if (!result.success) return -1; // Gửi OTP thất bại
+    return 1; // Gửi OTP thành công
+  } catch (error) {
+    console.error('Error in checkAccountByPhoneNumber:', error);
+    return -1; // Lỗi xảy ra
+  }
+};
+
+const changePassword_ByPhoneNumber = async (phoneNumber, resetToken, oldPassword, newPassword) => {
+  try {
+    const account = await models.Account.findOne({ where: { phone_number: phoneNumber } });
+    if (!account) throw new Error("Account not found");
+    const storedToken = await redisService.get(`reset:${phoneNumber}`);
+    if (storedToken !== resetToken) return 0;
+    const isValid = await bcrypt.compare(oldPassword, account.password);
+    if (!isValid) throw new Error("Invalid old password");
+    account.password = newPassword;
+    await account.save();
+    await redisService.del(`reset:${phoneNumber}`);
+    return account;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   login,
   changePassword,
@@ -265,5 +296,7 @@ module.exports = {
   resetPassword4Admin,
   getAllAccounts_keyword,
   checkAccountByEmail,
-  changePassword_ByEmail
+  changePassword_ByEmail,
+  checkAccountByPhoneNumber,
+  changePassword_ByPhoneNumber
 };

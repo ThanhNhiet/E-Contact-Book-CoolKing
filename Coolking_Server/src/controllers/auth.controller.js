@@ -2,6 +2,8 @@ const accountRepo = require('../repositories/account.repo');
 const jwtUtils = require('../utils/jwt.utils');
 const tokenRepo = require('../repositories/token.repo');
 const redisService = require('../services/redis.service');
+const emailService = require("../services/email.service");
+const smsService = require("../services/sms.service");
 
 // POST /public/login
 exports.login = async (req, res, next) => {
@@ -30,7 +32,7 @@ exports.login = async (req, res, next) => {
 
 		// Trả về token cho client
 		res.json({
-			message: "Login successful",
+			message: "Đăng nhập thành công",
 			access_token: accessToken,
 			refresh_token: refreshToken
 		});
@@ -124,8 +126,287 @@ exports.logout = async (req, res) => {
 			}
 		}
 		
-		res.json({ message: 'Logged out successfully' });
+		res.json({ message: 'Đăng xuất thành công' });
 	} catch (error) {
 		res.status(500).json({ message: error.message });
+	}
+};
+
+// POST /public/verify-otp
+exports.verifyOTP_Email = async (req, res) => {
+	try {
+		const { email, otp } = req.body;
+
+		// Kiểm tra các trường bắt buộc
+		if (!email || !otp) {
+			return res.status(400).json({
+				success: false,
+				message: 'Email và OTP là bắt buộc'
+			});
+		}
+
+		// Kiểm tra format email
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(email)) {
+			return res.status(400).json({
+				success: false,
+				message: 'Email không hợp lệ'
+			});
+		}
+
+		// Kiểm tra format OTP (6 số)
+		const otpRegex = /^\d{6}$/;
+		if (!otpRegex.test(otp)) {
+			return res.status(400).json({
+				success: false,
+				message: 'OTP phải là 6 chữ số'
+			});
+		}
+
+		const result = await emailService.verifyOTP(email, otp);
+
+		if (result.success) {
+			res.status(200).json({
+				success: true,
+				message: result.message,
+				data: {
+					email: email,
+					verified: true,
+					resetToken: result.resetToken
+				}
+			});
+		} else {
+			res.status(400).json({
+				success: false,
+				message: result.message
+			});
+		}
+
+	} catch (error) {
+		console.error('Error in verifyOTP controller:', error);
+		res.status(500).json({
+			success: false,
+			message: error.message || 'Lỗi server khi xác thực OTP'
+		});
+	}
+};
+
+// POST /public/check-email/:email
+exports.checkAccountByEmail = async (req, res) => {
+	try {
+		const { email } = req.params;
+
+		// Kiểm tra email có được cung cấp không
+		if (!email) {
+			return res.status(400).json({
+				success: false,
+				message: 'Email là bắt buộc'
+			});
+		}
+
+		// Kiểm tra format email
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(email)) {
+			return res.status(400).json({
+				success: false,
+				message: 'Email không hợp lệ'
+			});
+		}
+
+		const result = await accountRepo.checkAccountByEmail(email);
+
+		if (result === 0) {
+			return res.status(404).json({
+				success: false,
+				message: 'Không tìm thấy tài khoản với email này'
+			});
+		} else if (result === -1) {
+			return res.status(500).json({
+				success: false,
+				message: 'Lỗi khi gửi OTP. Vui lòng thử lại sau'
+			});
+		} else {
+			return res.status(200).json({
+				success: true,
+				message: 'Tìm thấy tài khoản. OTP đã được gửi đến email của bạn',
+				data: {
+					email: email,
+					accountExists: true,
+					otpSent: true
+				}
+			});
+		}
+
+	} catch (error) {
+		console.error('Error in checkAccountByEmail controller:', error);
+		res.status(500).json({
+			success: false,
+			message: error.message || 'Lỗi server khi kiểm tra email'
+		});
+	}
+};
+
+// POST /public/change-password-by-email
+exports.changePasswordByEmail = async (req, res) => {
+	try {
+		const { email, resetToken, oldPassword, newPassword } = req.body;
+		if (!email || !resetToken || !oldPassword || !newPassword) {
+			return res.status(400).json({
+				success: false,
+				message: 'Email, Password cũ và Password mới là bắt buộc'
+			});
+		}
+		const result = await accountRepo.changePassword_ByEmail(email, resetToken, oldPassword, newPassword);
+		if (result === 0) {
+			return res.status(400).json({
+				success: false,
+				message: 'Token đặt lại không hợp lệ hoặc đã hết hạn'
+			});
+		} else {
+			return res.status(200).json({
+				success: true,
+				message: 'Đổi mật khẩu thành công'
+			});
+		}
+	} catch (error) {
+		console.error('Error in changePasswordByEmail controller:', error);
+		res.status(500).json({
+			success: false,
+			message: error.message || 'Lỗi server'
+		});
+	}
+};
+
+// POST /public/check-phone-number/:phoneNumber
+exports.checkAccountByPhoneNumber = async (req, res) => {
+	try {
+		const { phoneNumber } = req.params;
+		// Kiểm tra số điện thoại có được cung cấp không
+		if (!phoneNumber) {
+			return res.status(400).json({
+				success: false,
+				message: 'Số điện thoại là bắt buộc'
+			});
+		}
+		// Kiểm tra format số điện thoại (có 10 số)
+		const phoneRegex = /^\d{10}$/;
+		if (!phoneRegex.test(phoneNumber)) {
+			return res.status(400).json({
+				success: false,
+				message: 'Số điện thoại không hợp lệ.'
+			});
+		}
+		const result = await accountRepo.checkAccountByPhoneNumber(phoneNumber);
+		if (result === 0) {
+			return res.status(404).json({
+				success: false,
+				message: 'Không tìm thấy tài khoản với số điện thoại này'
+			});
+		} else if (result === -1) {
+			return res.status(500).json({
+				success: false,
+				message: 'Lỗi khi gửi OTP. Vui lòng thử lại sau'
+			});
+		} else {
+			return res.status(200).json({
+				success: true,
+				message: 'Tìm thấy tài khoản. OTP đã được gửi đến số điện thoại của bạn',
+				data: {
+					phoneNumber: phoneNumber,
+					accountExists: true,
+					otpSent: true
+				}
+			});
+		}
+	} catch (error) {
+		console.error('Error in checkAccountByPhoneNumber controller:', error);
+		res.status(500).json({
+			success: false,
+			message: error.message || 'Lỗi server'
+		});
+	}
+};
+
+// POST /public/verify-otp-phone
+exports.verifyOTP_Phone = async (req, res) => {
+	try {
+		const { phoneNumber, otp } = req.body;
+		// Kiểm tra các trường bắt buộc
+		if (!phoneNumber || !otp) {
+			return res.status(400).json({
+				success: false,
+				message: 'Số điện thoại và OTP là bắt buộc'
+			});
+		}
+		// Kiểm tra format số điện thoại (có 10 số)
+		const phoneRegex = /^\d{10}$/;
+		if (!phoneRegex.test(phoneNumber)) {
+			return res.status(400).json({
+				success: false,
+				message: 'Số điện thoại không hợp lệ.'
+			});
+		}
+		// Kiểm tra format OTP (6 số)
+		const otpRegex = /^\d{6}$/;
+		if (!otpRegex.test(otp)) {
+			return res.status(400).json({
+				success: false,
+				message: 'OTP phải là 6 chữ số'
+			});
+		}
+		const result = await smsService.verifyOTP(phoneNumber, otp);
+		if (result.success) {
+			res.status(200).json({
+				success: true,
+				message: result.message,
+				data: {
+					phoneNumber: phoneNumber,
+					verified: true,
+					resetToken: result.resetToken
+				}
+			});
+		} else {
+			res.status(400).json({
+				success: false,
+				message: result.message
+			});
+		}
+	} catch (error) {
+		console.error('Error in verifyOTP_Phone controller:', error);
+		res.status(500).json({
+			success: false,
+			message: error.message || 'Lỗi server'
+		});
+	}
+};
+
+// POST /public/change-password-by-phone-number
+exports.changePasswordByPhoneNumber = async (req, res) => {
+	try {
+		const { phoneNumber, resetToken, oldPassword, newPassword } = req.body;
+		if (!phoneNumber || !resetToken || !oldPassword || !newPassword) {
+			return res.status(400).json({
+				success: false,
+				message: 'Số điện thoại, Token và mật khẩu mới là bắt buộc'
+			});
+		}
+		const result = await accountRepo.changePassword_ByPhoneNumber(phoneNumber, resetToken, oldPassword, newPassword);
+		if (result === 0) {
+			return res.status(400).json({
+				success: false,
+				message: 'Token đặt lại không hợp lệ hoặc đã hết hạn'
+			});
+		} else {
+			return res.status(200).json({
+				success: true,
+				message: 'Đổi mật khẩu thành công'
+			});
+		}
+	} catch (error) {
+		console.error('Error in changePasswordByPhoneNumber controller:', error);
+		res.status(500).json({
+			success: false,
+			message: error.message || 'Lỗi server'
+		});
 	}
 };

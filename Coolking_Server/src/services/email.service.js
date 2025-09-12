@@ -1,6 +1,5 @@
 const nodemailer = require('nodemailer');
 const redisService = require('./redis.service');
-const bcrypt = require("bcrypt");
 
 // Tạo transporter cho email
 const transporter = nodemailer.createTransport({
