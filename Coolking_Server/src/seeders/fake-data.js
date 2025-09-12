@@ -24,7 +24,7 @@ async function seed() {
             faculty_id = 'F' + faker.number.int({ min: 1000, max: 9999 });
         } while (facultyIds.has(faculty_id));
         facultyIds.add(faculty_id);
-        
+
         faculties.push(await models.Faculty.create({
             id: uuidv4(),
             faculty_id: faculty_id,
@@ -38,7 +38,7 @@ async function seed() {
     // 1b. Major
     const majors = [];
     const majorIds = new Set();
-    
+
     // Danh sách các tên ngành học mẫu (tiếng Anh để tránh lỗi encoding)
     const majorNames = [
         'Information Technology', 'Software Engineering', 'Information Security',
@@ -59,21 +59,21 @@ async function seed() {
         'Journalism', 'Multimedia Communications', 'Tourism',
         'Hotel Management', 'Restaurant Management'
     ];
-    
+
     for (let i = 0; i < 50; i++) {
         const faculty = faculties[faker.number.int({ min: 0, max: faculties.length - 1 })];
-        
+
         let major_id;
         do {
             major_id = 'M' + faker.number.int({ min: 1000, max: 9999 });
         } while (majorIds.has(major_id));
         majorIds.add(major_id);
-        
+
         // Lấy tên ngành học ngẫu nhiên từ danh sách
-        const majorName = i < majorNames.length 
-            ? majorNames[i] 
+        const majorName = i < majorNames.length
+            ? majorNames[i]
             : majorNames[faker.number.int({ min: 0, max: majorNames.length - 1 })];
-        
+
         majors.push(await models.Major.create({
             id: uuidv4(),
             major_id: major_id,
@@ -108,13 +108,13 @@ async function seed() {
     const subjectIds = new Set();
     for (let i = 0; i < 50; i++) {
         const faculty = faculties[faker.number.int({ min: 0, max: faculties.length - 1 })];
-        
+
         let subject_id;
         do {
             subject_id = 'S' + faker.number.int({ min: 1000, max: 9999 });
         } while (subjectIds.has(subject_id));
         subjectIds.add(subject_id);
-        
+
         subjects.push(await models.Subject.create({
             id: uuidv4(),
             subject_id: subject_id,
@@ -185,7 +185,7 @@ async function seed() {
         // 80% sinh viên có chuyên ngành, 20% chưa chọn chuyên ngành (major_id = null)
         const hasMajor = faker.datatype.boolean(0.8);
         const major = hasMajor ? majors[faker.number.int({ min: 0, max: majors.length - 1 })] : null;
-        
+
         let student_id;
         do {
             student_id = 'ST' + faker.number.int({ min: 1000, max: 9999 });
@@ -249,39 +249,39 @@ async function seed() {
     const usedEmails = new Set();
     const usedPhones = new Set();
     let accountCount = 0;
-    
+
     // Tạo danh sách tất cả người dùng có thể
     const allUsers = [
-        ...students.map(s => ({ 
-            id: s.student_id, 
+        ...students.map(s => ({
+            id: s.student_id,
             role: 'STUDENT',
             email: s.email,
             phone: s.phone
         })),
-        ...lecturers.map(l => ({ 
-            id: l.lecturer_id, 
+        ...lecturers.map(l => ({
+            id: l.lecturer_id,
             role: 'LECTURER',
             email: l.email,
             phone: l.phone
         })),
-        ...parents.map(p => ({ 
-            id: p.parent_id, 
+        ...parents.map(p => ({
+            id: p.parent_id,
             role: 'PARENT',
             email: p.email,
             phone: p.phone
         }))
     ];
-    
+
     // Xáo trộn danh sách để chọn ngẫu nhiên
     const shuffledUsers = faker.helpers.shuffle([...allUsers]);
-    
+
     // Tạo tối đa 50 account hoặc cho đến khi hết người dùng
     for (let i = 0; i < Math.min(50, shuffledUsers.length); i++) {
         const { id: user_id, role, email: originalEmail, phone: originalPhone } = shuffledUsers[i];
-        
+
         if (!usedUserIds.has(user_id)) {
             usedUserIds.add(user_id);
-            
+
             // Đảm bảo email là duy nhất
             let email = originalEmail;
             if (email && usedEmails.has(email)) {
@@ -291,7 +291,7 @@ async function seed() {
                 } while (usedEmails.has(email));
             }
             if (email) usedEmails.add(email);
-            
+
             // Đảm bảo phone_number là duy nhất
             let phone_number = originalPhone;
             if (phone_number && usedPhones.has(phone_number)) {
@@ -301,7 +301,7 @@ async function seed() {
                 } while (usedPhones.has(phone_number));
             }
             if (phone_number) usedPhones.add(phone_number);
-            
+
             await models.Account.create({
                 id: uuidv4(),
                 user_id,
@@ -314,32 +314,45 @@ async function seed() {
             accountCount++;
         }
     }
-    
+
     console.log(`Created ${accountCount} unique accounts`);
-    
+
 
     // 12. Schedule
     // Lấy danh sách các user_id đã được tạo account
     const accountUsers = await models.Account.findAll();
     const validUserIds = accountUsers.map(account => account.user_id);
-    
+
     for (let i = 0; i < 50; i++) {
         // Chỉ sử dụng những user_id đã tồn tại trong bảng accounts
         if (validUserIds.length === 0) {
             console.log("Không có user_id hợp lệ để tạo Schedule");
             break;
         }
-        
+
         const user_id = faker.helpers.arrayElement(validUserIds);
         const courseSection = courseSections[faker.number.int({ min: 0, max: courseSections.length - 1 })];
-        
+
+        const type = faker.helpers.arrayElement(['REGULAR', 'MAKEUP', 'EXAM']);
+        const startDate = faker.date.future({ years: 1 });
+        const endDate = faker.date.future({ years: 1, refDate: startDate });
+
+        const startLesson = faker.number.int({ min: 1, max: 10 });
+        const endLesson = faker.number.int({ min: startLesson, max: 12 });
+
         await models.Schedule.create({
             id: uuidv4(),
             user_id,
             course_section_id: courseSection.id,
-            isExam: faker.datatype.boolean(),
-            start_lesson: faker.number.int({ min: 1, max: 12 }),
-            end_lesson: faker.number.int({ min: 1, max: 12 })
+            type,
+            day_of_week: type === 'REGULAR' ? faker.number.int({ min: 1, max: 7 }) : null,
+            date: type !== 'REGULAR' ? startDate : null,
+            room: `Room ${faker.number.int({ min: 100, max: 499 })}`,
+            start_date: startDate,
+            end_date: endDate,
+            start_lesson: startLesson,
+            end_lesson: endLesson,
+            status: faker.helpers.arrayElement(['SCHEDULED', 'COMPLETED', 'CANCELED'])
         });
     }
 
@@ -351,12 +364,12 @@ async function seed() {
             { model: models.CourseSection, as: 'course_section' }
         ]
     });
-    
+
     // Chỉ tạo điểm cho các sinh viên đã đăng ký khóa học
     for (let i = 0; i < Math.min(50, studentCourseSections.length); i++) {
         const randomIndex = faker.number.int({ min: 0, max: studentCourseSections.length - 1 });
         const studentCourseSection = studentCourseSections[randomIndex];
-        
+
         await models.Score.create({
             id: uuidv4(),
             student_id: studentCourseSection.student_id,

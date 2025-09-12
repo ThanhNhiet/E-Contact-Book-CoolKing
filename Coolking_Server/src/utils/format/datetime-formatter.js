@@ -33,4 +33,12 @@ const convertddMMyyyy2yyyyMMdd = (dateString) => {
   return `${yyyy}-${MM}-${dd}`;
 };
 
-module.exports = { formatDateTimeVN, formatDateVN, convertddMMyyyy2yyyyMMdd };
+function getDateOfWeek(dayOfWeek, currentDate) {
+  const startOfWeek = new Date(currentDate);
+  startOfWeek.setDate(currentDate.getDate() - currentDate.getDay() + 1);
+  const date = new Date(startOfWeek);
+  date.setDate(startOfWeek.getDate() + (dayOfWeek - 1));
+  return date;
+};
+
+module.exports = { formatDateTimeVN, formatDateVN, convertddMMyyyy2yyyyMMdd, getDateOfWeek };
