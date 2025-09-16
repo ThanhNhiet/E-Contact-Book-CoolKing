@@ -51,9 +51,6 @@ chatSchema.virtual('members', {
   foreignField: 'chat'
 });
 
-// Add indexes
-chatSchema.index({ chatID: 1 });
-
 const Chat = mongoose.model('Chat', chatSchema);
 
 module.exports = {

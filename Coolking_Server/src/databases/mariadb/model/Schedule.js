@@ -23,8 +23,27 @@ module.exports = function(sequelize, DataTypes) {
         key: 'id'
       }
     },
+
+    // Có phải lịch thi hay không
     isExam: {
       type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+
+    // Thứ trong tuần (1-7)
+    day_of_week: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
+
+    // Áp dụng cho lịch thi
+    date: {
+      type: DataTypes.DATEONLY,
+      allowNull: true
+    },
+    room: {
+      type: DataTypes.STRING(255),
       allowNull: false
     },
     start_lesson: {
@@ -34,6 +53,23 @@ module.exports = function(sequelize, DataTypes) {
     end_lesson: {
       type: DataTypes.INTEGER,
       allowNull: false
+    },
+
+    //Ngày bắt đầu lớp học phần
+    start_date: {
+      type: DataTypes.DATEONLY,
+      allowNull: false
+    },
+    //Ngày kết thúc lớp học phần
+    end_date: {
+      type: DataTypes.DATEONLY,
+      allowNull: false
+    },
+
+    isCompleted: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
     }
   }, {
     sequelize,

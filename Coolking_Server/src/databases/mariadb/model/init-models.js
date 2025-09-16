@@ -3,6 +3,7 @@ var DataTypes = require("sequelize").DataTypes;
 var _Account = require("./Account");
 var _Attendance = require("./Attendance");
 var _Schedule = require("./Schedule");
+var _ScheduleException = require("./ScheduleException");
 var _Clazz = require("./Clazz");
 var _CourseSection = require("./CourseSection");
 var _Faculty = require("./Faculty");
@@ -33,6 +34,7 @@ function initModels(sequelize) {
   const Subject = _Subject(sequelize, DataTypes);
   const Account = _Account(sequelize, DataTypes);
   const Schedule = _Schedule(sequelize, DataTypes);
+  const ScheduleException = _ScheduleException(sequelize, DataTypes);
   const RefreshToken = _RefreshToken(sequelize, DataTypes);
 
   // ===== Associations =====
@@ -55,6 +57,14 @@ function initModels(sequelize) {
   // CourseSection - Schedule
   Schedule.belongsTo(CourseSection, { as: "course_section", foreignKey: "course_section_id" });
   CourseSection.hasMany(Schedule, { as: "schedules", foreignKey: "course_section_id" });
+
+  // Schedule - ScheduleException
+  ScheduleException.belongsTo(Schedule, { as: "schedule", foreignKey: "schedule_id" });
+  Schedule.hasMany(ScheduleException, { as: "schedule_exceptions", foreignKey: "schedule_id" });
+
+  // ScheduleException - Lecturer (new_lecturer_id)
+  ScheduleException.belongsTo(Lecturer, { as: "new_lecturer", foreignKey: "new_lecturer_id", targetKey: "lecturer_id" });
+  Lecturer.hasMany(ScheduleException, { as: "schedule_exceptions", foreignKey: "new_lecturer_id", sourceKey: "lecturer_id" });
 
   // CourseSection - LecturerCourseSection
   LecturerCourseSection.belongsTo(CourseSection, { as: "course_section", foreignKey: "course_section_id" });
@@ -135,6 +145,7 @@ function initModels(sequelize) {
     Account,
     Attendance,
     Schedule,
+    ScheduleException,
     Clazz,
     CourseSection,
     Faculty,
