@@ -48,6 +48,14 @@ module.exports = function(sequelize, DataTypes) {
         key: 'faculty_id'
       }
     },
+    homeroom_class_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'clazz',
+        key: 'id'
+      }
+    },
     isDeleted: {
       type: DataTypes.BOOLEAN,
       allowNull: false
@@ -80,6 +88,13 @@ module.exports = function(sequelize, DataTypes) {
           { name: "faculty_id" },
         ]
       },
+      {
+        name: "homeroom_class_id",
+        using: "BTREE",
+        fields: [
+          { name: "homeroom_class_id" },
+        ]
+      }
     ]
   });
 };
