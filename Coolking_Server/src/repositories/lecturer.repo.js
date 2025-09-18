@@ -16,6 +16,12 @@ const getLecturerByLecturer_id = async (lecturer_id) => {
           as: 'faculty',
           attributes: ['name'],
           required: false
+        },
+        {
+          model: models.Clazz,
+          as: 'clazz',
+          attributes: ['name'],
+          required: false
         }
       ]
     });
@@ -34,6 +40,7 @@ const getLecturerByLecturer_id = async (lecturer_id) => {
       email: result.email,
       address: result.address,
       facultyName: result.faculty ? result.faculty.name : null,
+      homeroomClassName: result.clazz ? result.clazz.name : null,
       createdAt: datetimeFormatter.formatDateTimeVN(result.createdAt),
       updatedAt: datetimeFormatter.formatDateTimeVN(result.updatedAt),
     };
