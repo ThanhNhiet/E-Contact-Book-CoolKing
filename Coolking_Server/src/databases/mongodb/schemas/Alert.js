@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
+// Define targetScope enum
+const TargetScope = {
+  PERSON: 'person',
+  ALL: 'all'
+};
+
 // Define the Alert schema
 const alertSchema = new Schema({
   _id: {
@@ -9,13 +15,10 @@ const alertSchema = new Schema({
   },
   senderID: {
     type: String,
-    required: true,
-    ref: 'Account'
+    required: true
   },
   receiverID: {
-    type: String,
-    required: true,
-    ref: 'Account'
+    type: String
   },
   header: {
     type: String,
@@ -27,6 +30,7 @@ const alertSchema = new Schema({
   },
   targetScope: {
     type: String,
+    enum: Object.values(TargetScope),
     required: true
   },
   createdAt: {

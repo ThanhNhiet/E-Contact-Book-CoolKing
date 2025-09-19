@@ -33,8 +33,7 @@ const chatSchema = new Schema({
     default: Date.now
   },
   createdBy: {
-    type: String,
-    ref: 'Account'
+    type: String
   },
   _id: {
     type: String,

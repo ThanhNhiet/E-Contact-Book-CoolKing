@@ -71,8 +71,7 @@ const messageSchema = new Schema({
   },
   senderID: {
     type: String,
-    required: true,
-    ref: 'Account'
+    required: true
   },
   type: {
     type: String,

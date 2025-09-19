@@ -16,8 +16,7 @@ const chatMemberSchema = new Schema({
   },
   userID: {
     type: String,
-    required: true,
-    ref: 'Account'
+    required: true
   },
   role: {
     type: String,
