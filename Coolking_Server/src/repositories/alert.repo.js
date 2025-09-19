@@ -128,17 +128,17 @@ const getAlertsByUser = async (userID, page = 1, pageSize = 10) => {
                 { targetScope: 'all' } // Thông báo cho tất cả
             ]
         })
-            .sort({ updatedAt: -1 }) // Sắp xếp theo thời gian updatedAt giảm dần
+            .sort({ createdAt: -1 }) // Sắp xếp theo thời gian createdAt giảm dần
             .skip(skip)
             .limit(pageSize)
-            .select('_id senderID receiverID header body targetScope isRead createdAt updatedAt');
+            .select('_id senderID receiverID header body targetScope isRead createdAt createdAt');
 
         // Xử lý dữ liệu alerts
         const processedAlerts = alerts.map(alert => {
             let isRead = alert.isRead;
 
             // Xử lý logic đặc biệt cho targetScope: 'all'
-            if (alert.targetScope === 'all' && alert.updatedAt < sevenDaysAgo) {
+            if (alert.targetScope === 'all' && alert.createdAt < sevenDaysAgo) {
                 isRead = true; // Mặc định set isRead = true nếu quá 7 ngày
             }
 
@@ -174,7 +174,7 @@ const getAlertsByUser = async (userID, page = 1, pageSize = 10) => {
         const allUnreadCount = await Alert.countDocuments({
             targetScope: 'all',
             isRead: false,
-            updatedAt: { $gte: sevenDaysAgo }
+            createdAt: { $gte: sevenDaysAgo }
         });
 
         const unreadCount = personalUnreadCount + allUnreadCount;
@@ -225,10 +225,8 @@ const markAlertAsRead = async (alertId, userID) => {
         const alert = await Alert.findOneAndUpdate(
             {
                 _id: alertId,
-                $or: [
-                    { receiverID: userID, targetScope: 'person' }, // Thông báo cá nhân
-                    { targetScope: 'all' } // Thông báo cho tất cả
-                ]
+                receiverID: userID, 
+                targetScope: 'person'
             },
             {
                 isRead: true,
@@ -243,12 +241,7 @@ const markAlertAsRead = async (alertId, userID) => {
 
         return {
             success: true,
-            message: 'Đánh dấu đã đọc thành công',
-            data: {
-                alertId: alert._id,
-                isRead: alert.isRead,
-                updatedAt: alert.updatedAt
-            }
+            message: 'Đánh dấu đã đọc thành công'
         };
 
     } catch (error) {
@@ -257,47 +250,116 @@ const markAlertAsRead = async (alertId, userID) => {
     }
 };
 
-/**
- * Xóa thông báo (chỉ admin mới được xóa thông báo all)
- * @param {String} alertId - ID thông báo
- * @param {String} userID - ID người dùng
- * @param {String} userRole - Role của người dùng (ADMIN, USER, etc.)
- * @returns {Object} - Kết quả xóa
- */
-const deleteAlert = async (alertId, userID, userRole) => {
+// Xóa thông báo dành cho admin
+const deleteAlert4Admin = async (alertId, senderID, createdAt) => {
     try {
-        if (!alertId || !userID) {
-            throw new Error('AlertId và userID là bắt buộc');
+        // 2 trường hợp, xóa thông báo all hoặc xóa thông báo person
+        // Tìm thông báo all
+        if (alertId !== '') {
+            const alert = await Alert.findById(alertId);
+            if (!alert) {
+                throw new Error('Không tìm thấy thông báo');
+            }
+            if (alert.targetScope !== 'all') {
+                throw new Error('Alert này không phải là thông báo hệ thống');
+            }
+            await Alert.findByIdAndDelete(alertId);
+            return {
+                success: true,
+                message: 'Xóa thông báo thành công'
+            };
         }
 
+        // Tìm danh sách thông báo person bằng senderID và createdAt
+        const alerts = await Alert.find({
+            senderID: senderID,
+            targetScope: 'person',
+            createdAt: { $lt: datetimeFormatter.parseDDMMYYYY2UTC(createdAt) }
+        });
+        if (alerts.length === 0) {
+            throw new Error('Không tìm thấy thông báo nào để xóa');
+        }
+        await Alert.deleteMany({
+            senderID: senderID,
+            targetScope: 'person',
+            createdAt: { $lt: datetimeFormatter.parseDDMMYYYY2UTC(createdAt) }
+        });
+        return {
+            success: true,
+            message: 'Xóa thông báo thành công'
+        };
+
+    } catch (error) {
+        console.error('Error in deleteAlert4Admin:', error);
+        throw new Error(`Lỗi khi xóa thông báo: ${error.message}`);
+    }
+};
+
+// Xóa thông báo dành cho giảng viên
+const deleteAlert4Lecturer = async (senderID, createdAt) => {
+    try {
+        if (!senderID) {
+            throw new Error('SenderID là bắt buộc');
+        }
         // Tìm thông báo
-        const alert = await Alert.findById(alertId);
+        const alerts = await Alert.find({
+            senderID: senderID,
+            targetScope: 'person',
+            createdAt: { $lt: datetimeFormatter.parseDDMMYYYY2UTC(createdAt) }
+        });
+        if (alerts.length === 0) {
+            throw new Error('Không tìm thấy thông báo');
+        }
+
+        // Xóa thông báo
+        await Alert.deleteMany({
+            senderID: senderID,
+            targetScope: 'person',
+            createdAt: { $lt: datetimeFormatter.parseDDMMYYYY2UTC(createdAt) }
+        });
+
+        return {
+            success: true,
+            message: 'Xóa thông báo thành công'
+        };
+
+    } catch (error) {
+        console.error('Error in deleteAlert4Lecturer:', error);
+        throw new Error(`Lỗi khi xóa thông báo: ${error.message}`);
+    }
+};
+
+// Xóa thông báo dành cho người nhận
+const deleteAlert4Receiver = async (alertID, receiverID) => {
+    try {
+        if (!receiverID) {
+            throw new Error('ReceiverID là bắt buộc');
+        }
+        if (!alertID) {
+            throw new Error('AlertID là bắt buộc');
+        }
+        // Tìm thông báo
+        const alert = await Alert.findOne({
+            _id: alertID,
+            receiverID: receiverID
+        });
         if (!alert) {
             throw new Error('Không tìm thấy thông báo');
         }
 
-        // Kiểm tra quyền xóa
-        if (alert.targetScope === 'all' && userRole !== 'ADMIN') {
-            throw new Error('Chỉ admin mới có thể xóa thông báo hệ thống');
-        }
-
-        if (alert.targetScope === 'person' && alert.receiverID !== userID && userRole !== 'ADMIN') {
-            throw new Error('Bạn không có quyền xóa thông báo này');
-        }
-
         // Xóa thông báo
-        await Alert.findByIdAndDelete(alertId);
+        await Alert.deleteOne({
+            _id: alertID,
+            receiverID: receiverID
+        });
 
         return {
             success: true,
-            message: 'Xóa thông báo thành công',
-            data: {
-                alertId: alertId
-            }
+            message: 'Xóa thông báo thành công'
         };
 
     } catch (error) {
-        console.error('Error in deleteAlert:', error);
+        console.error('Error in deleteAlert4Lecturer:', error);
         throw new Error(`Lỗi khi xóa thông báo: ${error.message}`);
     }
 };
@@ -307,5 +369,7 @@ module.exports = {
     sendAlertToPerson,
     getAlertsByUser,
     markAlertAsRead,
-    deleteAlert
+    deleteAlert4Admin,
+    deleteAlert4Lecturer,
+    deleteAlert4Receiver
 };

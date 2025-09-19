@@ -134,52 +134,6 @@ const getMyAlerts = async (req, res) => {
 };
 
 /**
- * Lấy danh sách thông báo của một user cụ thể (Admin only)
- * GET /api/alerts/user/:userID?page=1&pageSize=10
- */
-const getUserAlerts = async (req, res) => {
-    try {
-        const { userID } = req.params;
-
-        // Validate userID
-        if (!userID) {
-            return res.status(400).json({
-                success: false,
-                message: 'UserID là bắt buộc'
-            });
-        }
-
-        // Lấy pagination params
-        const page = parseInt(req.query.page) || 1;
-        const pageSize = parseInt(req.query.pageSize) || 10;
-
-        // Validate pagination
-        if (page < 1 || pageSize < 1 || pageSize > 100) {
-            return res.status(400).json({
-                success: false,
-                message: 'Page phải >= 1 và pageSize phải từ 1-100'
-            });
-        }
-
-        // Gọi repository để lấy thông báo
-        const result = await alertRepo.getAlertsByUser(userID, page, pageSize);
-
-        res.status(200).json({
-            success: true,
-            message: 'Lấy danh sách thông báo thành công',
-            data: result.data
-        });
-
-    } catch (error) {
-        console.error('Error in getUserAlerts controller:', error);
-        res.status(500).json({
-            success: false,
-            message: error.message || 'Lỗi server khi lấy danh sách thông báo'
-        });
-    }
-};
-
-/**
  * Đánh dấu thông báo đã đọc
  * PUT /api/alerts/:alertId/read
  */
@@ -189,7 +143,6 @@ const markAlertAsRead = async (req, res) => {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
         const decoded = jwtUtils.verifyAccessToken(token);
-        const userID = decoded.user_id;
 
         const { alertId } = req.params;
 
@@ -202,7 +155,7 @@ const markAlertAsRead = async (req, res) => {
         }
 
         // Gọi repository để đánh dấu đã đọc
-        const result = await alertRepo.markAlertAsRead(alertId, userID);
+        const result = await alertRepo.markAlertAsRead(alertId, decoded.user_id);
 
         res.status(200).json({
             success: true,
@@ -229,27 +182,21 @@ const deleteAlert = async (req, res) => {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
         const decoded = jwtUtils.verifyAccessToken(token);
-        const userID = decoded.user_id;
-        const userRole = decoded.role;
 
-        const { alertId } = req.params;
+        const { createdAt, senderID, alertID } = req.body;
 
-        // Validate alertId
-        if (!alertId) {
-            return res.status(400).json({
-                success: false,
-                message: 'AlertId là bắt buộc'
-            });
+        let result;
+        if (decoded.role === 'ADMIN') {
+            result = await alertRepo.deleteAlert4Admin(alertID, senderID, createdAt);
+        }
+        else if (decoded.role === 'LECTURER') {
+            result = await alertRepo.deleteAlert4Lecturer(decoded.user_id, createdAt);
+        }
+        else {
+            result = await alertRepo.deleteAlert4Receiver(alertID, decoded.user_id);
         }
 
-        // Gọi repository để xóa thông báo
-        const result = await alertRepo.deleteAlert(alertId, userID, userRole);
-
-        res.status(200).json({
-            success: true,
-            message: result.message,
-            data: result.data
-        });
+        res.status(200).json(result);
 
     } catch (error) {
         console.error('Error in deleteAlert controller:', error);
@@ -269,44 +216,10 @@ const deleteAlert = async (req, res) => {
     }
 };
 
-/**
- * Lấy số lượng thông báo chưa đọc
- * GET /api/alerts/unread-count
- */
-const getUnreadCount = async (req, res) => {
-    try {
-        // Lấy thông tin người dùng từ token
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.split(' ')[1];
-        const decoded = jwtUtils.verifyAccessToken(token);
-        const userID = decoded.user_id;
-
-        // Gọi repository để lấy thông báo (chỉ lấy 1 item để có unreadCount)
-        const result = await alertRepo.getAlertsByUser(userID, 1, 1);
-
-        res.status(200).json({
-            success: true,
-            message: 'Lấy số thông báo chưa đọc thành công',
-            data: {
-                unreadCount: result.data.unreadCount
-            }
-        });
-
-    } catch (error) {
-        console.error('Error in getUnreadCount controller:', error);
-        res.status(500).json({
-            success: false,
-            message: error.message || 'Lỗi server khi lấy số thông báo chưa đọc'
-        });
-    }
-};
-
 module.exports = {
     sendAlertToAll,
     sendAlertToPerson,
     getMyAlerts,
-    getUserAlerts,
     markAlertAsRead,
-    deleteAlert,
-    getUnreadCount
+    deleteAlert
 };
