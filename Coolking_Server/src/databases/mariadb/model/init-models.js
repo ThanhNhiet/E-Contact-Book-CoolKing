@@ -61,8 +61,8 @@ function initModels(sequelize) {
   Lecturer.hasMany(Attendance, { as: "attendances", foreignKey: "lecturer_id", sourceKey: "lecturer_id" });
 
   // Attendance - AttendanceStudent
-  AttendanceStudent.belongsTo(Attendance, { as: "attendance", foreignKey: "attendances_id" });
-  Attendance.hasMany(AttendanceStudent, { as: "attendance_students", foreignKey: "attendances_id" });
+  AttendanceStudent.belongsTo(Attendance, { as: "attendance", foreignKey: "attendance_id" });
+  Attendance.hasMany(AttendanceStudent, { as: "attendance_students", foreignKey: "attendance_id" });
 
   // Student - AttendanceStudent
   AttendanceStudent.belongsTo(Student, { as: "student", foreignKey: "student_id", targetKey: "student_id" });

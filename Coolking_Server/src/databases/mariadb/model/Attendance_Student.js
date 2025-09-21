@@ -9,7 +9,7 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: false,
       primaryKey: true
     },
-    attendances_id: {
+    attendance_id: {
       type: DataTypes.UUID,
       allowNull: false,
       references: {
@@ -58,7 +58,7 @@ module.exports = function(sequelize, DataTypes) {
         name: "attendances_id",
         using: "BTREE",
         fields: [
-          { name: "attendances_id" },
+          { name: "attendance_id" },
         ]
       },
       {
@@ -73,8 +73,11 @@ module.exports = function(sequelize, DataTypes) {
         unique: true,
         using: "BTREE",
         fields: [
-          { name: "attendances_id" },
+          { name: "attendance_id" },
           { name: "student_id" },
+          { name: "start_lesson" },
+          { name: "end_lesson" },
+          { name: "createdAt" }
         ]
       },
     ]

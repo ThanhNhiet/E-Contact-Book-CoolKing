@@ -14,7 +14,6 @@ const formatDateTimeVN = (isoString) => {
 
 const formatDateVN = (isoString) => {
   const date = new Date(isoString);
-  date.setHours(date.getHours() + 7);
 
   const dd = String(date.getDate()).padStart(2, '0');
   const MM = String(date.getMonth() + 1).padStart(2, '0');
