@@ -44,35 +44,34 @@ const getStudentsByCourseSectionID = async (course_section_id) => {
 };
 
 /**
- * Lấy danh sách các sinh viên điểm danh bằng attendance_id
- * @param {string} attendance_id 
- * @returns {Array} Danh sách điểm danh sinh viên
+ * Lấy thông tin các buổi điểm danh của 1 lớp học phần bằng course_section_id
+ * @param {string} course_section_id 
+ * @returns {Array} Danh sách các buổi điểm danh
  */
-const getAttendanceStudentListByAttendanceID = async (attendance_id) => {
+const getAttendanceListByCourseID = async (course_section_id) => {
     try {
         // Validate input
-        if (!attendance_id) {
-            throw new Error('attendance_id is required');
+        if (!course_section_id) {
+            throw new Error('course_section_id is required');
         }
 
-        const attendanceStudents = await models.AttendanceStudent.findAll({
+        const attendances = await models.Attendance.findAll({
             where: {
-                attendance_id: attendance_id
+                course_section_id: course_section_id
             },
-            attributes: ['student_id', 'status', 'description', 'start_lesson', 'end_lesson', 'createdAt']
+            attributes: ['id', 'date_attendance', 'start_lesson', 'end_lesson'],
+            order: [['date_attendance', 'ASC'], ['start_lesson', 'ASC']]
         });
 
-        return attendanceStudents.map(item => ({
-            student_id: item.student_id,
-            status: item.status,
-            description: item.description,
+        return attendances.map(item => ({
+            attendance_id: item.id,
+            date_attendance: item.date_attendance,
             start_lesson: item.start_lesson,
-            end_lesson: item.end_lesson,
-            createdAt: item.createdAt
+            end_lesson: item.end_lesson
         }));
 
     } catch (error) {
-        console.error('Error in getAttendanceStudentListByAttendanceID:', error);
+        console.error('Error in getAttendanceListByCourseID:', error);
         throw error;
     }
 };
@@ -154,19 +153,46 @@ const getCourseSectionDetailByID = async (course_section_id) => {
 };
 
 /**
- * Merge kết quả và trả về dữ liệu điểm danh hoàn chỉnh
- * @param {string} course_section_id 
+ * Lấy danh sách các sinh viên điểm danh bằng attendance_id
  * @param {string} attendance_id 
+ * @returns {Array} Danh sách điểm danh sinh viên
+ */
+const getAttendanceStudentListByAttendanceID = async (attendance_id) => {
+    try {
+        // Validate input
+        if (!attendance_id) {
+            throw new Error('attendance_id is required');
+        }
+
+        const attendanceStudents = await models.AttendanceStudent.findAll({
+            where: {
+                attendance_id: attendance_id
+            },
+            attributes: ['student_id', 'status', 'description']
+        });
+
+        return attendanceStudents.map(item => ({
+            student_id: item.student_id,
+            status: item.status,
+            description: item.description
+        }));
+
+    } catch (error) {
+        console.error('Error in getAttendanceStudentListByAttendanceID:', error);
+        throw error;
+    }
+};
+
+/**
+ * Merge kết quả và trả về dữ liệu điểm danh hoàn chỉnh theo course_section_id
+ * @param {string} course_section_id 
  * @returns {Object} Dữ liệu điểm danh hoàn chỉnh
  */
-const getAttendanceDetailsByCourseSectionAndAttendanceID = async (course_section_id, attendance_id) => {
+const getAttendanceDetailsByCourseSectionID = async (course_section_id) => {
     try {
         // Validate input parameters
         if (!course_section_id) {
             throw new Error('course_section_id is required');
-        }
-        if (!attendance_id) {
-            throw new Error('attendance_id is required');
         }
 
         // Lấy thông tin chi tiết lớp học phần
@@ -175,46 +201,28 @@ const getAttendanceDetailsByCourseSectionAndAttendanceID = async (course_section
         // Lấy danh sách sinh viên trong lớp
         const allStudents = await getStudentsByCourseSectionID(course_section_id);
 
-        // Lấy danh sách điểm danh của sinh viên
-        const attendanceStudents = await getAttendanceStudentListByAttendanceID(attendance_id);
+        // Lấy danh sách các buổi điểm danh
+        const attendanceList = await getAttendanceListByCourseID(course_section_id);
 
-        // Tạo map để dễ dàng lookup thông tin điểm danh
-        const attendanceMap = new Map();
+        // Tạo danh sách attendances với thông tin điểm danh đầy đủ
+        const attendances = [];
 
-        // Tạo map để lookup attendance data theo student_id cho từng nhóm
-        const attendanceDataMap = new Map();
+        for (const attendance of attendanceList) {
+            // Lấy danh sách sinh viên điểm danh cho buổi này
+            const attendanceStudents = await getAttendanceStudentListByAttendanceID(attendance.attendance_id);
 
-        attendanceStudents.forEach(attendance => {
-            const dateKey = datetimeFormatter.formatDateVN(attendance.createdAt);
-            const lessonKey = `${attendance.start_lesson}-${attendance.end_lesson}`;
-            const key = `${dateKey}_${lessonKey}`;
-
-            if (!attendanceMap.has(key)) {
-                attendanceMap.set(key, {
-                    date: dateKey,
-                    start_lesson: attendance.start_lesson,
-                    end_lesson: attendance.end_lesson
+            // Tạo map để lookup nhanh thông tin điểm danh của từng sinh viên
+            const attendanceStudentMap = new Map();
+            attendanceStudents.forEach(item => {
+                attendanceStudentMap.set(item.student_id, {
+                    status: item.status,
+                    description: item.description
                 });
-            }
-
-            // Lưu thông tin điểm danh vào map
-            if (!attendanceDataMap.has(key)) {
-                attendanceDataMap.set(key, new Map());
-            }
-            attendanceDataMap.get(key).set(attendance.student_id, {
-                status: attendance.status,
-                description: attendance.description
             });
-        });
 
-        // Tạo danh sách students đầy đủ cho mỗi nhóm attendance
-        const attendances = Array.from(attendanceMap.values()).map(group => {
-            const groupKey = `${group.date}_${group.start_lesson}-${group.end_lesson}`;
-            const groupAttendanceData = attendanceDataMap.get(groupKey) || new Map();
-
-            // Tạo danh sách đầy đủ tất cả sinh viên
+            // Tạo danh sách đầy đủ tất cả sinh viên với thông tin điểm danh
             const students = allStudents.map(student => {
-                const attendanceData = groupAttendanceData.get(student.student_id);
+                const attendanceData = attendanceStudentMap.get(student.student_id);
 
                 return {
                     student_id: student.student_id,
@@ -226,13 +234,13 @@ const getAttendanceDetailsByCourseSectionAndAttendanceID = async (course_section
                 };
             });
 
-            return {
-                date: group.date,
-                start_lesson: group.start_lesson,
-                end_lesson: group.end_lesson,
+            attendances.push({
+                date_attendance: datetimeFormatter.formatDateVN(attendance.date_attendance),
+                start_lesson: attendance.start_lesson,
+                end_lesson: attendance.end_lesson,
                 students: students
-            };
-        });
+            });
+        }
 
         return {
             subjectName: courseSectionDetail.subjectName,
@@ -241,23 +249,21 @@ const getAttendanceDetailsByCourseSectionAndAttendanceID = async (course_section
             facultyName: courseSectionDetail.facultyName,
             sessionName: courseSectionDetail.sessionName,
             lecturerName: courseSectionDetail.lecturerName,
-            attendance_id: attendance_id,
             attendances: attendances
         };
 
     } catch (error) {
-        console.error('Error in getAttendanceDetailsByCourseSectionAndAttendanceID:', error);
+        console.error('Error in getAttendanceDetailsByCourseSectionID:', error);
         throw error;
     }
 };
 
 /**
- * Tạo mới nhiều bản ghi điểm danh 
- * @param {string} attendance_id
- * @param {object} attendanceData
- {
-    "start_lesson": num,
-    "end_lesson": num,
+ * Tạo mới bản ghi buổi điểm danh (Attendance) và điểm danh cho sinh viên (AttendanceStudent)
+ * @param {Array} attendanceData
+{
+    "start_lesson": xx,
+    "end_lesson": xx,
     "students": [
         {
             "student_id": "xxx",
@@ -265,7 +271,7 @@ const getAttendanceDetailsByCourseSectionAndAttendanceID = async (course_section
             "description": ""
         },
         {
-            "student_id": "xxx",
+            "student_id": "xxx", 
             "status": "PRESENT",
             "description": ""
         }
@@ -274,84 +280,107 @@ const getAttendanceDetailsByCourseSectionAndAttendanceID = async (course_section
 }
  * @returns {Object} success + message
  */
-const createAttendanceRecord = async (attendance_id, attendanceData) => {
+const createAttendanceRecord = async (lecturer_id, course_section_id, attendanceData) => {
     const transaction = await sequelize.transaction();
-    
+
     try {
         // Validate input
-        if (!attendance_id) {
-            throw new Error('attendance_id is required');
+        if (!lecturer_id) {
+            throw new Error('lecturer_id is required');
+        }
+        
+        if (!course_section_id) {
+            throw new Error('course_section_id is required');
         }
         
         if (!attendanceData) {
             throw new Error('attendanceData is required');
         }
-        
+
         const { start_lesson, end_lesson, students } = attendanceData;
-        
+
         // Validate required fields
         if (start_lesson === undefined || end_lesson === undefined) {
             throw new Error('start_lesson and end_lesson are required');
         }
-        
+
         if (!Array.isArray(students) || students.length === 0) {
             throw new Error('students array is required and cannot be empty');
         }
-        
+
         // Validate lessons
         if (start_lesson < 1 || end_lesson < 1 || start_lesson > end_lesson) {
             throw new Error('Invalid lesson range. start_lesson and end_lesson must be >= 1 and start_lesson <= end_lesson');
         }
-        
-        // Kiểm tra attendance record có tồn tại không
-        const existingAttendance = await models.Attendance.findByPk(attendance_id);
-        if (!existingAttendance) {
-            throw new Error(`Attendance record not found with id: ${attendance_id}`);
+
+        // Tự động tạo date_attendance theo ngày hiện tại (yyyy-MM-dd)
+        const currentDate = new Date();
+        const date_attendance = currentDate.toISOString().split('T')[0]; // yyyy-MM-dd format
+
+        console.log(`Creating attendance record for ${students.length} students on ${date_attendance}`);
+
+        // Kiểm tra lecturer có tồn tại không
+        const existingLecturer = await models.Lecturer.findOne({
+            where: { lecturer_id: lecturer_id }
+        });
+        if (!existingLecturer) {
+            throw new Error(`Lecturer not found with id: ${lecturer_id}`);
         }
-        
-        console.log(`Creating attendance records for ${students.length} students`);
-        
-        // Tạo array các attendance student records để bulk insert
+
+        // Kiểm tra course_section có tồn tại không
+        const existingCourseSection = await models.CourseSection.findByPk(course_section_id);
+        if (!existingCourseSection) {
+            throw new Error(`Course section not found with id: ${course_section_id}`);
+        }
+
+        // Tạo bản ghi Attendance trước
+        const attendanceRecord = await models.Attendance.create({
+            lecturer_id: lecturer_id,
+            course_section_id: course_section_id,
+            date_attendance: date_attendance,
+            start_lesson: start_lesson,
+            end_lesson: end_lesson
+        }, { transaction });
+
+        // Validate và tạo bản ghi AttendanceStudent
         const attendanceStudentRecords = [];
-        
+        const { StatusAttendance } = require('../databases/mariadb/model/enums');
+
         for (const studentData of students) {
             const { student_id, status, description = "" } = studentData;
-            
+
             // Validate student data
             if (!student_id) {
                 throw new Error('student_id is required for each student');
             }
-            
+
             if (!status) {
                 throw new Error(`status is required for student ${student_id}`);
             }
-            
+
             // Validate status enum
-            const { StatusAttendance } = require('../databases/mariadb/model/enums');
             if (!Object.values(StatusAttendance).includes(status)) {
                 throw new Error(`Invalid status: ${status}. Must be one of: ${Object.values(StatusAttendance).join(', ')}`);
             }
-            
+
             // Kiểm tra sinh viên có tồn tại không
             const existingStudent = await models.Student.findOne({
                 where: { student_id: student_id }
             });
-            
+
             if (!existingStudent) {
                 throw new Error(`Student not found with id: ${student_id}`);
             }
-            
+
             // Tạo record
             attendanceStudentRecords.push({
-                attendance_id: attendance_id,
+                attendance_id: attendanceRecord.id,
                 student_id: student_id,
                 status: status,
-                description: description || "",
-                start_lesson: start_lesson,
-                end_lesson: end_lesson
+                description: description || ""
             });
         }
-        
+
         // Bulk insert các attendance student records
         const createdRecords = await models.AttendanceStudent.bulkCreate(
             attendanceStudentRecords,
@@ -361,18 +390,25 @@ const createAttendanceRecord = async (attendance_id, attendanceData) => {
                 returning: true
             }
         );
-        
+
         await transaction.commit();
-        
+
         return {
             success: true,
-            message: `Dữ liệu điểm danh đã được lưu thành công cho ${createdRecords.length} sinh viên`
+            message: `Dữ liệu điểm danh đã được lưu thành công cho ${createdRecords.length} sinh viên`,
+            data: {
+                attendance_id: attendanceRecord.id,
+                date_attendance: date_attendance,
+                start_lesson: start_lesson,
+                end_lesson: end_lesson,
+                total_students: createdRecords.length
+            }
         };
-        
+
     } catch (error) {
         await transaction.rollback();
         console.error('Error in createAttendanceRecord:', error);
-        
+
         return {
             success: false,
             message: `Lỗi khi tạo dữ liệu điểm danh: ${error.message}`
@@ -381,12 +417,12 @@ const createAttendanceRecord = async (attendance_id, attendanceData) => {
 };
 
 /**
- * Cập nhật nhiều bản ghi điểm danh 
+ * Cập nhật bản ghi buổi điểm danh và điểm danh cho sinh viên
  * @param {string} attendance_id
- * @param {object} attendanceData
- {
-    "start_lesson": num,
-    "end_lesson": num,
+ * @param {Array} attendance_studentData
+{
+    "start_lesson": xx,
+    "end_lesson": xx,
     "students": [
         {
             "student_id": "xxx",
@@ -394,7 +430,7 @@ const createAttendanceRecord = async (attendance_id, attendanceData) => {
             "description": ""
         },
         {
-            "student_id": "xxx",
+            "student_id": "xxx", 
             "status": "PRESENT",
             "description": ""
         }
@@ -405,7 +441,7 @@ const createAttendanceRecord = async (attendance_id, attendanceData) => {
  */
 const updateAttendanceRecord = async (attendance_id, attendanceData) => {
     const transaction = await sequelize.transaction();
-    
+
     try {
         // Validate input
         if (!attendance_id) {
@@ -415,85 +451,95 @@ const updateAttendanceRecord = async (attendance_id, attendanceData) => {
         if (!attendanceData) {
             throw new Error('attendanceData is required');
         }
-        
+
         const { start_lesson, end_lesson, students } = attendanceData;
-        
+
         // Validate required fields
         if (start_lesson === undefined || end_lesson === undefined) {
             throw new Error('start_lesson and end_lesson are required');
         }
-        
+
         if (!Array.isArray(students) || students.length === 0) {
             throw new Error('students array is required and cannot be empty');
         }
-        
+
         // Validate lessons
         if (start_lesson < 1 || end_lesson < 1 || start_lesson > end_lesson) {
             throw new Error('Invalid lesson range. start_lesson and end_lesson must be >= 1 and start_lesson <= end_lesson');
         }
-        
+
         // Kiểm tra attendance record có tồn tại không
         const existingAttendance = await models.Attendance.findByPk(attendance_id);
         if (!existingAttendance) {
             throw new Error(`Attendance record not found with id: ${attendance_id}`);
         }
-        
-        console.log(`Updating attendance records for ${students.length} students`);
-        
-        // Validate status enum and students exist
+
+        // Tự động cập nhật date_attendance theo ngày hiện tại (yyyy-MM-dd)
+        const currentDate = new Date();
+        const date_attendance = currentDate.toISOString().split('T')[0]; // yyyy-MM-dd format
+
+        console.log(`Updating attendance record for ${students.length} students on ${date_attendance}`);
+
+        // Cập nhật bản ghi Attendance
+        await models.Attendance.update({
+            date_attendance: date_attendance,
+            start_lesson: start_lesson,
+            end_lesson: end_lesson
+        }, {
+            where: { id: attendance_id },
+            transaction
+        });
+
+        // Validate students trước khi xóa và tạo mới
         const { StatusAttendance } = require('../databases/mariadb/model/enums');
-        
+
         for (const studentData of students) {
             const { student_id, status } = studentData;
-            
+
             // Validate student data
             if (!student_id) {
                 throw new Error('student_id is required for each student');
             }
-            
+
             if (!status) {
                 throw new Error(`status is required for student ${student_id}`);
             }
-            
+
             // Validate status enum
             if (!Object.values(StatusAttendance).includes(status)) {
                 throw new Error(`Invalid status: ${status}. Must be one of: ${Object.values(StatusAttendance).join(', ')}`);
             }
-            
+
             // Kiểm tra sinh viên có tồn tại không
             const existingStudent = await models.Student.findOne({
                 where: { student_id: student_id }
             });
-            
+
             if (!existingStudent) {
                 throw new Error(`Student not found with id: ${student_id}`);
             }
         }
-        
-        // Xóa các record cũ với cùng attendance_id, start_lesson, end_lesson
+
+        // Xóa các record cũ của AttendanceStudent
         await models.AttendanceStudent.destroy({
             where: {
-                attendance_id: attendance_id,
-                start_lesson: start_lesson,
-                end_lesson: end_lesson
+                attendance_id: attendance_id
             },
             transaction
         });
-        
-        // Tạo array các attendance student records để bulk insert
+
+        // Tạo lại các bản ghi AttendanceStudent
         const attendanceStudentRecords = students.map(studentData => {
             const { student_id, status, description = "" } = studentData;
-            
+
             return {
                 attendance_id: attendance_id,
                 student_id: student_id,
                 status: status,
-                description: description || "",
-                start_lesson: start_lesson,
-                end_lesson: end_lesson
+                description: description || ""
             };
         });
-        
+
         // Bulk insert các attendance student records mới
         const updatedRecords = await models.AttendanceStudent.bulkCreate(
             attendanceStudentRecords,
@@ -503,20 +549,28 @@ const updateAttendanceRecord = async (attendance_id, attendanceData) => {
                 returning: true
             }
         );
-        
+
         await transaction.commit();
-        
+
         console.log(`Successfully updated ${updatedRecords.length} attendance student records`);
-        
+
         return {
             success: true,
-            message: `Dữ liệu điểm danh đã được cập nhật thành công cho ${updatedRecords.length} sinh viên`
+            message: `Dữ liệu điểm danh đã được cập nhật thành công cho ${updatedRecords.length} sinh viên`,
+            data: {
+                attendance_id: attendance_id,
+                date_attendance: date_attendance,
+                start_lesson: start_lesson,
+                end_lesson: end_lesson,
+                total_students: updatedRecords.length,
+                updated_records: updatedRecords.length
+            }
         };
-        
+
     } catch (error) {
         await transaction.rollback();
         console.error('Error in updateAttendanceRecord:', error);
-        
+
         return {
             success: false,
             message: `Lỗi khi cập nhật dữ liệu điểm danh: ${error.message}`
@@ -524,13 +578,12 @@ const updateAttendanceRecord = async (attendance_id, attendanceData) => {
     }
 };
 
-
-
 module.exports = {
     getStudentsByCourseSectionID,
-    getAttendanceStudentListByAttendanceID,
+    getAttendanceListByCourseID,
     getCourseSectionDetailByID,
-    getAttendanceDetailsByCourseSectionAndAttendanceID,
+    getAttendanceStudentListByAttendanceID,
+    getAttendanceDetailsByCourseSectionID,
     createAttendanceRecord,
     updateAttendanceRecord
 };

@@ -1,7 +1,7 @@
 const attendanceRepo = require('../repositories/attendance.repo');
 const jwtUtils = require('../utils/jwt.utils');
 
-// GET /attendances/students?course_section_id=&attendance_id=
+// GET /attendances/students/:course_section_id
 exports.getAttendanceDetailsByCourseSectionAndAttendanceID = async (req, res) => {
     try {
         const authHeader = req.headers['authorization'];
@@ -11,7 +11,7 @@ exports.getAttendanceDetailsByCourseSectionAndAttendanceID = async (req, res) =>
             return res.status(403).json({ message: 'Forbidden' });
         }
 
-        const { course_section_id, attendance_id } = req.query;
+        const { course_section_id } = req.params;
         if (!course_section_id) {
             return res.status(400).json({ 
                 success: false,
@@ -19,18 +19,11 @@ exports.getAttendanceDetailsByCourseSectionAndAttendanceID = async (req, res) =>
             });
         }
 
-        if (!attendance_id) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'Mã điểm danh (attendance_id) là bắt buộc' 
-            });
-        }
-
-        const attendanceDetails = await attendanceRepo.getAttendanceDetailsByCourseSectionAndAttendanceID(course_section_id, attendance_id);
+        const attendanceDetails = await attendanceRepo.getAttendanceDetailsByCourseSectionID(course_section_id);
         return res.status(200).json(attendanceDetails);
 
     } catch (error) {
-        console.error('Error in getAttendanceDetailsByCourseSectionAndAttendanceID:', error);
+        console.error('Error in getAttendanceDetailsByCourseSectionID:', error);
         return res.status(500).json({ 
             success: false,
             message: 'Internal Server Error',
@@ -39,8 +32,8 @@ exports.getAttendanceDetailsByCourseSectionAndAttendanceID = async (req, res) =>
     }
 };
 
-// POST /attendances/students/:attendance_id
-exports.createOrUpdateAttendanceStudents = async (req, res) => {
+// POST /attendances/students/:course_section_id
+exports.createAttendanceStudents = async (req, res) => {
     try {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
@@ -48,11 +41,11 @@ exports.createOrUpdateAttendanceStudents = async (req, res) => {
         if (!decoded || decoded.role !== 'LECTURER') {
             return res.status(403).json({ message: 'Forbidden' });
         }
-        const { attendance_id } = req.params;
-        if (!attendance_id) {
+        const { course_section_id } = req.params;
+        if (!course_section_id) {
             return res.status(400).json({ 
                 success: false,
-                message: 'Mã điểm danh (attendance_id) là bắt buộc' 
+                message: 'Mã học phần (course_section_id) là bắt buộc' 
             });
         }
         const attendanceData = req.body;
@@ -62,7 +55,7 @@ exports.createOrUpdateAttendanceStudents = async (req, res) => {
                 message: 'Dữ liệu điểm danh (students) là bắt buộc và phải là một mảng không rỗng' 
             });
         }
-        const result = await attendanceRepo.createAttendanceRecord(attendance_id, attendanceData);
+        const result = await attendanceRepo.createAttendanceRecord(decoded.user_id, course_section_id, attendanceData);
         if (result.success) {
             return res.status(200).json(result);
         } else {
