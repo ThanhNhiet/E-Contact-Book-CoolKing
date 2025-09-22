@@ -32,14 +32,6 @@ module.exports = function(sequelize, DataTypes) {
     description: {
       type: DataTypes.STRING(255),
       allowNull: true
-    },
-    start_lesson: {
-      type: DataTypes.INTEGER,
-      allowNull: false
-    },
-    end_lesson: {
-      type: DataTypes.INTEGER,
-      allowNull: false
     }
   }, {
     sequelize,
@@ -67,19 +59,7 @@ module.exports = function(sequelize, DataTypes) {
         fields: [
           { name: "student_id" },
         ]
-      },
-      {
-        name: "attendances_student_unique",
-        unique: true,
-        using: "BTREE",
-        fields: [
-          { name: "attendance_id" },
-          { name: "student_id" },
-          { name: "start_lesson" },
-          { name: "end_lesson" },
-          { name: "createdAt" }
-        ]
-      },
+      }
     ]
   });
 };

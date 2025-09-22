@@ -23,6 +23,18 @@ module.exports = function(sequelize, DataTypes) {
         model: 'course_sections',
         key: 'id'
       }
+    },
+    date_attendance: {
+      type: DataTypes.DATEONLY,
+      allowNull: false
+    },
+    start_lesson: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    end_lesson: {
+      type: DataTypes.INTEGER,
+      allowNull: false
     }
   }, {
     sequelize,
@@ -51,6 +63,18 @@ module.exports = function(sequelize, DataTypes) {
           { name: "course_section_id" },
         ]
       },
+      {
+        name: "attendances_unique",
+        unique: true,
+        using: "BTREE",
+        fields: [
+          { name: "lecturer_id" },
+          { name: "course_section_id" },
+          { name: "date_attendance" },
+          { name: "start_lesson" },
+          { name: "end_lesson" },
+        ]
+      }
     ]
   });
 };
