@@ -133,12 +133,37 @@ const getStudentsScoreByCourseSectionId4Lecturer = async (course_section_id) => 
                 avr: null
             };
 
+            // Tính toán initial_evaluate
+            let initial_evaluate = 'ok';
+            
+            if (score) {
+                // Tính điểm trung bình của regular (cả theo và pra)
+                const regularScores = [
+                    score.theo_regular1, score.theo_regular2, score.theo_regular3,
+                    score.pra_regular1, score.pra_regular2, score.pra_regular3
+                ].filter(s => s !== null && s !== undefined);
+                
+                let regularAverage = null;
+                if (regularScores.length > 0) {
+                    regularAverage = regularScores.reduce((sum, s) => sum + s, 0) / regularScores.length;
+                }
+                
+                // Kiểm tra các điều kiện danger
+                if ((regularAverage !== null && regularAverage < 1) || 
+                    (score.mid !== null && score.mid < 4) ||
+                    (score.final !== null && score.final < 3) ||
+                    (score.final !== null && score.final < 4)) {
+                    initial_evaluate = 'danger';
+                }
+            }
+
             students.push({
                 no: i + 1, // STT
                 student_id: student.student_id,
                 name: student.name,
                 dob: datetimeFormatter.formatDateVN(student.dob),
-                score: scoreData
+                score: scoreData,
+                initial_evaluate: initial_evaluate
             });
         }
 
