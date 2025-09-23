@@ -7,6 +7,7 @@ const alertRoute = require('./alert.route');
 const attendanceRoute = require('./attendance.route');
 const courseSectionRoute = require('./coursesection.route');
 const studentRoute = require('./student.route');
+const statisticsRoute = require('./statistics.route');
 
 const router = express.Router();
 
@@ -18,5 +19,6 @@ router.use('/lecturers', lecturerRoute);
 router.use('/schedules', scheduleRoute);
 router.use('/alerts', alertRoute);
 router.use('/coursesections', courseSectionRoute);
+router.use('/statistics', statisticsRoute);
 
 module.exports = router;
