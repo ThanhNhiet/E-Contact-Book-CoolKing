@@ -95,8 +95,8 @@ function initModels(sequelize) {
   Faculty.hasMany(Major, { as: "majors", foreignKey: "faculty_id", sourceKey: "faculty_id" });
 
   // Major - Student
-  Student.belongsTo(Major, { as: "major", foreignKey: "major_id", targetKey: "major_id" });
-  Major.hasMany(Student, { as: "students", foreignKey: "major_id", sourceKey: "major_id" });
+  Student.belongsTo(Major, { as: "major", foreignKey: "major_id" });
+  Major.hasMany(Student, { as: "students", foreignKey: "major_id" });
 
   // Faculty - Dean (Lecturer)
   Faculty.belongsTo(Lecturer, { as: "dean", foreignKey: "dean_id", targetKey: "lecturer_id" });
