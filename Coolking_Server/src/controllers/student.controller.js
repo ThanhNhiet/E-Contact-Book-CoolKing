@@ -73,7 +73,14 @@ exports.getStudentScheduleWithExceptions = async (req, res) => {
         }
         
         const studentId = req.params.student_id;
-        const schedule = await studentRepo.getStudentScheduleWithExceptions(studentId);
+        const paginationOptions = {
+            page: req.query.page,
+            limit: req.query.limit,
+            sortBy: req.query.sortBy,
+            sortOrder: req.query.sortOrder
+        };
+        
+        const schedule = await studentRepo.getStudentScheduleWithExceptions(studentId, paginationOptions);
         res.status(200).json(schedule);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -91,7 +98,14 @@ exports.getMyScheduleWithExceptions = async (req, res) => {
             return res.status(403).json({ message: 'Forbidden' });
         }
         
-        const schedule = await studentRepo.getStudentScheduleWithExceptions(decoded.user_id);
+        const paginationOptions = {
+            page: req.query.page,
+            limit: req.query.limit,
+            sortBy: req.query.sortBy,
+            sortOrder: req.query.sortOrder
+        };
+        
+        const schedule = await studentRepo.getStudentScheduleWithExceptions(decoded.user_id, paginationOptions);
         res.status(200).json(schedule);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -110,7 +124,14 @@ exports.getStudentBasicSchedule = async (req, res) => {
         }
         
         const studentId = req.params.student_id;
-        const schedule = await studentRepo.getStudentBasicSchedule(studentId);
+        const paginationOptions = {
+            page: req.query.page,
+            limit: req.query.limit,
+            sortBy: req.query.sortBy,
+            sortOrder: req.query.sortOrder
+        };
+        
+        const schedule = await studentRepo.getStudentBasicSchedule(studentId, paginationOptions);
         res.status(200).json(schedule);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -128,7 +149,14 @@ exports.getMyBasicSchedule = async (req, res) => {
             return res.status(403).json({ message: 'Forbidden' });
         }
         
-        const schedule = await studentRepo.getStudentBasicSchedule(decoded.user_id);
+        const paginationOptions = {
+            page: req.query.page,
+            limit: req.query.limit,
+            sortBy: req.query.sortBy,
+            sortOrder: req.query.sortOrder
+        };
+        
+        const schedule = await studentRepo.getStudentBasicSchedule(decoded.user_id, paginationOptions);
         res.status(200).json(schedule);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -147,7 +175,14 @@ exports.getStudentExamSchedule = async (req, res) => {
         }
         
         const studentId = req.params.student_id;
-        const examSchedule = await studentRepo.getStudentExamSchedule(studentId);
+        const paginationOptions = {
+            page: req.query.page,
+            limit: req.query.limit,
+            sortBy: req.query.sortBy,
+            sortOrder: req.query.sortOrder
+        };
+        
+        const examSchedule = await studentRepo.getStudentExamSchedule(studentId, paginationOptions);
         res.status(200).json(examSchedule);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -165,7 +200,14 @@ exports.getMyExamSchedule = async (req, res) => {
             return res.status(403).json({ message: 'Forbidden' });
         }
         
-        const examSchedule = await studentRepo.getStudentExamSchedule(decoded.user_id);
+        const paginationOptions = {
+            page: req.query.page,
+            limit: req.query.limit,
+            sortBy: req.query.sortBy,
+            sortOrder: req.query.sortOrder
+        };
+        
+        const examSchedule = await studentRepo.getStudentExamSchedule(decoded.user_id, paginationOptions);
         res.status(200).json(examSchedule);
     } catch (error) {
         res.status(500).json({ message: error.message });

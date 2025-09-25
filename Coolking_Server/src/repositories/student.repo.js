@@ -322,18 +322,72 @@ const updateStudentInfo = async (student_id, updateData) => {
 }
 
 /**
- * Lấy lịch học của sinh viên bao gồm cả exception (thay đổi lịch)
+ * Lấy lịch học của sinh viên bao gồm cả exception (thay đổi lịch) với phân trang
  * @param {string} student_id - Mã sinh viên (VD: SV2100001)
- * @returns {Object} - Thông tin lịch học chi tiết
+ * @param {Object} options - Tùy chọn phân trang {page: 1, limit: 10, sortBy: 'day_of_week', sortOrder: 'ASC'}
+ * @returns {Object} - Thông tin lịch học chi tiết với phân trang
  */
-const getStudentScheduleWithExceptions = async (student_id) => {
+const getStudentScheduleWithExceptions = async (student_id, options = {}) => {
     try {
         // Validate input
         if (!student_id) {
             throw new Error('student_id is required');
         }
 
-        // Sử dụng raw query để thực hiện complex join
+        // Default pagination options
+        const page = parseInt(options.page) || 1;
+        const limit = parseInt(options.limit) || 10;
+        const sortBy = options.sortBy || 'day_of_week';
+        const sortOrder = options.sortOrder || 'ASC';
+        const offset = (page - 1) * limit;
+
+        // Validate sortBy to prevent SQL injection
+        const allowedSortFields = ['day_of_week', 'start_lesson', 'exam_date', 'subject_name', 'session_name'];
+        const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'day_of_week';
+        const safeSortOrder = ['ASC', 'DESC'].includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'ASC';
+
+        // Đếm tổng số records
+        const countResults = await sequelize.query(`
+            SELECT COUNT(*) as total
+            FROM students AS ST 
+            JOIN schedules AS SH ON ST.student_id = SH.user_id 
+            LEFT JOIN schedule_exceptions AS shex ON SH.id = shex.schedule_id
+            LEFT JOIN lecturers AS le1 ON le1.lecturer_id = shex.new_lecturer_id 
+                AND shex.exception_type = 'LECTURER_CHANGED'
+            JOIN course_sections AS co_se ON co_se.id = SH.course_section_id
+            JOIN clazz AS cl ON cl.id = co_se.clazz_id
+            JOIN subjects AS su ON su.subject_id = co_se.subject_id
+            JOIN sessions AS se ON se.id = co_se.session_id
+            JOIN lecturers_coursesections AS le_co ON le_co.course_section_id = co_se.id
+            JOIN lecturers AS le2 ON le2.lecturer_id = le_co.lecturer_id
+            WHERE SH.isExam = 0 
+              AND SH.isCompleted = 0 
+              AND SH.user_id = :student_id
+        `, {
+            replacements: { student_id },
+            type: sequelize.QueryTypes.SELECT
+        });
+
+        const totalRecords = countResults[0]?.total || 0;
+        const totalPages = Math.ceil(totalRecords / limit);
+
+        if (totalRecords === 0) {
+            return {
+                student_id: student_id,
+                message: "Không tìm thấy lịch học cho sinh viên này",
+                pagination: {
+                    current_page: page,
+                    total_pages: 0,
+                    total_records: 0,
+                    limit: limit,
+                    has_next: false,
+                    has_prev: false
+                },
+                schedules: []
+            };
+        }
+
+        // Lấy dữ liệu với phân trang
         const results = await sequelize.query(`
             SELECT  
                 ST.student_id,
@@ -374,20 +428,14 @@ const getStudentScheduleWithExceptions = async (student_id) => {
             WHERE SH.isExam = 0 
               AND SH.isCompleted = 0 
               AND SH.user_id = :student_id
-            ORDER BY SH.day_of_week, SH.start_lesson
+            ORDER BY ${safeSortBy === 'subject_name' ? 'su.name' : 
+                      safeSortBy === 'session_name' ? 'se.name' : 
+                      `SH.${safeSortBy}`} ${safeSortOrder}
+            LIMIT :limit OFFSET :offset
         `, {
-            replacements: { student_id },
+            replacements: { student_id, limit, offset },
             type: sequelize.QueryTypes.SELECT
         });
-
-
-        if (!results || results.length === 0) {
-            return {
-                student_id: student_id,
-                message: "Không tìm thấy lịch học cho sinh viên này",
-                schedules: []
-            };
-        }
 
         // Format lại dữ liệu để dễ sử dụng
         const formattedSchedules = results.map(schedule => ({
@@ -424,21 +472,46 @@ const getStudentScheduleWithExceptions = async (student_id) => {
             } : null
         }));
 
-        // Thống kê
+        // Thống kê tổng quan (không phân trang)
+        const allResults = await sequelize.query(`
+            SELECT 
+                CASE WHEN shex.id IS NOT NULL THEN 'Có thay đổi' ELSE 'Lịch bình thường' END AS schedule_status,
+                shex.exception_type
+            FROM students AS ST 
+            JOIN schedules AS SH ON ST.student_id = SH.user_id 
+            LEFT JOIN schedule_exceptions AS shex ON SH.id = shex.schedule_id
+            JOIN course_sections AS co_se ON co_se.id = SH.course_section_id
+            JOIN lecturers_coursesections AS le_co ON le_co.course_section_id = co_se.id
+            WHERE SH.isExam = 0 
+              AND SH.isCompleted = 0 
+              AND SH.user_id = :student_id
+        `, {
+            replacements: { student_id },
+            type: sequelize.QueryTypes.SELECT
+        });
+
         const stats = {
-            total_schedules: formattedSchedules.length,
-            normal_schedules: formattedSchedules.filter(s => s.schedule_info.status === 'Lịch bình thường').length,
-            exception_schedules: formattedSchedules.filter(s => s.schedule_info.status === 'Có thay đổi').length,
-            exception_types: [...new Set(formattedSchedules
-                .filter(s => s.exception_info)
-                .map(s => s.exception_info.exception_type)
+            total_schedules: totalRecords,
+            normal_schedules: allResults.filter(s => s.schedule_status === 'Lịch bình thường').length,
+            exception_schedules: allResults.filter(s => s.schedule_status === 'Có thay đổi').length,
+            exception_types: [...new Set(allResults
+                .filter(s => s.exception_type)
+                .map(s => s.exception_type)
             )]
         };
 
         return {
             student_id: student_id,
-            student_name: results[0].student_name,
+            student_name: results[0]?.student_name,
             statistics: stats,
+            pagination: {
+                current_page: page,
+                total_pages: totalPages,
+                total_records: totalRecords,
+                limit: limit,
+                has_next: page < totalPages,
+                has_prev: page > 1
+            },
             schedules: formattedSchedules
         };
 
@@ -452,14 +525,65 @@ const getStudentScheduleWithExceptions = async (student_id) => {
 
 
 /**
- * Lấy lịch học đơn giản của sinh viên (không bao gồm exception)
+ * Lấy lịch học đơn giản của sinh viên (không bao gồm exception) với phân trang
  * @param {string} student_id - Mã sinh viên
- * @returns {Object} - Lịch học cơ bản
+ * @param {Object} options - Tùy chọn phân trang {page: 1, limit: 10, sortBy: 'day_of_week', sortOrder: 'ASC'}
+ * @returns {Object} - Lịch học cơ bản với phân trang
  */
-const getStudentBasicSchedule = async (student_id) => {
+const getStudentBasicSchedule = async (student_id, options = {}) => {
     try {
         if (!student_id) {
             throw new Error('student_id is required');
+        }
+
+        // Default pagination options
+        const page = parseInt(options.page) || 1;
+        const limit = parseInt(options.limit) || 10;
+        const sortBy = options.sortBy || 'day_of_week';
+        const sortOrder = options.sortOrder || 'ASC';
+        const offset = (page - 1) * limit;
+
+        // Validate sortBy to prevent SQL injection
+        const allowedSortFields = ['day_of_week', 'start_lesson', 'schedule_date', 'subject_name', 'session_name'];
+        const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'day_of_week';
+        const safeSortOrder = ['ASC', 'DESC'].includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'ASC';
+
+        // Đếm tổng số records
+        const countResults = await sequelize.query(`
+            SELECT COUNT(*) as total
+            FROM students AS ST 
+            JOIN schedules AS SH ON ST.student_id = SH.user_id 
+            JOIN course_sections AS co_se ON co_se.id = SH.course_section_id
+            JOIN clazz AS cl ON cl.id = co_se.clazz_id
+            JOIN subjects AS su ON su.subject_id = co_se.subject_id
+            JOIN sessions AS se ON se.id = co_se.session_id
+            JOIN lecturers_coursesections AS le_co ON le_co.course_section_id = co_se.id
+            JOIN lecturers AS le ON le.lecturer_id = le_co.lecturer_id
+            WHERE SH.isExam = 0 
+              AND SH.isCompleted = 0 
+              AND SH.user_id = :student_id
+        `, {
+            replacements: { student_id },
+            type: sequelize.QueryTypes.SELECT
+        });
+
+        const totalRecords = countResults[0]?.total || 0;
+        const totalPages = Math.ceil(totalRecords / limit);
+
+        if (totalRecords === 0) {
+            return {
+                student_id: student_id,
+                message: "Không tìm thấy lịch học cho sinh viên này",
+                pagination: {
+                    current_page: page,
+                    total_pages: 0,
+                    total_records: 0,
+                    limit: limit,
+                    has_next: false,
+                    has_prev: false
+                },
+                schedules: []
+            };
         }
 
         const results = await sequelize.query(`
@@ -489,15 +613,26 @@ const getStudentBasicSchedule = async (student_id) => {
             WHERE SH.isExam = 0 
               AND SH.isCompleted = 0 
               AND SH.user_id = :student_id
-            ORDER BY SH.day_of_week, SH.start_lesson
+            ORDER BY ${safeSortBy === 'subject_name' ? 'su.name' : 
+                      safeSortBy === 'session_name' ? 'se.name' : 
+                      `SH.${safeSortBy}`} ${safeSortOrder}
+            LIMIT :limit OFFSET :offset
         `, {
-            replacements: { student_id },
+            replacements: { student_id, limit, offset },
             type: sequelize.QueryTypes.SELECT
         });
 
         return {
             student_id,
-            total_schedules: results.length,
+            student_name: results[0]?.student_name,
+            pagination: {
+                current_page: page,
+                total_pages: totalPages,
+                total_records: totalRecords,
+                limit: limit,
+                has_next: page < totalPages,
+                has_prev: page > 1
+            },
             schedules: results
         };
 
@@ -508,14 +643,64 @@ const getStudentBasicSchedule = async (student_id) => {
 }
 
 /**
- * Lấy lịch thi của sinh viên
+ * Lấy lịch thi của sinh viên với phân trang
  * @param {string} student_id - Mã sinh viên
- * @returns {Object} - Lịch thi
+ * @param {Object} options - Tùy chọn phân trang {page: 1, limit: 10, sortBy: 'exam_date', sortOrder: 'ASC'}
+ * @returns {Object} - Lịch thi với phân trang
  */
-const getStudentExamSchedule = async (student_id) => {
+const getStudentExamSchedule = async (student_id, options = {}) => {
     try {
         if (!student_id) {
             throw new Error('student_id is required');
+        }
+
+        // Default pagination options
+        const page = parseInt(options.page) || 1;
+        const limit = parseInt(options.limit) || 10;
+        const sortBy = options.sortBy || 'exam_date';
+        const sortOrder = options.sortOrder || 'ASC';
+        const offset = (page - 1) * limit;
+
+        // Validate sortBy to prevent SQL injection
+        const allowedSortFields = ['exam_date', 'start_lesson', 'subject_name', 'session_name'];
+        const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'exam_date';
+        const safeSortOrder = ['ASC', 'DESC'].includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'ASC';
+
+        // Đếm tổng số records
+        const countResults = await sequelize.query(`
+            SELECT COUNT(*) as total
+            FROM students AS ST 
+            JOIN schedules AS SH ON ST.student_id = SH.user_id 
+            JOIN course_sections AS co_se ON co_se.id = SH.course_section_id
+            JOIN clazz AS cl ON cl.id = co_se.clazz_id
+            JOIN subjects AS su ON su.subject_id = co_se.subject_id
+            JOIN sessions AS se ON se.id = co_se.session_id
+            JOIN lecturers_coursesections AS le_co ON le_co.course_section_id = co_se.id
+            JOIN lecturers AS le ON le.lecturer_id = le_co.lecturer_id
+            WHERE SH.isExam = 1 
+              AND SH.user_id = :student_id
+        `, {
+            replacements: { student_id },
+            type: sequelize.QueryTypes.SELECT
+        });
+
+        const totalRecords = countResults[0]?.total || 0;
+        const totalPages = Math.ceil(totalRecords / limit);
+
+        if (totalRecords === 0) {
+            return {
+                student_id: student_id,
+                message: "Không tìm thấy lịch thi cho sinh viên này",
+                pagination: {
+                    current_page: page,
+                    total_pages: 0,
+                    total_records: 0,
+                    limit: limit,
+                    has_next: false,
+                    has_prev: false
+                },
+                exams: []
+            };
         }
 
         const results = await sequelize.query(`
@@ -543,15 +728,27 @@ const getStudentExamSchedule = async (student_id) => {
             JOIN lecturers AS le ON le.lecturer_id = le_co.lecturer_id
             WHERE SH.isExam = 1 
               AND SH.user_id = :student_id
-            ORDER BY SH.date, SH.start_lesson
+            ORDER BY ${safeSortBy === 'subject_name' ? 'su.name' : 
+                      safeSortBy === 'session_name' ? 'se.name' : 
+                      safeSortBy === 'exam_date' ? 'SH.date' : 
+                      `SH.${safeSortBy}`} ${safeSortOrder}
+            LIMIT :limit OFFSET :offset
         `, {
-            replacements: { student_id },
+            replacements: { student_id, limit, offset },
             type: sequelize.QueryTypes.SELECT
         });
 
         return {
             student_id,
-            total_exams: results.length,
+            student_name: results[0]?.student_name,
+            pagination: {
+                current_page: page,
+                total_pages: totalPages,
+                total_records: totalRecords,
+                limit: limit,
+                has_next: page < totalPages,
+                has_prev: page > 1
+            },
             exams: results
         };
 
