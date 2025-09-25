@@ -6,19 +6,14 @@ const MessageType = {
   TEXT: 'text',
   IMAGE: 'image',
   FILE: 'file',
-  VIDEO: 'video',
-  EMOJI: 'emoji',
-  DOC: 'doc',
-  AUDIO: 'audio',
-  UNSEND: 'unsend',
-  NOTIFICATION: 'notification'
+  LINK: 'link'
 };
 
 // Define MessageStatus enum
 const MessageStatus = {
-  SEND: 'send',
-  READ: 'read',
-  DELIVERED: 'delivered'
+  SENDING: 'sending',
+  SENT: 'sent',
+  READ: 'read'
 };
 
 // Define ReplyInfo schema as a subdocument
@@ -38,12 +33,15 @@ const replyInfoSchema = new Schema({
   },
   content: {
     type: String
-  },
-  media_url: [String]
+  }
 }, { _id: false });
 
 // Define PinnedInfo schema as a subdocument
 const pinnedInfoSchema = new Schema({
+  messageID: {
+    type: String,
+    required: true
+  },
   pinnedBy: {
     type: String,
     required: true
@@ -51,10 +49,6 @@ const pinnedInfoSchema = new Schema({
   pinnedDate: {
     type: Date,
     default: Date.now
-  },
-  messageID: {
-    type: String,
-    required: true
   }
 }, { _id: false });
 
@@ -81,33 +75,26 @@ const messageSchema = new Schema({
   content: {
     type: String
   },
-  mediaUrls: [String],
+  filename: {
+    type: String
+  },
   replyTo: {
     type: replyInfoSchema
   },
-  messageID: {
-    type: String,
-    required: true
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now
+  pinnedInfo: {
+    type: pinnedInfoSchema
   },
   status: {
     type: String,
     enum: Object.values(MessageStatus),
-    default: MessageStatus.SEND
-  },
-  pinnedInfo: {
-    type: pinnedInfoSchema
+    default: MessageStatus.SENT
   }
 }, {
   timestamps: true
 });
 
 // Add indexes
-messageSchema.index({ chatID: 1, timestamp: -1 });
-messageSchema.index({ messageID: 1 }, { unique: true });
+messageSchema.index({ chatID: 1, createdAt: -1 });
 
 const Message = mongoose.model('Message', messageSchema);
 

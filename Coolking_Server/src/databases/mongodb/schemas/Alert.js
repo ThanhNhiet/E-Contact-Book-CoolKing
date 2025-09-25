@@ -33,17 +33,9 @@ const alertSchema = new Schema({
     enum: Object.values(TargetScope),
     required: true
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
   isRead: {
     type: Boolean,
     default: false
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   }
 }, {
   timestamps: true
