@@ -19,6 +19,10 @@ const memberSchema = new Schema({
     type: String,
     required: true
   },
+  userName: {
+    type: String,
+    required: true
+  },
   role: {
     type: String,
     enum: Object.values(MemberRole),
@@ -40,6 +44,10 @@ const chatSchema = new Schema({
     type: String,
     required: true
   },
+  course_section_id: {
+    type: String,
+    index: true
+  },
   type: {
     type: String,
     enum: Object.values(ChatType),
@@ -53,6 +61,7 @@ const chatSchema = new Schema({
   },
   avatar: String,
   createdBy: String,
+  updatedBy: String,
   members: [memberSchema],   // embedded members array
 }, {
   timestamps: true
