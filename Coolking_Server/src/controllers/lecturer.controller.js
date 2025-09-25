@@ -26,3 +26,19 @@ exports.updateLecturerInfo = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+exports.uploadAvatar = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!req.file) {
+            return res.status(400).json({ message: 'Vui lòng chọn file ảnh' });
+        }
+        const updatedLecturer = await lecturerRepo.uploadAvatar(decoded.user_id, req.file);
+        if (!updatedLecturer) return res.status(404).json({ message: 'Giảng viên không tồn tại' });
+        res.status(200).json({ message: 'Cập nhật avatar thành công', avatar: updatedLecturer.avatar });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
