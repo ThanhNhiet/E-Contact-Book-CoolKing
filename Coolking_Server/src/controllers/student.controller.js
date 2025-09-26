@@ -1,3 +1,4 @@
+const e = require('express');
 const studentRepo = require('../repositories/student.repo');
 const jwtUtils = require('../utils/jwt.utils');
 
@@ -213,3 +214,20 @@ exports.getMyExamSchedule = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+exports.uploadStudentAvatar = async (req, res) => {
+    try {
+         const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        
+        if (!decoded || decoded.role !== 'STUDENT') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const updatedStudent = await studentRepo.updateStudentAvatar(decoded.user_id, req.file);
+        if (!updatedStudent) return res.status(404).json({ message: 'Sinh viên không tồn tại' });
+        res.status(200).json({ message: 'Cập nhật avatar sinh viên thành công', avatar: updatedStudent.avatar });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}

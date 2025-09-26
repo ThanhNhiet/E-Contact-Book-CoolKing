@@ -2,6 +2,9 @@ const sequelize = require("../config/mariadb.conf");
 const initModels = require("../databases/mariadb/model/init-models");
 const models = initModels(sequelize);
 const datetimeFormatter = require("../utils/format/datetime-formatter");
+const cloudinaryService = require("../services/cloudinary.service");
+const cloudinaryUtils = require("../utils/cloudinary.utils");
+
 
 /**
  *  Lấy danh sách sinh viên + điểm số bằng course_section_id - dùng cho giảng viên
@@ -183,6 +186,50 @@ const getStudentsScoreByCourseSectionId4Lecturer = async (course_section_id) => 
         throw error;
     }
 };
+
+const updateStudentAvatar = async (student_id, file) => {
+    try {
+        const student = await models.Student.findOne({ where: { student_id } });
+        if (!student) throw new Error("Student not found");
+
+         const folder = 'account_avatar';
+          
+            // Xóa avatar cũ nếu có
+            if (student.avatar) {
+              try {
+                const publicId = cloudinaryUtils.getPublicIdFromUrl(student.avatar, folder);
+                await cloudinaryService.deleteFromCloudinary(publicId);
+              } catch (deleteError) {
+                console.log('Warning: Could not delete old avatar:', deleteError.message);
+              }
+            }
+            
+            // Upload avatar mới
+            const uploadResult = await cloudinaryService.upload2Cloudinary(file.buffer, folder, file.originalname);
+            if (!uploadResult.success) {
+              throw new Error('Avatar upload failed');
+            }
+            
+
+            // Cập nhật avatar URL trong database
+            student.avatar = uploadResult.url;
+            await student.save();
+
+            return {
+              student_id: student.student_id,
+              name: student.name,
+              avatar: student.avatar,
+              message: 'Avatar uploaded successfully'
+            };
+    } catch (error) {
+        console.error("Error in uploadAvatar:", error);
+        throw error;
+    }
+}
+
+
+
+
 
 /**
  *  Lấy thông tin sinh viên bằng student_id - dùng cho giảng viên
