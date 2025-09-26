@@ -132,3 +132,72 @@ exports.deleteChat = async (req, res) => {
         });
     }
 };
+
+// GET /api/chats?page=&pageSize=
+exports.getUserChats = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        
+        const { page, pageSize } = req.query;
+        const chats = await chatRepo.getUserChats(decoded.user_id, decoded.role, page, pageSize);
+        res.status(200).json(chats);
+    } catch (error) {
+        console.error('Error in getUserChats controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi lấy danh sách cuộc trò chuyện'
+        });
+    }
+};
+
+// GET /api/chats/search?keyword=
+exports.searchChatsByKeyword = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { keyword } = req.query;
+        if (!keyword) {
+            return res.status(400).json({
+                success: false,
+                message: 'keyword là bắt buộc'
+            });
+        }
+        const chats = await chatRepo.searchChatsByKeyword(decoded.user_id, keyword, decoded.role);
+        res.status(200).json(chats);
+    } catch (error) {
+        console.error('Error in searchChatsByKeyword controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi tìm kiếm cuộc trò chuyện'
+        });
+    }
+};
+
+// DELETE /api/chats/cleanup-inactive
+exports.deleteInactivePrivateChats = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const result = await chatRepo.deleteInactivePrivateChats();
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in deleteInactivePrivateChats controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi xóa cuộc trò chuyện riêng không hoạt động'
+        });
+    }
+};

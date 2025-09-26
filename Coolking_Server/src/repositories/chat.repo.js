@@ -238,6 +238,296 @@ const getGroupChatInfoByCourseSection4Admin = async (course_section_id) => {
 };
 
 /**
+ * Lấy danh sách các đoạn chat của một user với phân trang
+ * @param {string} userID - ID của user
+ * @param {string} roleAccount - Role của account ('STUDENT', 'PARENT', 'LECTURER', 'ADMIN')
+ * @param {number} page - Trang hiện tại (mặc định 1)
+ * @param {number} pageSize - Kích thước trang (mặc định 15)
+ * @returns {Promise<Object>} - Danh sách các đoạn chat với phân trang
+ */
+const getUserChats = async (userID, roleAccount, page = 1, pageSize = 10) => {
+    try {
+        const page_num = Math.max(1, parseInt(page) || 1);
+        const pageSize_num = Math.max(1, parseInt(pageSize) || 10);
+        const skip = (page_num - 1) * pageSize_num;
+
+        let chatFilter = {
+            "members.userID": userID
+        };
+
+        // Phân loại chat theo role để tối ưu hóa truy vấn
+        if (roleAccount === 'STUDENT') {
+            // Student chỉ có group chat và private chat với lecturer
+            chatFilter = {
+                "members.userID": userID,
+                $or: [
+                    { type: ChatType.GROUP },
+                    { type: ChatType.PRIVATE }
+                ]
+            };
+        } else if (roleAccount === 'PARENT') {
+            // Parent chỉ có private chat
+            chatFilter = {
+                "members.userID": userID,
+                type: ChatType.PRIVATE
+            };
+        } else if (roleAccount === 'LECTURER') {
+            chatFilter = {
+                "members.userID": userID,
+                $or: [
+                    { type: ChatType.GROUP },
+                    { type: ChatType.PRIVATE }
+                ]
+            };
+        }
+
+        // Đếm tổng số chat
+        const total = await Chat.countDocuments(chatFilter);
+        const totalPages = Math.ceil(total / pageSize_num);
+
+        // Lấy dữ liệu với phân trang
+        const chats = await Chat.find(chatFilter)
+            .sort({ updatedAt: -1 }) // Sắp xếp theo thời gian cập nhật gần nhất
+            .skip(skip)
+            .limit(pageSize_num)
+            .lean(); // Sử dụng lean() để tăng performance
+
+        // Xử lý dữ liệu trả về
+        const processedChats = chats.map(chat => {
+            const result = {
+                _id: chat._id,
+                type: chat.type,
+                name: chat.name,
+                avatar: chat.avatar,
+                course_section_id: chat.course_section_id,
+                createdAt: chat.createdAt,
+                updatedAt: chat.updatedAt
+            };
+
+            // Nếu là private chat, tạo tên chat từ tên của người kia
+            if (chat.type === ChatType.PRIVATE) {
+                const otherMember = chat.members.find(member => member.userID !== userID);
+                result.name = otherMember ? otherMember.userName : 'Unknown User';
+                result.avatar = otherMember?.avatar || result.avatar;
+            }
+
+            // Thêm thông tin về member hiện tại
+            const currentMember = chat.members.find(member => member.userID === userID);
+            result.currentMember = currentMember || null;
+
+            return result;
+        });
+
+        // Tạo pagination info
+        const linkPrev = page_num > 1 ? page_num - 1 : null;
+        const linkNext = page_num < totalPages ? page_num + 1 : null;
+        
+        // Tạo danh sách pages (hiển thị tối đa 5 trang xung quanh trang hiện tại)
+        const pages = [];
+        const startPage = Math.max(1, page_num - 2);
+        const endPage = Math.min(totalPages, page_num + 2);
+        
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(i);
+        }
+
+        return {
+            total: total,
+            page: page_num,
+            pageSize: pageSize_num,
+            totalPages,
+            chats: processedChats,
+            linkPrev,
+            linkNext,
+            pages
+        };
+
+    } catch (error) {
+        console.error('Error getting user chats:', error);
+        throw new Error(`Failed to get user chats: ${error.message}`);
+    }
+};
+
+/**
+ * Tìm kiếm chats theo từ khóa
+ * @param {string} userID - ID của user hiện tại 
+ * @param {string} keyword - Từ khóa tìm kiếm (name chat đối với group; phone, email đối với private)
+ * @param {string} roleAccount - Role của user hiện tại để phân quyền tìm kiếm
+ * @returns {Promise<Object>} - Danh sách chats với currentMember (không phân trang)
+ */
+const searchChatsByKeyword = async (userID, keyword, roleAccount) => {
+    try {
+        if (!keyword || keyword.trim() === '') {
+            return {
+                success: false,
+                message: 'Từ khóa tìm kiếm không được để trống'
+            };
+        }
+
+        const searchKeyword = keyword.trim();
+        let chatFilter = { 'members.userID': userID };
+
+        // Phân quyền tìm kiếm theo role
+        let groupChatFilter = {};
+        let privateChatFilter = {};
+
+        if (roleAccount === 'STUDENT') {
+            // Student có thể tìm group + private chats
+            groupChatFilter = {
+                'members.userID': userID,
+                type: ChatType.GROUP,
+                name: { $regex: searchKeyword, $options: 'i' }
+            };
+            privateChatFilter = {
+                'members.userID': userID,
+                type: ChatType.PRIVATE
+            };
+        } else if (roleAccount === 'PARENT') {
+            // Parent chỉ có thể tìm private chats
+            privateChatFilter = {
+                'members.userID': userID,
+                type: ChatType.PRIVATE
+            };
+        } else if (roleAccount === 'LECTURER' || roleAccount === 'ADMIN') {
+            // Lecturer có thể tìm tất cả chats
+            groupChatFilter = {
+                'members.userID': userID,
+                type: ChatType.GROUP,
+                name: { $regex: searchKeyword, $options: 'i' }
+            };
+            privateChatFilter = {
+                'members.userID': userID,
+                type: ChatType.PRIVATE
+            };
+        }
+
+        // Query group chats và private chats riêng biệt
+        const [groupChats, allPrivateChats] = await Promise.all([
+            Object.keys(groupChatFilter).length > 0 ? 
+                Chat.find(groupChatFilter)
+                    .populate('course_section_id', 'name code')
+                    .sort({ lastMessageAt: -1 })
+                    .limit(10)
+                    .lean() : [],
+            Object.keys(privateChatFilter).length > 0 ?
+                Chat.find(privateChatFilter)
+                    .sort({ lastMessageAt: -1 })
+                    .lean() : []
+        ]);
+
+        // Filter private chats theo phone/email/name từ MariaDB
+        const { Op } = require('sequelize');
+        const filteredPrivateChats = [];
+
+        const searchCondition = {
+            [Op.and]: [
+                {
+                    [Op.or]: [
+                        { email: { [Op.like]: `%${searchKeyword}%` } },
+                        { phone: { [Op.like]: `%${searchKeyword}%` } },
+                        { name: { [Op.like]: `%${searchKeyword}%` } }
+                    ]
+                },
+                { isDeleted: false }
+            ]
+        };
+
+        for (const chat of allPrivateChats) {
+            const otherMember = chat.members.find(member => member.userID !== userID);
+            
+            if (otherMember) {
+                let userFound = false;
+
+                // Tìm trong Student
+                const student = await models.Student.findOne({
+                    where: {
+                        ...searchCondition,
+                        student_id: otherMember.userID
+                    }
+                });
+
+                if (student) userFound = true;
+
+                // Tìm trong Lecturer nếu chưa tìm thấy
+                if (!userFound) {
+                    const lecturer = await models.Lecturer.findOne({
+                        where: {
+                            ...searchCondition,
+                            lecturer_id: otherMember.userID
+                        }
+                    });
+                    if (lecturer) userFound = true;
+                }
+
+                // Tìm trong Parent nếu chưa tìm thấy
+                if (!userFound) {
+                    const parent = await models.Parent.findOne({
+                        where: {
+                            ...searchCondition,
+                            parent_id: otherMember.userID
+                        }
+                    });
+                    if (parent) userFound = true;
+                }
+
+                // Chỉ thêm vào results nếu tìm thấy user matching
+                if (userFound) {
+                    filteredPrivateChats.push(chat);
+                }
+            }
+        }
+
+        // Kết hợp results và limit tổng cộng 20
+        const allChats = [...groupChats, ...filteredPrivateChats]
+            .sort((a, b) => new Date(b.lastMessageAt || b.updatedAt) - new Date(a.lastMessageAt || a.updatedAt))
+            .slice(0, 20);
+
+        // Format response giống getUserChats
+        const results = await Promise.all(allChats.map(async (chat) => {
+            const currentMember = chat.members.find(member => member.userID === userID);
+            
+            let chatInfo = {
+                _id: chat._id,
+                chatType: chat.type,
+                name: chat.name,
+                avatar: chat.avatar,
+                createdAt: chat.createdAt,
+                currentMember: {
+                    userID: currentMember.userID,
+                    role: currentMember.role,
+                    joinedAt: currentMember.joinedAt
+                }
+            };
+
+            // Nếu là private chat, tên chat chính là tên của đối phương (đã có sẵn trong members.userName)
+            if (chat.type === ChatType.PRIVATE) {
+                const otherMember = chat.members.find(member => member.userID !== userID);
+                if (otherMember) {
+                    chatInfo.name = otherMember.userName;
+                }
+            }
+
+            // Thêm thông tin course section cho group chat
+            if (chat.type === ChatType.GROUP && chat.course_section_id) {
+                chatInfo.courseSection = chat.course_section_id;
+            }
+
+            return chatInfo;
+        }));
+
+        return {
+            success: true,
+            chats: results
+        };
+
+    } catch (error) {
+        console.error('Error searching users for chat:', error);
+        throw new Error(`Failed to search users: ${error.message}`);
+    }
+};
+
+
+/**
  * Cập nhật group chat cho admin
  * @param {string} admin_id - ID của admin
  * @param {string} chatID - ID của chat
@@ -373,10 +663,52 @@ const deleteGroupChat4Admin = async (chatID) => {
     }
 };
 
+/**
+ * Xoá private chat của các accounts có status INACTIVE
+ * @returns {Promise<Object>} - Kết quả xóa
+ */
+const deleteInactivePrivateChats = async () => {
+    try {
+        // Lấy danh sách user_id của các account có status INACTIVE
+        const inactiveAccounts = await models.Account.findAll({
+            where: { status: 'INACTIVE' },
+            attributes: ['user_id']
+        });
+
+        if (inactiveAccounts.length === 0) {
+            return {
+                success: true,
+                message: 'Không có tài khoản INACTIVE nào để xóa chat'
+            };
+        }
+
+        const inactiveUserIds = inactiveAccounts.map(account => account.user_id);
+
+        // Xóa các private chat có chứa user INACTIVE (MongoDB operation)
+        const deleteResult = await Chat.deleteMany({
+            type: ChatType.PRIVATE,
+            "members.userID": { $in: inactiveUserIds }
+        });
+
+        return {
+            success: true,
+            deletedCount: deleteResult.deletedCount,
+            message: `Đã xóa ${deleteResult.deletedCount} private chat của các tài khoản không hoạt động`
+        };
+
+    } catch (error) {
+        console.error('Error deleting inactive private chats:', error);
+        throw new Error(`Failed to delete inactive private chats: ${error.message}`);
+    }
+};
+
 module.exports = {
     createGroupChat4Admin,
     createPrivateChat4Users,
     getGroupChatInfoByCourseSection4Admin,
+    getUserChats,
+    searchChatsByKeyword,
     updateGroupChat4Admin,
-    deleteGroupChat4Admin
+    deleteGroupChat4Admin,
+    deleteInactivePrivateChats
 };
