@@ -5,4 +5,11 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 }).single("file");
 
-module.exports = upload;
+
+
+const uploadd = multer({
+storage: multer.memoryStorage(),
+limits: { fileSize: 10 * 1024 * 1024 },
+}).array("files");
+
+module.exports = { upload, uploadd };

@@ -10,6 +10,6 @@ router.get('/info', lecturerController.getLecturerInfo);
 router.put('/info', lecturerController.updateLecturerInfo);
 
 //POST /lecturer/avatar
-router.post('/avatar', upload, lecturerController.uploadAvatar);
+router.post('/avatar', upload.upload, lecturerController.uploadAvatar);
 
 module.exports = router;

@@ -9,6 +9,7 @@ const courseSectionRoute = require('./coursesection.route');
 const studentRoute = require('./student.route');
 const statisticsRoute = require('./statistics.route');
 const chatRoute = require('./chat.route');
+const messageRoute = require('./message.route');
 
 const router = express.Router();
 
@@ -22,5 +23,6 @@ router.use('/alerts', alertRoute);
 router.use('/coursesections', courseSectionRoute);
 router.use('/statistics', statisticsRoute);
 router.use('/chats', chatRoute);
+router.use('/messages', messageRoute);
 
 module.exports = router;

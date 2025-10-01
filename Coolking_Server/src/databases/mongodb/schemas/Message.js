@@ -58,6 +58,11 @@ const messageSchema = new Schema({
     type: String,
     required: true
   },
+  messageID:{
+    type: String,
+    required: true,
+    unique: true
+  },
   chatID: {
     type: String,
     required: true,
