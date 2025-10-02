@@ -1,5 +1,5 @@
 const Sequelize = require('sequelize');
-const { StatusAttendance } = require("./enums");
+
 module.exports = function(sequelize, DataTypes) {
   return sequelize.define('Attendance', {
     id: {
@@ -8,15 +8,7 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: false,
       primaryKey: true
     },
-    student_id: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-      references: {
-        model: 'students',
-        key: 'student_id'
-      }
-    },
-    created_by: {
+    lecturer_id: {
       type: DataTypes.STRING(255),
       allowNull: false,
       references: {
@@ -32,13 +24,9 @@ module.exports = function(sequelize, DataTypes) {
         key: 'id'
       }
     },
-    status: {
-      type: DataTypes.ENUM(...Object.values(StatusAttendance)),
-      allowNull: false,
-    },
-    description: {
-      type: DataTypes.STRING(255),
-      allowNull: true
+    date_attendance: {
+      type: DataTypes.DATEONLY,
+      allowNull: false
     },
     start_lesson: {
       type: DataTypes.INTEGER,
@@ -62,17 +50,10 @@ module.exports = function(sequelize, DataTypes) {
         ]
       },
       {
-        name: "student_id",
+        name: "lecturer_id",
         using: "BTREE",
         fields: [
-          { name: "student_id" },
-        ]
-      },
-      {
-        name: "created_by",
-        using: "BTREE",
-        fields: [
-          { name: "created_by" },
+          { name: "lecturer_id" },
         ]
       },
       {
@@ -82,6 +63,18 @@ module.exports = function(sequelize, DataTypes) {
           { name: "course_section_id" },
         ]
       },
+      {
+        name: "attendances_unique",
+        unique: true,
+        using: "BTREE",
+        fields: [
+          { name: "lecturer_id" },
+          { name: "course_section_id" },
+          { name: "date_attendance" },
+          { name: "start_lesson" },
+          { name: "end_lesson" },
+        ]
+      }
     ]
   });
 };

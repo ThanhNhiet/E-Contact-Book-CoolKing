@@ -7,12 +7,46 @@ const ChatType = {
   GROUP: 'group'
 };
 
+// Define MemberRole enum
+const MemberRole = {
+  ADMIN: 'admin',
+  MEMBER: 'member'
+};
+
+// Subdocument schema for members
+const memberSchema = new Schema({
+  userID: {
+    type: String,
+    required: true
+  },
+  userName: {
+    type: String,
+    required: true
+  },
+  role: {
+    type: String,
+    enum: Object.values(MemberRole),
+    default: MemberRole.MEMBER
+  },
+  joinedAt: {
+    type: Date,
+    default: Date.now
+  },
+  muted: {
+    type: Boolean,
+    default: false
+  }
+}, { _id: false });
+
 // Define the Chat schema
 const chatSchema = new Schema({
-  chatID: {
+  _id: {
     type: String,
-    required: true,
-    unique: true
+    required: true
+  },
+  course_section_id: {
+    type: String,
+    index: true
   },
   type: {
     type: String,
@@ -25,35 +59,21 @@ const chatSchema = new Schema({
       return this.type === ChatType.GROUP;
     }
   },
-  avatar: {
-    type: String
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  createdBy: {
-    type: String,
-    ref: 'Account'
-  },
-  _id: {
-    type: String,
-    required: true
-  }
+  avatar: String,
+  createdBy: String,
+  updatedBy: String,
+  members: [memberSchema],   // embedded members array
 }, {
   timestamps: true
 });
 
-// Virtual for members (populated from ChatMembers)
-chatSchema.virtual('members', {
-  ref: 'ChatMember',
-  localField: '_id',
-  foreignField: 'chat'
-});
+// Composite index: ensure a user appears once per chat
+chatSchema.index({ _id: 1, "members.userID": 1 }, { unique: true });
 
 const Chat = mongoose.model('Chat', chatSchema);
 
 module.exports = {
   Chat,
-  ChatType
+  ChatType,
+  MemberRole
 };

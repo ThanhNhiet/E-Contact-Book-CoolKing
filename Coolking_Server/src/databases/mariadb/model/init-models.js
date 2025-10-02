@@ -2,6 +2,7 @@ var DataTypes = require("sequelize").DataTypes;
 
 var _Account = require("./Account");
 var _Attendance = require("./Attendance");
+var _AttendanceStudent = require("./Attendance_Student");
 var _Schedule = require("./Schedule");
 var _ScheduleException = require("./ScheduleException");
 var _Clazz = require("./Clazz");
@@ -20,6 +21,7 @@ var _Subject = require("./Subject");
 
 function initModels(sequelize) {
   const Attendance = _Attendance(sequelize, DataTypes);
+  const AttendanceStudent = _AttendanceStudent(sequelize, DataTypes);
   const Clazz = _Clazz(sequelize, DataTypes);
   const CourseSection = _CourseSection(sequelize, DataTypes);
   const Faculty = _Faculty(sequelize, DataTypes);
@@ -53,6 +55,18 @@ function initModels(sequelize) {
   // CourseSection - Attendance
   Attendance.belongsTo(CourseSection, { as: "course_section", foreignKey: "course_section_id" });
   CourseSection.hasMany(Attendance, { as: "attendances", foreignKey: "course_section_id" });
+
+  // Lecturer - Attendance
+  Attendance.belongsTo(Lecturer, { as: "lecturer", foreignKey: "lecturer_id", targetKey: "lecturer_id" });
+  Lecturer.hasMany(Attendance, { as: "attendances", foreignKey: "lecturer_id", sourceKey: "lecturer_id" });
+
+  // Attendance - AttendanceStudent
+  AttendanceStudent.belongsTo(Attendance, { as: "attendance", foreignKey: "attendance_id" });
+  Attendance.hasMany(AttendanceStudent, { as: "attendance_students", foreignKey: "attendance_id" });
+
+  // Student - AttendanceStudent
+  AttendanceStudent.belongsTo(Student, { as: "student", foreignKey: "student_id", targetKey: "student_id" });
+  Student.hasMany(AttendanceStudent, { as: "attendance_students", foreignKey: "student_id", sourceKey: "student_id" });
 
   // CourseSection - Schedule
   Schedule.belongsTo(CourseSection, { as: "course_section", foreignKey: "course_section_id" });
@@ -106,17 +120,9 @@ function initModels(sequelize) {
   LecturerCourseSection.belongsTo(Lecturer, { as: "lecturer", foreignKey: "lecturer_id", targetKey: "lecturer_id" });
   Lecturer.hasMany(LecturerCourseSection, { as: "lecturers_course_sections", foreignKey: "lecturer_id", sourceKey: "lecturer_id" });
 
-  // Lecturer - Attendance (created_by)
-  Attendance.belongsTo(Lecturer, { as: "created_by_lecturer", foreignKey: "created_by", targetKey: "lecturer_id" });
-  Lecturer.hasMany(Attendance, { as: "attendances", foreignKey: "created_by", sourceKey: "lecturer_id" });
-
   // Session - CourseSection
   CourseSection.belongsTo(Session, { as: "session", foreignKey: "session_id" });
   Session.hasMany(CourseSection, { as: "course_sections", foreignKey: "session_id" });
-
-  // Student - Attendance
-  Attendance.belongsTo(Student, { as: "student", foreignKey: "student_id", targetKey: "student_id" });
-  Student.hasMany(Attendance, { as: "attendances", foreignKey: "student_id", sourceKey: "student_id" });
 
   // Student - Parent
   Parent.belongsTo(Student, { as: "student", foreignKey: "student_id", targetKey: "student_id" });
@@ -144,6 +150,7 @@ function initModels(sequelize) {
   return {
     Account,
     Attendance,
+    AttendanceStudent,
     Schedule,
     ScheduleException,
     Clazz,
