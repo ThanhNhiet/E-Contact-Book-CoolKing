@@ -238,14 +238,12 @@ const checkAccountByEmail = async (email) => {
   }
 };
 
-const changePassword_ByEmail = async (email, resetToken, oldPassword, newPassword) => {
+const changePassword_ByEmail = async (email, resetToken, newPassword) => {
   try {
     const account = await models.Account.findOne({ where: { email } });
     if (!account) throw new Error("Account not found");
     const storedToken = await redisService.get(`reset:${email}`);
     if (storedToken !== resetToken) return 0;
-    const isValid = await bcrypt.compare(oldPassword, account.password);
-    if (!isValid) throw new Error("Invalid old password");
     account.password = newPassword;
     await account.save();
     await redisService.del(`reset:${email}`);
@@ -268,14 +266,12 @@ const checkAccountByPhoneNumber = async (phoneNumber) => {
   }
 };
 
-const changePassword_ByPhoneNumber = async (phoneNumber, resetToken, oldPassword, newPassword) => {
+const changePassword_ByPhoneNumber = async (phoneNumber, resetToken, newPassword) => {
   try {
     const account = await models.Account.findOne({ where: { phone_number: phoneNumber } });
     if (!account) throw new Error("Account not found");
     const storedToken = await redisService.get(`reset:${phoneNumber}`);
     if (storedToken !== resetToken) return 0;
-    const isValid = await bcrypt.compare(oldPassword, account.password);
-    if (!isValid) throw new Error("Invalid old password");
     account.password = newPassword;
     await account.save();
     await redisService.del(`reset:${phoneNumber}`);
