@@ -1,11 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/auth/useAuth';
 
 const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   
   const { login, loading, error, clearError } = useAuth();
+  const location = useLocation();
+
+  // Check for success message from ChangePasswordPage
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+      // Clear the message after 5 seconds
+      setTimeout(() => setSuccessMessage(''), 5000);
+    }
+  }, [location.state]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +37,12 @@ const LoginPage: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-800 mb-2">CoolKing E-Contact</h1>
           <p className="text-gray-600">Đăng nhập</p>
         </div>
+
+        {successMessage && (
+          <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+            <p className="text-sm">{successMessage}</p>
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
@@ -88,9 +106,9 @@ const LoginPage: React.FC = () => {
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            <a href="#" className="text-blue-600 hover:text-blue-800 font-medium">
+            <Link to="/forgot-password" className="text-blue-600 hover:text-blue-800 font-medium transition duration-200">
               Quên mật khẩu?
-            </a>
+            </Link>
           </p>
         </div>
       </div>

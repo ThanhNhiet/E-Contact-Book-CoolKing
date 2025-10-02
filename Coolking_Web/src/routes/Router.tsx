@@ -1,6 +1,9 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from '../pages/auth/LoginPage';
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
+import OTPConfirmPage from '../pages/auth/OTPConfirmPage';
+import ChangePasswordPage from '../pages/auth/ChangePasswordPage';
 import AccountDbPage from '../pages/admin/Account/AccountsDashboardPage';
 import ClazzListPage from '../pages/lecturer/clazz/ClazzListPage';
 import SchedulePage from '../pages/lecturer/schedule/SchedulePage';
@@ -14,6 +17,9 @@ const Router: React.FC = () => {
         {/* Public routes - không cần bearer token */}
         <Route path="/" element={<LoginPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/otp-confirm" element={<OTPConfirmPage />} />
+        <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/test" element={<ApiTestPage />} />
         
         {/* Admin routes - cần bearer token và role admin */}

@@ -46,6 +46,58 @@ class AuthService {
     }
   }
 
+  // POST /api/public/check-email/{email}
+  async checkEmail(email: string) {
+    const response = await axiosInstance.post(`/public/check-email/${email}`);
+    return response.data;
+  }
+
+  // POST /api/public/check-phone-number/{phoneNumber}
+  async checkPhone(phone: string) {
+    const response = await axiosInstance.post(`/public/check-phone-number/${phone}`);
+    return response.data;
+  }
+
+  // /api/public/verify-otp-email
+  async verifyOtpEmail(email: string, otp: string) {
+    const response = await axiosInstance.post('/public/verify-otp-email', {
+      email,
+      otp
+    });
+    return response.data;
+  }
+
+  // /api/public/verify-otp-phone
+  async verifyOtpPhone(phone: string, otp: string) {
+    const response = await axiosInstance.post('/public/verify-otp-phone', {
+      phoneNumber: phone,
+      otp
+    });
+    return response.data;
+  }
+
+  // /api/public/change-password-by-email
+  async changePasswordByEmail(email: string, newPassword: string) {
+    const resetToken = localStorage.getItem('resetToken');
+    const response = await axiosInstance.post('/public/change-password-by-email', {
+      email,
+      resetToken,
+      newPassword
+    });
+    return response.data;
+  }
+
+  // /api/public/change-password-by-phone
+  async changePasswordByPhone(phone: string, newPassword: string) {
+    const resetToken = localStorage.getItem('resetToken');
+    const response = await axiosInstance.post('/public/change-password-by-phone', {
+      phoneNumber: phone,
+      resetToken,
+      newPassword
+    });
+    return response.data;
+  }
+
   isValidToken(): boolean {
     return TokenManager.hasValidToken();
   }
