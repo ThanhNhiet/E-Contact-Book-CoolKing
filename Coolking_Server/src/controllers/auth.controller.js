@@ -249,14 +249,14 @@ exports.checkAccountByEmail = async (req, res) => {
 // POST /public/change-password-by-email
 exports.changePasswordByEmail = async (req, res) => {
 	try {
-		const { email, resetToken, oldPassword, newPassword } = req.body;
-		if (!email || !resetToken || !oldPassword || !newPassword) {
+		const { email, resetToken, newPassword } = req.body;
+		if (!email || !resetToken || !newPassword) {
 			return res.status(400).json({
 				success: false,
-				message: 'Email, Password cũ và Password mới là bắt buộc'
+				message: 'Password mới là bắt buộc'
 			});
 		}
-		const result = await accountRepo.changePassword_ByEmail(email, resetToken, oldPassword, newPassword);
+		const result = await accountRepo.changePassword_ByEmail(email, resetToken, newPassword);
 		if (result === 0) {
 			return res.status(400).json({
 				success: false,
@@ -383,14 +383,14 @@ exports.verifyOTP_Phone = async (req, res) => {
 // POST /public/change-password-by-phone-number
 exports.changePasswordByPhoneNumber = async (req, res) => {
 	try {
-		const { phoneNumber, resetToken, oldPassword, newPassword } = req.body;
-		if (!phoneNumber || !resetToken || !oldPassword || !newPassword) {
+		const { phoneNumber, resetToken, newPassword } = req.body;
+		if (!phoneNumber || !resetToken || !newPassword) {
 			return res.status(400).json({
 				success: false,
-				message: 'Số điện thoại, Token và mật khẩu mới là bắt buộc'
+				message: 'Mật khẩu mới là bắt buộc'
 			});
 		}
-		const result = await accountRepo.changePassword_ByPhoneNumber(phoneNumber, resetToken, oldPassword, newPassword);
+		const result = await accountRepo.changePassword_ByPhoneNumber(phoneNumber, resetToken, newPassword);
 		if (result === 0) {
 			return res.status(400).json({
 				success: false,
