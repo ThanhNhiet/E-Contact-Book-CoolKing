@@ -55,6 +55,24 @@ class AccountService {
         });
         return response.data;
     }
+
+    // GET /api/students/info-view-le-ad/{studentId}
+    async getStudentInfo(studentId: string) {
+        const response = await axiosInstance.get(`/students/info-view-le-ad/${studentId}`);
+        return response.data;
+    }
+
+    // GET /api/lecturers/{lecturerId}
+    async getLecturerInfo(lecturerId: string) {
+        const response = await axiosInstance.get(`/lecturers/${lecturerId}`);
+        return response.data;
+    }
+
+    // GET /api/parents/{parentId}
+    async getParentInfo(parentId: string) {
+        const response = await axiosInstance.get(`/parents/${parentId}`);
+        return response.data;
+    }
 }
 
 // Export singleton instance

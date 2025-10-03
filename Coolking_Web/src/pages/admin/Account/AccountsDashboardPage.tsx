@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useAccount } from '../../../hooks/useAccount';
+import { useAccount, type Account } from '../../../hooks/useAccount';
 import HeaderAdCpn from '../../../components/admin/HeaderAdCpn';
 import FooterAdCpn from '../../../components/admin/FooterAdCpn';
+import AccountsCreateModal from './AccountsCreateModal';
+import AccountsEditModal from './AccountsEditModal';
 
 const AccountsDashboardPage: React.FC = () => {
   const { accounts, loading, error, currentPage, pageSize, pages, getAccounts, searchAccounts, disableAccount, resetPassword, refreshAccounts } = useAccount();
@@ -9,6 +11,11 @@ const AccountsDashboardPage: React.FC = () => {
   const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: 'disable' | 'reset', userId: string } | null>(null);
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
   useEffect(() => {
     getAccounts(1, 10);
@@ -42,20 +49,54 @@ const AccountsDashboardPage: React.FC = () => {
     setShowActionMenu(null);
   };
 
+  const handleEditAccount = (userId: string) => {
+    const account = accounts.find(acc => acc.user_id === userId);
+    if (account) {
+      setEditingAccount(account);
+      setShowEditModal(true);
+    }
+    setShowActionMenu(null);
+  };
+
+  const handleCreateAccount = () => {
+    setShowCreateModal(true);
+  };
+
+  const handleModalSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setShowSuccessNotification(true);
+    refreshAccounts();
+    
+    // Auto hide success notification after 3 seconds
+    setTimeout(() => {
+      setShowSuccessNotification(false);
+    }, 3000);
+  };
+
   const handleConfirmAction = async () => {
     if (!confirmAction) return;
 
     try {
       if (confirmAction.type === 'disable') {
         await disableAccount(confirmAction.userId);
+        setSuccessMessage(`Đã vô hiệu hóa tài khoản ${confirmAction.userId} thành công!`);
       } else if (confirmAction.type === 'reset') {
         await resetPassword(confirmAction.userId);
+        setSuccessMessage(`Đã reset mật khẩu cho tài khoản ${confirmAction.userId} thành công!`);
       }
+      
+      // Show success notification
+      setShowSuccessNotification(true);
       
       // Refresh the accounts list
       refreshAccounts();
       setShowConfirmModal(false);
       setConfirmAction(null);
+      
+      // Auto hide success notification after 3 seconds
+      setTimeout(() => {
+        setShowSuccessNotification(false);
+      }, 3000);
     } catch (error) {
       console.error('Action failed:', error);
     }
@@ -94,14 +135,14 @@ const AccountsDashboardPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm border">
           {/* Header */}
           <div className="px-6 py-4 border-b border-gray-200">
-            <h1 className="text-2xl font-bold text-gray-800 mb-4">Quản lý Tài Khoản</h1>
+            <h1 className="text-2xl font-bold text-gray-800 mb-4 text-center">Quản lý Tài Khoản</h1>
             
             {/* Search and Actions */}
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 flex-1 max-w-md">
                 <input
                   type="text"
-                  placeholder="Search..."
+                  placeholder="Tìm kiếm theo ID, Email hoặc SĐT"
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -118,18 +159,14 @@ const AccountsDashboardPage: React.FC = () => {
               </div>
               
               <div className="flex gap-3">
-                <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 font-medium">
+                <button 
+                  onClick={handleCreateAccount}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 font-medium"
+                >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                   <span>Tạo mới</span>
-                </button>
-                
-                <button className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 font-medium">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  <span>Chỉnh sửa</span>
                 </button>
               </div>
             </div>
@@ -143,7 +180,7 @@ const AccountsDashboardPage: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số điện thoại</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vai trò</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày cập nhật</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
@@ -181,10 +218,10 @@ const AccountsDashboardPage: React.FC = () => {
                         {account.user_id}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {account.email}
+                        {account.email || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {account.phone_number}
+                        {account.phone_number || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={getRoleBadge(account.role)}>
@@ -212,6 +249,13 @@ const AccountsDashboardPage: React.FC = () => {
                         {showActionMenu === account.user_id && (
                           <div className="absolute right-0 top-12 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                             <div className="py-1">
+                              <button
+                                onClick={() => handleEditAccount(account.user_id)}
+                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
+                              >
+                                <span className="text-blue-500">✏️</span>
+                                <span>Chỉnh sửa</span>
+                              </button>
                               <button
                                 onClick={() => handleDisableAccount(account.user_id)}
                                 className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
@@ -278,6 +322,26 @@ const AccountsDashboardPage: React.FC = () => {
 
       <FooterAdCpn />
 
+      {/* Success Notification */}
+      {showSuccessNotification && (
+        <div className="fixed top-4 right-4 z-50">
+          <div className="bg-green-500 text-white px-4 py-3 rounded shadow-md flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span>{successMessage}</span>
+            <button
+              onClick={() => setShowSuccessNotification(false)}
+              className="ml-2 hover:bg-green-600 rounded p-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Confirmation Modal */}
       {showConfirmModal && confirmAction && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -314,6 +378,21 @@ const AccountsDashboardPage: React.FC = () => {
           onClick={() => setShowActionMenu(null)}
         />
       )}
+
+      {/* Create Account Modal */}
+      <AccountsCreateModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={handleModalSuccess}
+      />
+
+      {/* Edit Account Modal */}
+      <AccountsEditModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSuccess={handleModalSuccess}
+        account={editingAccount}
+      />
     </div>
   );
 };

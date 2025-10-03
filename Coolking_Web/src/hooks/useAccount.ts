@@ -181,11 +181,11 @@ export const useAccount = () => {
         }
     }, []);
 
-    const disableAccount = useCallback(async (accountId: string) => {
+    const disableAccount = useCallback(async (userId: string) => {
         try {
             setLoading(true);
             setError('');
-            const data = await accountService.deleteAccount(accountId);
+            const data = await accountService.deleteAccount(userId);
             return data;
         } catch (error: any) {
             setError('Failed to disable account');
@@ -196,11 +196,11 @@ export const useAccount = () => {
         }
     }, []);
 
-    const resetPassword = useCallback(async (accountId: string) => {
+    const resetPassword = useCallback(async (userId: string) => {
         try {
             setLoading(true);
             setError('');
-            const data = await accountService.resetPassword(accountId);
+            const data = await accountService.resetPassword(userId);
             return data;
         } catch (error: any) {
             setError('Failed to reset password');
@@ -214,6 +214,62 @@ export const useAccount = () => {
     const refreshAccounts = useCallback(() => {
         getAccounts(currentPage, pageSize);
     }, [getAccounts, currentPage, pageSize]);
+
+    const createAccount = useCallback(async (accountData: Account) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await accountService.createAccount(accountData);
+            return data;
+        } catch (error: any) {
+            setError('Failed to create account');
+            console.error('Create account error:', error);
+            throw error;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const updateAccount = useCallback(async (userId: string, accountData: Partial<Account>) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await accountService.updateAccount(userId, accountData);
+            return data;
+        } catch (error: any) {
+            setError('Failed to update account');
+            console.error('Update account error:', error);
+            throw error;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const getDetailInfoByID = useCallback(async (userId: string) => {
+        try {
+            setLoading(true);
+            setError('');
+            console.log('Fetching details for userId:', userId);
+            if (userId.startsWith('SV')) {
+                const data = await accountService.getStudentInfo(userId);
+                return data;
+            } else if (userId.startsWith('LE')) {
+                const data = await accountService.getLecturerInfo(userId);
+                return data;
+            } else if (userId.startsWith('PA')) {
+                const data = await accountService.getParentInfo(userId);
+                return data;
+            } else {
+                setError('Invalid user ID format');
+                return null;
+            }
+        } catch (error: any) {
+            setError('Failed to fetch account details');
+            console.error('Get account details error:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     return {
         loading,
@@ -229,6 +285,9 @@ export const useAccount = () => {
         searchAccounts,
         disableAccount,
         resetPassword,
-        refreshAccounts
+        refreshAccounts,
+        createAccount,
+        updateAccount,
+        getDetailInfoByID
     };
 };
