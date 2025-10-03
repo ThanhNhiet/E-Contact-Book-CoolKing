@@ -72,6 +72,7 @@ const getAllAccounts_paging = async (page, pageSize) => {
       attributes: { exclude: ['password'] },
       limit: pageSize_num,
       offset,
+      order: [['updatedAt', 'DESC']],
       raw: true
     });
 
@@ -116,6 +117,7 @@ const getAllAccounts_keyword = async (keyword, page, pageSize) => {
       attributes: { exclude: ['password'] },
       limit: pageSize_num,
       offset,
+      order: [['updatedAt', 'DESC']],
       raw: true
     });
 
