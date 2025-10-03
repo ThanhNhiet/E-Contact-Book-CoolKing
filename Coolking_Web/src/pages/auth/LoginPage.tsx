@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/auth/useAuth';
+import logoImg from '../../assets/img/logo.png';
 
 const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -34,6 +35,13 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
         <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <img 
+              src={logoImg} 
+              alt="CoolKing Logo" 
+              className="h-16 w-16 object-contain"
+            />
+          </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">CoolKing E-Contact</h1>
           <p className="text-gray-600">Đăng nhập</p>
         </div>
