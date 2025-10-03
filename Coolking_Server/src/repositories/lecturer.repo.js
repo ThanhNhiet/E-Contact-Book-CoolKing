@@ -121,11 +121,22 @@ const uploadAvatar = async (lecturer_id, file) => {
   }
 };
 
+const getLecturerById = async (lecturer_id) => {
+  try {
+    const lecturer = await models.Lecturer.findOne({ where: { lecturer_id } });
+    if (!lecturer) throw new Error("Lecturer not found");
+    return lecturer;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   getLecturerByLecturer_id,
   createLecturer,
   updateLecturer,
   deleteLecturer,
-  uploadAvatar
+  uploadAvatar,
+  getLecturerById
 };
 

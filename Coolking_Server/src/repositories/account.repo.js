@@ -184,6 +184,23 @@ const getAccountByUserId = async (user_id) => {
 
 const createAccount = async (accountData) => {
   try {
+    if (accountData.role === 'ADMIN') {
+      // Tự động sinh user_id cho ADMIN, user_id có định dạng ADMINxxx
+      const lastAdmin = await models.Account.findOne({
+        where: { role: 'ADMIN' },
+        order: [['createdAt', 'DESC']],
+        raw: true
+      });
+      let newIdNumber = 1;
+      if (lastAdmin) {
+        const lastUserId = lastAdmin.user_id;
+        const match = lastUserId.match(/(\d+)$/);
+        if (match) {
+          newIdNumber = parseInt(match[1]) + 1;
+        }
+      }
+      accountData.user_id = `ADMIN${String(newIdNumber).padStart(3, '0')}`;
+    }
     return await models.Account.create(accountData);
   } catch (error) {
     throw error;
