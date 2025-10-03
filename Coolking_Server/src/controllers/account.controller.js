@@ -64,9 +64,41 @@ exports.createAccount = async (req, res) => {
 		if (!req.body.password ||req.body.password.trim() === '') {
 			req.body.password = '12345678';
 		}
+		
+		// console.log('Creating account with data:', JSON.stringify(req.body, null, 2));
 		await accountRepo.createAccount(req.body);
 		res.status(201).json({ message: 'Tạo tài khoản thành công' });
 	} catch (err) {
+		// console.error('Error creating account:', err);
+		// console.error('Error details:', {
+		// 	name: err.name,
+		// 	message: err.message,
+		// 	stack: err.stack,
+		// 	original: err.original
+		// });
+		
+		// // Handle Sequelize validation errors specifically
+		// if (err.name === 'SequelizeValidationError') {
+		// 	const validationErrors = err.errors.map(error => ({
+		// 		field: error.path,
+		// 		message: error.message,
+		// 		value: error.value
+		// 	}));
+		// 	return res.status(400).json({ 
+		// 		message: 'Validation error', 
+		// 		errors: validationErrors 
+		// 	});
+		// }
+		
+		// // Handle Sequelize unique constraint errors
+		// if (err.name === 'SequelizeUniqueConstraintError') {
+		// 	const field = err.errors[0].path;
+		// 	return res.status(400).json({ 
+		// 		message: `${field} already exists`, 
+		// 		field: field 
+		// 	});
+		// }
+		
 		res.status(500).json({ message: err.message });
 	}
 };
