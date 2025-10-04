@@ -1,21 +1,20 @@
 const formatDateTimeVN = (isoString) => {
   const date = new Date(isoString);
 
-  // const dd = String(date.getDate()).padStart(2, '0');
-  // const MM = String(date.getMonth() + 1).padStart(2, '0');
-  // const yyyy = date.getFullYear();
-  // const hh = String(date.getHours()).padStart(2, '0');
-  // const mm = String(date.getMinutes()).padStart(2, '0');
-  // const ss = String(date.getSeconds()).padStart(2, '0');
-  // return `${dd}-${MM}-${yyyy} ${hh}:${mm}:${ss}`;
-
-  const options = { 
+  // Tùy chọn định dạng riêng cho ngày và giờ
+  const dateOptions = { 
     timeZone: 'Asia/Ho_Chi_Minh',
-    hour12: false,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit'
+    year: 'numeric', month: '2-digit', day: '2-digit'
   };
-  return new Intl.DateTimeFormat('vi-VN', options).format(date).replace(',', '');
+  const timeOptions = { 
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
+  };
+
+  const formattedDate = new Intl.DateTimeFormat('vi-VN', dateOptions).format(date);
+  const formattedTime = new Intl.DateTimeFormat('vi-VN', timeOptions).format(date);
+
+  return `${formattedDate} ${formattedTime}`;
 };
 
 const formatDateVN = (isoString) => {
