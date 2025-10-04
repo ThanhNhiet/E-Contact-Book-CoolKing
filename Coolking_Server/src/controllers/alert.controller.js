@@ -216,10 +216,74 @@ const deleteAlert = async (req, res) => {
     }
 };
 
+/**
+ * Lấy tất cả thông báo (Admin only)
+ * GET /api/alerts?page=1&pageSize=10&keyword=...
+ */
+const getAllAlerts = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const keyword = req.query.keyword || '';
+
+        // Gọi repository để lấy tất cả thông báo
+        const result = await alertRepo.getAllAlerts4Admin(page, pageSize, keyword);
+
+        res.status(200).json(result);
+
+    } catch (error) {
+        console.error('Error in getAllAlerts controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi lấy danh sách thông báo'
+        });
+    }
+};
+
+/**
+ * Tìm kiếm các thông báo theo từ khóa (Admin only)
+ * GET /api/alerts/search?keyword=&page=1&pageSize=10
+ */
+const searchAlerts = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+
+        const keyword = req.query.keyword || '';
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        console.log('Searching alerts with keyword:', keyword, 'page:', page, 'pageSize:', pageSize);
+
+        // Gọi repository để tìm kiếm thông báo
+        const result = await alertRepo.searchAlertsByKeyword4Admin(keyword, page, pageSize);
+
+        res.status(200).json(result);
+
+    } catch (error) {
+        console.error('Error in searchAlerts controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi tìm kiếm thông báo'
+        });
+    }
+};
+
 module.exports = {
     sendAlertToAll,
     sendAlertToPerson,
     getMyAlerts,
     markAlertAsRead,
-    deleteAlert
+    deleteAlert,
+    getAllAlerts,
+    searchAlerts
 };
