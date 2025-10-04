@@ -517,10 +517,34 @@ const searchAlertsByKeyword4Admin = async (keyword, page = 1, pageSize = 10) => 
     }
 };
 
+/**
+ * Cập nhật thông báo (dành cho admin)
+ * @param {String} alertId - ID thông báo
+ * @param {String} header - Tiêu đề mới
+ * @param {String} body - Nội dung mới
+ * @returns {Object} - Kết quả cập nhật
+ */
+const updateAlert4Admin = async (alertId, header, body) => {
+    try {
+        const updatedAlert = await Alert.findByIdAndUpdate(alertId, { header, body }, { new: true });
+        if (!updatedAlert) {
+            throw new Error('Thông báo không tồn tại');
+        }
+        return {
+            success: true,
+            message: 'Cập nhật thông báo thành công'
+        };
+    } catch (error) {
+        console.error('Error updating alert:', error);
+        throw new Error(`Lỗi khi cập nhật thông báo: ${error.message}`);
+    }
+};
+
 module.exports = {
     sendAlertToAll,
     sendAlertToPerson,
     getAlertsByUser,
+    updateAlert4Admin,
     markAlertAsRead,
     deleteAlert4Admin,
     deleteAlert4Lecturer,

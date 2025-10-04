@@ -277,6 +277,37 @@ const searchAlerts = async (req, res) => {
     }
 };
 
+/**
+ * Cập nhật thông báo (Admin only)
+ * PUT /api/alerts/:alertId
+ */
+const updateAlert4Admin = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { alertId } = req.params;
+        const { header, body } = req.body;
+        if (!header && !body) {
+            return res.status(400).json({
+                success: false,
+                message: 'Chưa có thay đổi nào để cập nhật'
+            });
+        }
+        const result = await alertRepo.updateAlert4Admin(alertId, header, body);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in updateAlert4Admin controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi cập nhật thông báo'
+        });
+    }
+};
+
 module.exports = {
     sendAlertToAll,
     sendAlertToPerson,
@@ -284,5 +315,6 @@ module.exports = {
     markAlertAsRead,
     deleteAlert,
     getAllAlerts,
-    searchAlerts
+    searchAlerts,
+    updateAlert4Admin
 };
