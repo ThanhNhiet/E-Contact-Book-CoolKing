@@ -464,7 +464,6 @@ const searchAlertsByKeyword4Admin = async (keyword, page = 1, pageSize = 10) => 
 
         if (parsedDate) {
             query.$or.push({ createdAt: { $gte: parsedDate } });
-            console.log('Searching by parsed date:', parsedDate);
         }
 
         const alerts = await Alert.find(query)

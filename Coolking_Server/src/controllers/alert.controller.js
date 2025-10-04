@@ -262,7 +262,6 @@ const searchAlerts = async (req, res) => {
         const keyword = req.query.keyword || '';
         const page = parseInt(req.query.page) || 1;
         const pageSize = parseInt(req.query.pageSize) || 10;
-        console.log('Searching alerts with keyword:', keyword, 'page:', page, 'pageSize:', pageSize);
 
         // Gọi repository để tìm kiếm thông báo
         const result = await alertRepo.searchAlertsByKeyword4Admin(keyword, page, pageSize);
