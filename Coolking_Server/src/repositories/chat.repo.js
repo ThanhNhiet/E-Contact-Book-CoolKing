@@ -1,4 +1,5 @@
 const sequelize = require("../config/mariadb.conf");
+const { Op } = require('sequelize');
 const initModels = require("../databases/mariadb/model/init-models");
 const models = initModels(sequelize);
 
@@ -242,7 +243,7 @@ const getGroupChatInfoByCourseSection4Admin = async (course_section_id) => {
  * @param {string} userID - ID của user
  * @param {string} roleAccount - Role của account ('STUDENT', 'PARENT', 'LECTURER', 'ADMIN')
  * @param {number} page - Trang hiện tại (mặc định 1)
- * @param {number} pageSize - Kích thước trang (mặc định 15)
+ * @param {number} pageSize - Kích thước trang (mặc định 10)
  * @returns {Promise<Object>} - Danh sách các đoạn chat với phân trang
  */
 const getUserChats = async (userID, roleAccount, page = 1, pageSize = 10) => {
@@ -416,7 +417,6 @@ const searchChatsByKeyword = async (userID, keyword, roleAccount) => {
         ]);
 
         // Filter private chats theo phone/email/name từ MariaDB
-        const { Op } = require('sequelize');
         const filteredPrivateChats = [];
 
         const searchCondition = {
@@ -702,6 +702,458 @@ const deleteInactivePrivateChats = async () => {
     }
 };
 
+/**
+ * Lấy tất cả chats, phân trang, dành cho admin
+ * @param {number} page - Trang hiện tại (mặc định 1)
+ * @param {number} pageSize - Kích thước trang (mặc định 10)
+ */
+const getAllChats = async (page = 1, pageSize = 10) => {
+    try {
+        const page_num = Math.max(1, parseInt(page) || 1);
+        const pageSize_num = Math.max(1, parseInt(pageSize) || 10);
+        const skip = (page_num - 1) * pageSize_num;
+        const total = await Chat.countDocuments({});
+        const totalPages = Math.ceil(total / pageSize_num);
+        const chats = await Chat.find({})
+            .sort({ updatedAt: -1 }) // Sắp xếp theo thời gian cập nhật gần nhất
+            .skip(skip)
+            .limit(pageSize_num)
+            .lean(); // Sử dụng lean() để tăng performance
+        const processedChats = chats.map(chat => ({
+            _id: chat._id,
+            type: chat.type,
+            name: chat.name,
+            avatar: chat.avatar,
+            course_section_id: chat.course_section_id,
+            createdAt: chat.createdAt,
+            updatedAt: chat.updatedAt,
+            memberCount: chat.members.length
+        }));
+
+        return {
+            total,
+            page: page_num,
+            pageSize: pageSize_num,
+            totalPages,
+            chats: processedChats,
+            linkPrev: page_num > 1 ? `/chats?page=${page_num - 1}&pageSize=${pageSize_num}` : null,
+            linkNext: page_num < totalPages ? `/chats?page=${page_num + 1}&pageSize=${pageSize_num}` : null,
+            pages: Array.from({ length: Math.min(3, totalPages - page_num + 1) }, (_, i) => page_num + i)
+        };
+
+    } catch (error) {
+        console.error('Error getting all chats:', error);
+        throw new Error(`Failed to get all chats: ${error.message}`);
+    }
+};
+
+/** Tìm kiếm chats theo từ khóa, dành cho admin
+ * @param {string} keyword - Từ khóa tìm kiếm (name chat đối với group; phone, email đối với private)
+ * @param {number} page - Trang hiện tại (mặc định 1)
+ * @param {number} pageSize - Kích thước trang (mặc định 10)
+ * @returns {Promise<Object>} - Danh sách chats có phân trang
+ */
+const searchChatsByKeyword4Admin = async (keyword, page = 1, pageSize = 10) => {
+    try {
+        if (!keyword || keyword.trim() === '') {
+           return await getAllChats(page, pageSize);
+        }
+
+        const searchKeyword = keyword.trim();
+        const page_num = Math.max(1, parseInt(page) || 1);
+        const pageSize_num = Math.max(1, parseInt(pageSize) || 10);
+        const skip = (page_num - 1) * pageSize_num;
+
+        // Tìm group chats theo tên
+        const groupChatFilter = {
+            type: ChatType.GROUP,
+            name: { $regex: searchKeyword, $options: 'i' }
+        };
+
+        // Tìm private chats
+        const privateChatFilter = {
+            type: ChatType.PRIVATE
+        };
+
+        const [groupChats, allPrivateChats] = await Promise.all([
+            Chat.find(groupChatFilter).sort({ updatedAt: -1 }).lean(),
+            Chat.find(privateChatFilter).sort({ updatedAt: -1 }).lean()
+        ]);
+
+        // Filter private chats theo phone/email/name từ MariaDB
+        const filteredPrivateChats = [];
+
+        const searchCondition = {
+            [Op.or]: [
+                { email: { [Op.like]: `%${searchKeyword}%` } },
+                { phone: { [Op.like]: `%${searchKeyword}%` } },
+                { name: { [Op.like]: `%${searchKeyword}%` } }
+            ]
+        };
+
+        for (const chat of allPrivateChats) {
+            let userFound = false;
+            const allUserIDs = chat.members.map(member => member.userID);
+
+            // Tìm trong Student
+            const students = await models.Student.findAll({
+                where: {
+                    ...searchCondition,
+                    student_id: { [Op.in]: allUserIDs }
+                }
+            });
+            if (students.length > 0) userFound = true;
+
+            // Tìm trong Lecturer nếu chưa tìm thấy
+            if (!userFound) {
+                const lecturers = await models.Lecturer.findAll({
+                    where: {
+                        ...searchCondition,
+                        lecturer_id: { [Op.in]: allUserIDs }
+                    }
+                });
+                if (lecturers.length > 0) userFound = true;
+            }
+
+            // Tìm trong Parent nếu chưa tìm thấy
+            if (!userFound) {
+                const parents = await models.Parent.findAll({
+                    where: {
+                        ...searchCondition,
+                        parent_id: { [Op.in]: allUserIDs }
+                    }
+                });
+                if (parents.length > 0) userFound = true;
+            }
+
+            if (userFound) {
+                filteredPrivateChats.push(chat);
+            }
+        }
+
+        // Kết hợp results và phân trang
+        const allChats = [...groupChats, ...filteredPrivateChats]
+            .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+        const total = allChats.length;
+        const totalPages = Math.ceil(total / pageSize_num);
+        const paginatedChats = allChats.slice(skip, skip + pageSize_num);
+
+        const processedChats = paginatedChats.map(chat => ({
+            _id: chat._id,
+            type: chat.type,
+            name: chat.name,
+            avatar: chat.avatar,
+            course_section_id: chat.course_section_id,
+            createdAt: chat.createdAt,
+            updatedAt: chat.updatedAt,
+            memberCount: chat.members.length
+        }));
+
+        return {
+            total,
+            page: page_num,
+            pageSize: pageSize_num,
+            totalPages,
+            chats: processedChats,
+            linkPrev: page_num > 1 ? `/chats/search?keyword=${encodeURIComponent(keyword)}&page=${page_num - 1}&pageSize=${pageSize_num}` : null,
+            linkNext: page_num < totalPages ? `/chats/search?keyword=${encodeURIComponent(keyword)}&page=${page_num + 1}&pageSize=${pageSize_num}` : null,
+            pages: Array.from({ length: Math.min(3, totalPages - page_num + 1) }, (_, i) => page_num + i)
+        };
+
+    } catch (error) {
+        console.error('Error searching chats for admin:', error);
+        throw new Error(`Failed to search chats: ${error.message}`);
+    }
+};
+
+/**
+ * Lấy danh sách các lớp học phần chưa có group chat
+ * @param {number} page - Trang hiện tại (mặc định 1) 
+ * @param {number} pageSize - Kích thước trang (mặc định 10)
+ * @returns {Promise<Object>} - Danh sách course sections chưa có group chat
+ */
+const getNonChatCourseSections = async (page = 1, pageSize = 10) => {
+    try {
+        const page_num = Math.max(1, parseInt(page) || 1);
+        const pageSize_num = Math.max(1, parseInt(pageSize) || 10);
+        const offset = (page_num - 1) * pageSize_num;
+
+        // Lấy danh sách course_section_id đã có group chat
+        const existingGroupChats = await Chat.find(
+            { type: ChatType.GROUP, course_section_id: { $exists: true, $ne: null } },
+            { course_section_id: 1 }
+        ).lean();
+        
+        const existingCourseSectionIds = existingGroupChats.map(chat => chat.course_section_id);
+
+        // Điều kiện WHERE để loại bỏ các course section đã có group chat
+        const whereCondition = existingCourseSectionIds.length > 0 
+            ? { id: { [Op.notIn]: existingCourseSectionIds } }
+            : {};
+
+        // Đếm tổng số course sections chưa có group chat
+        const total = await models.CourseSection.count({
+            where: whereCondition
+        });
+
+        // Lấy danh sách course sections chưa có group chat với phân trang
+        const courseSections = await models.CourseSection.findAll({
+            where: whereCondition,
+            include: [
+                {
+                    model: models.Subject,
+                    as: 'subject',
+                    attributes: ['name'],
+                    include: [
+                        {
+                            model: models.Faculty,
+                            as: 'faculty',
+                            attributes: ['name']
+                        }
+                    ]
+                },
+                {
+                    model: models.Clazz,
+                    as: 'clazz',
+                    attributes: ['name']
+                },
+                {
+                    model: models.Session,
+                    as: 'session',
+                    attributes: ['name']
+                },
+                {
+                    model: models.LecturerCourseSection,
+                    as: 'lecturers_course_sections',
+                    include: [
+                        {
+                            model: models.Lecturer,
+                            as: 'lecturer',
+                            attributes: ['name']
+                        }
+                    ]
+                }
+            ],
+            attributes: ['id', 'updatedAt'],
+            order: [['updatedAt', 'DESC']],
+            limit: pageSize_num,
+            offset: offset
+        });
+
+        // Format dữ liệu trả về
+        const processedCourseSections = courseSections.map(cs => ({
+            subjectName: cs.subject?.name || 'N/A',
+            className: cs.clazz?.name || 'N/A',
+            course_section_id: cs.id,
+            facultyName: cs.subject?.faculty?.name || 'N/A',
+            sessionName: cs.session?.name || 'N/A',
+            lecturerName: cs.lecturers_course_sections?.[0]?.lecturer?.name || 'N/A',
+            updatedAt: datetimeFormatter.formatDateTimeVN(cs.updatedAt)
+        }));
+
+        const totalPages = Math.ceil(total / pageSize_num);
+
+        return {
+            total,
+            page: page_num,
+            pageSize: pageSize_num,
+            totalPages,
+            courseSections: processedCourseSections,
+            linkPrev: page_num > 1 ? `/course-sections/non-chat?page=${page_num - 1}&pageSize=${pageSize_num}` : null,
+            linkNext: page_num < totalPages ? `/course-sections/non-chat?page=${page_num + 1}&pageSize=${pageSize_num}` : null,
+            pages: Array.from({ length: Math.min(3, totalPages - page_num + 1) }, (_, i) => page_num + i)
+        };
+
+    } catch (error) {
+        console.error('Error getting non-chat course sections:', error);
+        throw new Error(`Failed to get non-chat course sections: ${error.message}`);
+    }
+};
+
+/**
+ * Tìm kiếm các lớp học phần chưa có group chat theo từ khóa
+ * @param {string} keyword - Từ khóa tìm kiếm
+ * @param {number} page - Trang hiện tại (mặc định 1)
+ * @param {number} pageSize - Kích thước trang (mặc định 10)
+ * @returns {Promise<Object>} - Danh sách course sections chưa có group chat phù hợp
+ */
+const searchNonChatCourseSections = async (keyword, page = 1, pageSize = 10) => {
+    try {
+        if (!keyword || keyword.trim() === '') {
+            return await getNonChatCourseSections(page, pageSize);
+        }
+
+        const searchKeyword = keyword.trim();
+        const page_num = Math.max(1, parseInt(page) || 1);
+        const pageSize_num = Math.max(1, parseInt(pageSize) || 10);
+        const offset = (page_num - 1) * pageSize_num;
+
+        // Lấy danh sách course_section_id đã có group chat
+        const existingGroupChats = await Chat.find(
+            { type: ChatType.GROUP, course_section_id: { $exists: true, $ne: null } },
+            { course_section_id: 1 }
+        ).lean();
+        
+        const existingCourseSectionIds = existingGroupChats.map(chat => chat.course_section_id);
+
+        // Tìm kiếm theo từng tiêu chí riêng biệt và gộp kết quả
+        let matchingCourseIds = new Set();
+
+        // 1. Tìm theo subject name
+        const subjectMatches = await models.CourseSection.findAll({
+            include: [{
+                model: models.Subject,
+                as: 'subject',
+                where: {
+                    name: { [Op.like]: `%${searchKeyword}%` }
+                },
+                attributes: []
+            }],
+            attributes: ['id'],
+            raw: true
+        });
+        subjectMatches.forEach(item => matchingCourseIds.add(item.id));
+
+        // 2. Tìm theo class name (bắt đầu bằng DH)
+        const classMatches = await models.CourseSection.findAll({
+            include: [{
+                model: models.Clazz,
+                as: 'clazz',
+                where: {
+                    name: {
+                        [Op.and]: [
+                            { [Op.like]: 'DH%' },
+                            { [Op.like]: `%${searchKeyword}%` }
+                        ]
+                    }
+                },
+                attributes: []
+            }],
+            attributes: ['id'],
+            raw: true
+        });
+        classMatches.forEach(item => matchingCourseIds.add(item.id));
+
+        // 3. Tìm theo session name (bắt đầu bằng HK)
+        const sessionMatches = await models.CourseSection.findAll({
+            include: [{
+                model: models.Session,
+                as: 'session',
+                where: {
+                    name: {
+                        [Op.and]: [
+                            { [Op.like]: 'HK%' },
+                            { [Op.like]: `%${searchKeyword}%` }
+                        ]
+                    }
+                },
+                attributes: []
+            }],
+            attributes: ['id'],
+            raw: true
+        });
+        sessionMatches.forEach(item => matchingCourseIds.add(item.id));
+
+        // Chuyển Set thành Array và loại bỏ các course section đã có group chat
+        const filteredIds = Array.from(matchingCourseIds).filter(id => 
+            !existingCourseSectionIds.includes(id)
+        );
+
+        if (filteredIds.length === 0) {
+            return {
+                total: 0,
+                page: page_num,
+                pageSize: pageSize_num,
+                totalPages: 0,
+                courseSections: [],
+                linkPrev: null,
+                linkNext: null,
+                pages: []
+            };
+        }
+
+        const whereCondition = {
+            id: { [Op.in]: filteredIds }
+        };
+
+        // Đếm tổng số kết quả
+        const total = filteredIds.length;
+
+        // Lấy dữ liệu với phân trang
+        const courseSections = await models.CourseSection.findAll({
+            where: whereCondition,
+            include: [
+                {
+                    model: models.Subject,
+                    as: 'subject',
+                    attributes: ['name'],
+                    include: [
+                        {
+                            model: models.Faculty,
+                            as: 'faculty',
+                            attributes: ['name']
+                        }
+                    ]
+                },
+                {
+                    model: models.Clazz,
+                    as: 'clazz',
+                    attributes: ['name']
+                },
+                {
+                    model: models.Session,
+                    as: 'session',
+                    attributes: ['name']
+                },
+                {
+                    model: models.LecturerCourseSection,
+                    as: 'lecturers_course_sections',
+                    include: [
+                        {
+                            model: models.Lecturer,
+                            as: 'lecturer',
+                            attributes: ['name']
+                        }
+                    ]
+                }
+            ],
+            attributes: ['id', 'updatedAt'],
+            order: [['updatedAt', 'DESC']],
+            limit: pageSize_num,
+            offset: offset
+        });
+
+        // Format dữ liệu trả về
+        const processedCourseSections = courseSections.map(cs => ({
+            subjectName: cs.subject?.name || 'N/A',
+            className: cs.clazz?.name || 'N/A',
+            course_section_id: cs.id,
+            facultyName: cs.subject?.faculty?.name || 'N/A',
+            sessionName: cs.session?.name || 'N/A',
+            lecturerName: cs.lecturers_course_sections?.[0]?.lecturer?.name || 'N/A',
+            updatedAt: datetimeFormatter.formatDateTimeVN(cs.updatedAt)
+        }));
+
+        const totalPages = Math.ceil(total / pageSize_num);
+
+        return {
+            total,
+            page: page_num,
+            pageSize: pageSize_num,
+            totalPages,
+            courseSections: processedCourseSections,
+            linkPrev: page_num > 1 ? `/course-sections/search?keyword=${encodeURIComponent(keyword)}&page=${page_num - 1}&pageSize=${pageSize_num}` : null,
+            linkNext: page_num < totalPages ? `/course-sections/search?keyword=${encodeURIComponent(keyword)}&page=${page_num + 1}&pageSize=${pageSize_num}` : null,
+            pages: Array.from({ length: Math.min(3, totalPages - page_num + 1) }, (_, i) => page_num + i)
+        };
+
+    } catch (error) {
+        console.error('Error searching non-chat course sections:', error);
+        throw new Error(`Failed to search non-chat course sections: ${error.message}`);
+    }
+};
+
 module.exports = {
     createGroupChat4Admin,
     createPrivateChat4Users,
@@ -710,5 +1162,9 @@ module.exports = {
     searchChatsByKeyword,
     updateGroupChat4Admin,
     deleteGroupChat4Admin,
-    deleteInactivePrivateChats
+    deleteInactivePrivateChats,
+    getAllChats,
+    searchChatsByKeyword4Admin,
+    getNonChatCourseSections,
+    searchNonChatCourseSections
 };

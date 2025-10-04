@@ -201,3 +201,99 @@ exports.deleteInactivePrivateChats = async (req, res) => {
         });
     }
 };
+
+// GET /api/chats/all?page=1&pageSize=10
+exports.getAllChats = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { page, pageSize } = req.query;
+        const chats = await chatRepo.getAllChats(page, pageSize);
+        res.status(200).json(chats);
+    } catch (error) {
+        console.error('Error in getAllChats controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi lấy danh sách cuộc trò chuyện'
+        });
+    }
+};
+
+// GET /api/chats/all/search?keyword=&page=&pageSize=
+exports.searchAllChats = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { keyword, page, pageSize } = req.query;
+        if (!keyword) {
+            return res.status(400).json({
+                success: false,
+                message: 'keyword là bắt buộc'
+            });
+        }
+        const chats = await chatRepo.searchChatsByKeyword4Admin(keyword, page, pageSize);
+        res.status(200).json(chats);
+    } catch (error) {
+        console.error('Error in searchAllChats controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi tìm kiếm cuộc trò chuyện'
+        });
+    }
+};
+
+// GET /api/chats/nonchat-course-sections?page=1&pageSize=10
+exports.getNonChatCourseSections = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { page, pageSize } = req.query;
+        const courseSections = await chatRepo.getNonChatCourseSections(page, pageSize);
+        res.status(200).json(courseSections);
+    } catch (error) {
+        console.error('Error in getNonChatCourseSections controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi lấy danh sách course section chưa có nhóm chat'
+        });
+    }
+};
+
+// GET /api/Chats/nonchat-course-sections/search?keyword=<keyword>&page=1&pageSize=10
+exports.searchNonChatCourseSections = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { keyword, page, pageSize } = req.query;
+        if (!keyword) {
+            return res.status(400).json({
+                success: false,
+                message: 'keyword là bắt buộc'
+            });
+        }
+        const courseSections = await chatRepo.searchNonChatCourseSections(keyword, page, pageSize);
+        res.status(200).json(courseSections);
+    } catch (error) {
+        console.error('Error in searchNonChatCourseSections controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi tìm kiếm course section chưa có nhóm chat'
+        });
+    }
+};
