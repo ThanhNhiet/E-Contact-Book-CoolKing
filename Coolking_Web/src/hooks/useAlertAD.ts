@@ -94,6 +94,20 @@ export const useAlert = () => {
         }
     }, []);
 
+    //Cập nhật thông báo
+    const updateAlert = useCallback(async (alertId: string, header?: string, body?: string) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await alertService.updateAlert(alertId, header, body);
+            return data;
+        } catch (error: any) {
+            setError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     return {
         loading,
         error,
@@ -108,6 +122,7 @@ export const useAlert = () => {
         getAlerts,
         searchAlerts,
         sendAlertToAll,
-        deleteAlert
+        deleteAlert,
+        updateAlert
     };
 };

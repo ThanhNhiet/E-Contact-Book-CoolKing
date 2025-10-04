@@ -4,6 +4,7 @@ import HeaderAdCpn from '../../../components/admin/HeaderAdCpn';
 import FooterAdCpn from '../../../components/admin/FooterAdCpn';
 import SendFormModal from './SendFormModal';
 import AlertDetailModal from './AlertDetailModal';
+import EditFormModal from './EditFormModal';
 
 const AlertDashboardPage: React.FC = () => {
   const { alerts, loading, error, currentPage, pages, getAlerts, searchAlerts, deleteAlert } = useAlert();
@@ -15,6 +16,9 @@ const AlertDashboardPage: React.FC = () => {
   const [alertToDelete, setAlertToDelete] = useState<Alert | null>(null);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAlert, setEditingAlert] = useState<Alert | null>(null);
 
   useEffect(() => {
     getAlerts(1, 10);
@@ -37,10 +41,20 @@ const AlertDashboardPage: React.FC = () => {
     setShowDetailModal(true);
   };
 
-  const handleDeleteClick = (alert: Alert, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row click
+  const handleActionClick = (alertId: string) => {
+    setShowActionMenu(showActionMenu === alertId ? null : alertId);
+  };
+
+  const handleEditClick = (alert: Alert) => {
+    setEditingAlert(alert);
+    setShowEditModal(true);
+    setShowActionMenu(null);
+  };
+
+  const handleDeleteClick = (alert: Alert) => {
     setAlertToDelete(alert);
     setShowConfirmModal(true);
+    setShowActionMenu(null);
   };
 
   const handleConfirmDelete = async () => {
@@ -104,7 +118,7 @@ const AlertDashboardPage: React.FC = () => {
       <HeaderAdCpn />
       
       <main className="flex-1 max-w-7xl mx-auto px-6 py-8 w-full">
-        <div className="bg-white rounded-lg shadow-sm border">
+        <div className="bg-white rounded-lg shadow-sm border relative">
           {/* Header */}
           <div className="px-6 py-4 border-b border-gray-200">
             <h1 className="text-2xl font-bold text-gray-800 mb-4 text-center">Quản lý Thông Báo</h1>
@@ -145,7 +159,7 @@ const AlertDashboardPage: React.FC = () => {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-visible">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
@@ -187,8 +201,14 @@ const AlertDashboardPage: React.FC = () => {
                   alerts.map((alert, index) => (
                     <tr 
                       key={alert._id} 
-                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer transition-colors duration-200`}
-                      onClick={() => handleRowClick(alert)}
+                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer transition-colors duration-200 select-none`}
+                      onClick={(e) => {
+                        // Only trigger detail if not clicking on action buttons and no text is selected
+                        const selection = window.getSelection();
+                        if (!e.defaultPrevented && (!selection || selection.toString().length === 0)) {
+                          handleRowClick(alert);
+                        }
+                      }}
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {alert._id.substring(0, 8)}...
@@ -212,16 +232,50 @@ const AlertDashboardPage: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {alert.createdAt}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 relative">
                         <button
-                          onClick={(e) => handleDeleteClick(alert, e)}
-                          className="p-2 hover:bg-red-100 rounded-full transition-colors duration-200 text-red-600"
-                          title="Xóa thông báo"
+                          data-alert-id={alert._id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleActionClick(alert._id);
+                          }}
+                          className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                           </svg>
                         </button>
+                        
+                        {showActionMenu === alert._id && (
+                          <div className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[60] w-48" 
+                               style={{
+                                 top: `${(document.querySelector(`[data-alert-id="${alert._id}"]`) as HTMLElement)?.getBoundingClientRect()?.bottom + 5 || 0}px`,
+                                 right: `${window.innerWidth - (document.querySelector(`[data-alert-id="${alert._id}"]`) as HTMLElement)?.getBoundingClientRect()?.right || 0}px`
+                               }}>
+                            <div className="py-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditClick(alert);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
+                              >
+                                <span className="text-blue-500">✏️</span>
+                                <span>Chỉnh sửa</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteClick(alert);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-gray-700 transition-colors duration-200 flex items-center gap-2"
+                              >
+                                <span className="text-red-500">🗑️</span>
+                                <span>Xóa</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -320,6 +374,14 @@ const AlertDashboardPage: React.FC = () => {
         </div>
       )}
 
+      {/* Click outside to close action menu */}
+      {showActionMenu && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setShowActionMenu(null)}
+        />
+      )}
+
       {/* Send Alert Modal */}
       <SendFormModal
         isOpen={showSendModal}
@@ -332,6 +394,14 @@ const AlertDashboardPage: React.FC = () => {
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         alert={selectedAlert}
+      />
+
+      {/* Edit Alert Modal */}
+      <EditFormModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSuccess={handleSendSuccess}
+        alert={editingAlert}
       />
     </div>
   );

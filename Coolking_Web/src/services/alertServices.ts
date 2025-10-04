@@ -47,6 +47,15 @@ class AlertService {
       });
       return response.data;
    }
+
+   // PUT /api/alerts/:alertId
+   async updateAlert(alertId: string, header?: string, body?: string) {
+      const response = await axiosInstance.put(`/alerts/${alertId}`, {
+         header,
+         body
+      });
+      return response.data;
+   }
    
 }
 // Export singleton instance
