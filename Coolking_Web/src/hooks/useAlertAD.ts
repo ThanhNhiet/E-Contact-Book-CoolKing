@@ -1,65 +1,6 @@
 import { useState, useCallback } from 'react';
 import { alertService } from '../services/alertServices';
 
-//Respone template
-// {
-//     "success": true,
-//     "total": 4,
-//     "page": 1,
-//     "pageSize": 10,
-//     "alerts": [
-//         {
-//             "_id": "6ae0c178-c614-451a-8448-ec1222d12afc",
-//             "senderID": "ADMIN001",
-//             "receiverID": "All",
-//             "header": "Test header 4/10",
-//             "body": "Xin chào tất cả",
-//             "targetScope": "all",
-//             "isRead": false,
-//             "createdAt": "04/10/2025 16:43:30",
-//             "updatedAt": "04/10/2025 16:43:30"
-//         },
-//         {
-//             "_id": "453eb3d7-55bc-4f39-982b-d2f71627b714",
-//             "senderID": "LE00001",
-//             "receiverID": "3",
-//             "header": "Test header",
-//             "body": "Xin chào tất cả 1, 2, 3",
-//             "targetScope": "person",
-//             "isRead": false,
-//             "createdAt": "25/09/2025 12:47:18",
-//             "updatedAt": "25/09/2025 12:47:18"
-//         },
-//         {
-//             "_id": "faa376d1-b975-478d-9875-190980ae206e",
-//             "senderID": "LE00001",
-//             "receiverID": "2",
-//             "header": "Test header",
-//             "body": "Xin chào tất cả 1, 2, 3",
-//             "targetScope": "person",
-//             "isRead": false,
-//             "createdAt": "25/09/2025 12:47:18",
-//             "updatedAt": "25/09/2025 12:47:18"
-//         },
-//         {
-//             "_id": "af6bfdf0-de91-49bd-986c-a7518c9d4f1b",
-//             "senderID": "LE00001",
-//             "receiverID": "1",
-//             "header": "Test header",
-//             "body": "Xin chào tất cả 1, 2, 3",
-//             "targetScope": "person",
-//             "isRead": false,
-//             "createdAt": "25/09/2025 12:47:18",
-//             "updatedAt": "25/09/2025 12:47:18"
-//         }
-//     ],
-//     "linkPrev": null,
-//     "linkNext": null,
-//     "pages": [
-//         1
-//     ]
-// }
-
 export interface Alert {
     _id: string;
     senderID: string;
