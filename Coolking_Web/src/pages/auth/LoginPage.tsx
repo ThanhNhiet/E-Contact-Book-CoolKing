@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../../hooks/auth/useAuth';
+import { useAuth } from '../../hooks/useAuth';
 import logoImg from '../../assets/img/logo.png';
 
 const LoginPage: React.FC = () => {

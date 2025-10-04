@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../../hooks/auth/useAuth';
+import { useAuth } from '../../hooks/useAuth';
 import logoImg from '../../assets/img/logo.png';
 
 const HeaderAdCpn: React.FC = () => {
@@ -39,7 +39,7 @@ const HeaderAdCpn: React.FC = () => {
                 Đoạn Chat
               </a>
               <a 
-                href="#" 
+                href="/admin/alerts" 
                 className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 px-3 py-2 rounded-md hover:bg-gray-50"
               >
                 Thông báo
