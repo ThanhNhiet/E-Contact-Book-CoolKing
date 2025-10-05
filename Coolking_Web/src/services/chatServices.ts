@@ -12,9 +12,9 @@ class ChatServices {
         return response.data;
     }
 
-    // GET /api/chats/search?keyword=<keyword>&page=1&pageSize=10
+    // GET /api/chats/all/search?keyword=<keyword>&page=1&pageSize=10
     async searchChats(keyword: string, page: number, pageSize: number) {
-        const response = await axiosInstance.get(`/chats/search`, {
+        const response = await axiosInstance.get(`/chats/all/search`, {
             params: {
                 keyword,
                 page,
@@ -79,6 +79,18 @@ class ChatServices {
                 pageSize
             }
         });
+        return response.data;
+    }
+
+    // GET /api/students/info-view-le-ad/{studentId}
+    async getStudentInfo(studentId: string) {
+        const response = await axiosInstance.get(`/students/info-view-le-ad/${studentId}`);
+        return response.data;
+    }
+
+    // GET /api/lecturers/{lecturerId}
+    async getLecturerInfo(lecturerId: string) {
+        const response = await axiosInstance.get(`/lecturers/${lecturerId}`);
         return response.data;
     }
 }
