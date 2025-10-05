@@ -5,6 +5,7 @@ import HeaderAdCpn from '../../../components/admin/HeaderAdCpn';
 import FooterAdCpn from '../../../components/admin/FooterAdCpn';
 import CleanUpChatModal from './CleanUpChatModal';
 import UpdateGrchatModal from './UpdateGrchatModal';
+import ChatDetailInfoModal from './ChatDetailInfoModal';
 
 const ChatDashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +19,8 @@ const ChatDashboardPage: React.FC = () => {
   const [showCleanUpModal, setShowCleanUpModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updatingChat, setUpdatingChat] = useState<Chat | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
 
   useEffect(() => {
     getChats(1, 10);
@@ -127,6 +130,16 @@ const ChatDashboardPage: React.FC = () => {
     }, 3000);
   };
 
+  const handleRowClick = (chat: Chat, event: React.MouseEvent) => {
+    // Prevent row click when action menu button is clicked
+    if ((event.target as HTMLElement).closest('button')) {
+      return;
+    }
+    
+    setSelectedChat(chat);
+    setShowDetailModal(true);
+  };
+
   const getChatTypeBadge = (type: string) => {
     const baseClasses = "px-3 py-1 rounded-full text-xs font-medium";
     if (type === 'group') {
@@ -194,7 +207,7 @@ const ChatDashboardPage: React.FC = () => {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto pr-4">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
@@ -234,7 +247,11 @@ const ChatDashboardPage: React.FC = () => {
                   </tr>
                 ) : (
                   chats.map((chat, index) => (
-                    <tr key={chat._id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <tr 
+                      key={chat._id} 
+                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer transition-colors duration-200`}
+                      onClick={(e) => handleRowClick(chat, e)}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={getChatTypeBadge(chat.type)}>
                           {chat.type === 'group' ? 'Nhóm' : 'Cá nhân'}
@@ -255,36 +272,42 @@ const ChatDashboardPage: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {chat.memberCount || 0}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 relative">
-                        <button
-                          onClick={() => handleActionClick(chat._id)}
-                          className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
-                        >
-                          <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                          </svg>
-                        </button>
-                        
-                        {showActionMenu === chat._id && (
-                          <div className="absolute right-0 top-12 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                            <div className="py-1">
-                              <button
-                                onClick={() => handleUpdateChat(chat._id)}
-                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
-                              >
-                                <span className="text-blue-500">✏️</span>
-                                <span>Cập nhật</span>
-                              </button>
-                              <button
-                                onClick={() => handleDeleteChat(chat._id)}
-                                className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-gray-700 transition-colors duration-200 flex items-center gap-2"
-                              >
-                                <span className="text-red-500">🗑️</span>
-                                <span>Xóa</span>
-                              </button>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div className="relative">
+                          <button
+                            onClick={() => handleActionClick(chat._id)}
+                            className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                          >
+                            <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                            </svg>
+                          </button>
+                          
+                          {showActionMenu === chat._id && (
+                            <div className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] w-48" 
+                                 style={{
+                                   top: `${(index + 2) * 60 + 180}px`, // Điều chỉnh vị trí dựa vào index của row
+                                   right: '24px' // Cách mép phải 24px
+                                 }}>
+                              <div className="py-1">
+                                <button
+                                  onClick={() => handleUpdateChat(chat._id)}
+                                  className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
+                                >
+                                  <span className="text-blue-500">✏️</span>
+                                  <span>Cập nhật</span>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteChat(chat._id)}
+                                  className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-gray-700 transition-colors duration-200 flex items-center gap-2"
+                                >
+                                  <span className="text-red-500">🗑️</span>
+                                  <span>Xóa</span>
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -403,6 +426,13 @@ const ChatDashboardPage: React.FC = () => {
         onClose={() => setShowUpdateModal(false)}
         onSuccess={handleUpdateSuccess}
         chat={updatingChat}
+      />
+
+      {/* Chat Detail Info Modal */}
+      <ChatDetailInfoModal
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        chat={selectedChat}
       />
     </div>
   );

@@ -24,10 +24,10 @@ class ChatServices {
         return response.data;
     }
 
-    // POST /api/chats/group?course_section_id=405e2844-93a7-11f0-a902-088fc3521198&nameGroup=Cơ sở dữ liệu
+    // POST /api/chats/group?course_section_id=&nameGroup=
     // Cho phép truyền param có dấu cách và các ký tự đặc biệt
     async createGroupChat(course_section_id: string, nameGroup: string) {
-        const response = await axiosInstance.post(`/chats/group`, {
+        const response = await axiosInstance.post(`/chats/group`, {}, {
             params: {
                 course_section_id,
                 nameGroup
@@ -45,6 +45,7 @@ class ChatServices {
     // PUT /api/chats/group/:chatID
     // body: { name: string, "students":  ["SVxxx", "SVxxx"], "lecturers": ["KExxx", "LExxx"] }
     async AddMembers2GroupChat(chatID: string, name: string, students: string[], lecturers: string[]) {
+        console.log('Adding members to group chat with chatID:', chatID, 'name:', name, 'students:', students, 'lecturers:', lecturers);
         const response = await axiosInstance.put(`/chats/group/${chatID}`, {
             name,
             students,
@@ -91,6 +92,12 @@ class ChatServices {
     // GET /api/lecturers/{lecturerId}
     async getLecturerInfo(lecturerId: string) {
         const response = await axiosInstance.get(`/lecturers/${lecturerId}`);
+        return response.data;
+    }
+
+    // GET /api/chats/group-info/{course_section_id}
+    async getGroupChatInfo(course_section_id: string) {
+        const response = await axiosInstance.get(`/chats/group-info/${course_section_id}`);
         return response.data;
     }
 }

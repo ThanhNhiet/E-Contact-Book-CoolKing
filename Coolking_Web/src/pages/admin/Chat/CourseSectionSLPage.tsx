@@ -11,6 +11,9 @@ const CourseSectionSLPage: React.FC = () => {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [creatingChat, setCreatingChat] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [selectedCourseSection, setSelectedCourseSection] = useState<CourseSection | null>(null);
+  const [groupNameToCreate, setGroupNameToCreate] = useState('');
 
   useEffect(() => {
     getNonChatCourseSections(1, 10);
@@ -32,20 +35,29 @@ const CourseSectionSLPage: React.FC = () => {
     }
   };
 
-  const handleCreateGroupChat = async (courseSection: CourseSection) => {
+  const handleShowConfirmCreate = (courseSection: CourseSection) => {
+    // Tạo tên nhóm theo format: sessionName_subjectName_className_Tiết start_lesson-end_lesson
+    const sessionName = courseSection.sessionName;
+    const subjectName = courseSection.subjectName;
+    const className = courseSection.className;
+    const startLesson = courseSection.start_lesson || 'N/A';
+    const endLesson = courseSection.end_lesson || 'N/A';
+    
+    const nameGroup = `${sessionName}_${subjectName}_${className}_Tiết ${startLesson}-${endLesson}`;
+    
+    setSelectedCourseSection(courseSection);
+    setGroupNameToCreate(nameGroup);
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmCreate = async () => {
+    if (!selectedCourseSection) return;
+    
     try {
-      setCreatingChat(courseSection.course_section_id);
+      setCreatingChat(selectedCourseSection.course_section_id);
+      setShowConfirmModal(false);
       
-      // Tạo tên nhóm theo format: sessionName_subjectName_className_Tiết start_lesson-end_lesson
-      const sessionName = courseSection.sessionName;
-      const subjectName = courseSection.subjectName;
-      const className = courseSection.className;
-      const startLesson = courseSection.start_lesson || 'N/A';
-      const endLesson = courseSection.end_lesson || 'N/A';
-      
-      const nameGroup = `${sessionName}_${subjectName}_${className}_Tiết ${startLesson}-${endLesson}`;
-      
-      const result = await createGroupChat(courseSection.course_section_id, nameGroup);
+      const result = await createGroupChat(selectedCourseSection.course_section_id, groupNameToCreate);
       
       if (result && result.success) {
         setSuccessMessage(result.message || 'Đã tạo nhóm chat thành công!');
@@ -67,7 +79,15 @@ const CourseSectionSLPage: React.FC = () => {
       console.error('Error creating group chat:', error);
     } finally {
       setCreatingChat(null);
+      setSelectedCourseSection(null);
+      setGroupNameToCreate('');
     }
+  };
+
+  const handleCancelCreate = () => {
+    setShowConfirmModal(false);
+    setSelectedCourseSection(null);
+    setGroupNameToCreate('');
   };
 
 
@@ -188,7 +208,7 @@ const CourseSectionSLPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <button
-                          onClick={() => handleCreateGroupChat(cs)}
+                          onClick={() => handleShowConfirmCreate(cs)}
                           disabled={creatingChat === cs.course_section_id}
                           className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
                         >
@@ -274,6 +294,50 @@ const CourseSectionSLPage: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && selectedCourseSection && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Xác nhận tạo nhóm chat
+            </h3>
+            <div className="mb-4">
+              <p className="text-gray-700 mb-2">
+                Bạn có chắc chắn muốn tạo nhóm chat cho lớp học phần này không?
+              </p>
+              <div className="bg-gray-50 p-3 rounded-lg text-sm">
+                <p><span className="font-medium">Môn học:</span> {selectedCourseSection.subjectName}</p>
+                <p><span className="font-medium">Lớp:</span> {selectedCourseSection.className}</p>
+                <p><span className="font-medium">Học kỳ:</span> {selectedCourseSection.sessionName}</p>
+                <p><span className="font-medium">Tên nhóm:</span> {groupNameToCreate}</p>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleCancelCreate}
+                className="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors duration-200"
+                disabled={creatingChat === selectedCourseSection.course_section_id}
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleConfirmCreate}
+                disabled={creatingChat === selectedCourseSection.course_section_id}
+                className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 rounded-lg transition-colors duration-200 flex items-center gap-2"
+              >
+                {creatingChat === selectedCourseSection.course_section_id && (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                <span>{creatingChat === selectedCourseSection.course_section_id ? 'Đang tạo...' : 'Tạo nhóm chat'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

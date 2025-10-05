@@ -232,6 +232,19 @@ export const useChat = () => {
         }
     }, []);
 
+    // Lấy thông tin nhóm chat theo course_section_id
+    const getGroupChatInfo = useCallback(async (course_section_id: string) => {
+        try {
+            setLoading(true);
+            const data = await chatServices.getGroupChatInfo(course_section_id);
+            return data;
+        } catch (error) {
+            setError('Failed to get group chat info');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     return {
         loading,
         error,
@@ -255,6 +268,7 @@ export const useChat = () => {
         deleteChat,
         cleanupInactiveChats,
         getStudentInfo,
-        getLecturerInfo
+        getLecturerInfo,
+        getGroupChatInfo
     };
 };
