@@ -725,8 +725,8 @@ const getAllChats = async (page = 1, pageSize = 10) => {
             name: chat.name,
             avatar: chat.avatar,
             course_section_id: chat.course_section_id,
-            createdAt: chat.createdAt,
-            updatedAt: chat.updatedAt,
+            createdAt: chat?.createdAt ? datetimeFormatter.formatDateTimeVN(chat.createdAt) : null,
+            updatedAt: chat?.updatedAt ? datetimeFormatter.formatDateTimeVN(chat.updatedAt) : null,
             memberCount: chat.members.length
         }));
 
@@ -845,8 +845,8 @@ const searchChatsByKeyword4Admin = async (keyword, page = 1, pageSize = 10) => {
             name: chat.name,
             avatar: chat.avatar,
             course_section_id: chat.course_section_id,
-            createdAt: chat.createdAt,
-            updatedAt: chat.updatedAt,
+            createdAt: chat?.createdAt ? datetimeFormatter.formatDateTimeVN(chat.createdAt) : null,
+            updatedAt: chat?.updatedAt ? datetimeFormatter.formatDateTimeVN(chat.updatedAt) : null,
             memberCount: chat.members.length
         }));
 
@@ -930,27 +930,44 @@ const getNonChatCourseSections = async (page = 1, pageSize = 10) => {
                         {
                             model: models.Lecturer,
                             as: 'lecturer',
-                            attributes: ['name']
+                            attributes: ['lecturer_id', 'name']
                         }
                     ]
+                },
+                {
+                    model: models.Schedule,
+                    as: 'schedules',
+                    where: {
+                        isExam: false
+                    },
+                    attributes: ['start_lesson', 'end_lesson'],
+                    required: false
                 }
             ],
-            attributes: ['id', 'updatedAt'],
+            attributes: ['id', 'createdAt', 'updatedAt'],
             order: [['updatedAt', 'DESC']],
             limit: pageSize_num,
             offset: offset
         });
 
         // Format dữ liệu trả về
-        const processedCourseSections = courseSections.map(cs => ({
-            subjectName: cs.subject?.name || 'N/A',
-            className: cs.clazz?.name || 'N/A',
-            course_section_id: cs.id,
-            facultyName: cs.subject?.faculty?.name || 'N/A',
-            sessionName: cs.session?.name || 'N/A',
-            lecturerName: cs.lecturers_course_sections?.[0]?.lecturer?.name || 'N/A',
-            updatedAt: datetimeFormatter.formatDateTimeVN(cs.updatedAt)
-        }));
+        const processedCourseSections = courseSections.map(cs => {
+            const lecturer = cs.lecturers_course_sections?.[0]?.lecturer;
+            const schedule = cs.schedules?.[0];
+            
+            return {
+                subjectName: cs.subject?.name || 'N/A',
+                className: cs.clazz?.name || 'N/A',
+                course_section_id: cs.id,
+                facultyName: cs.subject?.faculty?.name || 'N/A',
+                sessionName: cs.session?.name || 'N/A',
+                lecturerName: lecturer?.name || 'N/A',
+                start_lesson: schedule?.start_lesson || 'N/A',
+                end_lesson: schedule?.end_lesson || 'N/A',
+                createdAt: datetimeFormatter.formatDateTimeVN(cs.createdAt),
+                updatedAt: datetimeFormatter.formatDateTimeVN(cs.updatedAt)
+            };
+        });
 
         const totalPages = Math.ceil(total / pageSize_num);
 
@@ -1113,27 +1130,43 @@ const searchNonChatCourseSections = async (keyword, page = 1, pageSize = 10) => 
                         {
                             model: models.Lecturer,
                             as: 'lecturer',
-                            attributes: ['name']
+                            attributes: ['lecturer_id', 'name']
                         }
                     ]
+                },
+                {
+                    model: models.Schedule,
+                    as: 'schedules',
+                    where: {
+                        isExam: false
+                    },
+                    attributes: ['start_date', 'end_date'],
+                    required: false
                 }
             ],
-            attributes: ['id', 'updatedAt'],
+            attributes: ['id', 'createdAt', 'updatedAt'],
             order: [['updatedAt', 'DESC']],
             limit: pageSize_num,
             offset: offset
         });
 
         // Format dữ liệu trả về
-        const processedCourseSections = courseSections.map(cs => ({
-            subjectName: cs.subject?.name || 'N/A',
-            className: cs.clazz?.name || 'N/A',
-            course_section_id: cs.id,
-            facultyName: cs.subject?.faculty?.name || 'N/A',
-            sessionName: cs.session?.name || 'N/A',
-            lecturerName: cs.lecturers_course_sections?.[0]?.lecturer?.name || 'N/A',
-            updatedAt: datetimeFormatter.formatDateTimeVN(cs.updatedAt)
-        }));
+        const processedCourseSections = courseSections.map(cs => {
+            const lecturer = cs.lecturers_course_sections?.[0]?.lecturer;
+            const schedule = cs.schedules?.[0];
+            
+            return {
+                subjectName: cs.subject?.name || 'N/A',
+                className: cs.clazz?.name || 'N/A',
+                course_section_id: cs.id,
+                facultyName: cs.subject?.faculty?.name || 'N/A',
+                sessionName: cs.session?.name || 'N/A',
+                lecturerName: lecturer?.name || 'N/A',
+                start_lesson: schedule?.start_date ? datetimeFormatter.formatDateVN(schedule.start_date) : 'N/A',
+                end_lesson: schedule?.end_date ? datetimeFormatter.formatDateVN(schedule.end_date) : 'N/A',
+                updatedAt: datetimeFormatter.formatDateTimeVN(cs.updatedAt)
+            };
+        });
 
         const totalPages = Math.ceil(total / pageSize_num);
 
