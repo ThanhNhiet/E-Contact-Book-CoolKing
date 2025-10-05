@@ -9,6 +9,8 @@ import ClazzListPage from '../pages/lecturer/clazz/ClazzListPage';
 import SchedulePage from '../pages/lecturer/schedule/SchedulePage';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import AlertDbPage from '../pages/admin/Alert/AlertDashboardPage';
+import ChatDbPage from '../pages/admin/Chat/ChatDashboardPage';
+import CourseSectionSLPage from '../pages/admin/Chat/CourseSectionSLPage';
 
 const Router: React.FC = () => {
   return (
@@ -35,6 +37,24 @@ const Router: React.FC = () => {
           element={
             <ProtectedRoute requiredRole="ADMIN">
               <AlertDbPage />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/chat/course-sections" 
+          element={
+            <ProtectedRoute requiredRole="ADMIN">
+              <CourseSectionSLPage />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/chats" 
+          element={
+            <ProtectedRoute requiredRole="ADMIN">
+              <ChatDbPage />
             </ProtectedRoute>
           } 
         />

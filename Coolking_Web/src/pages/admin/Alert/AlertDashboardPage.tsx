@@ -210,7 +210,7 @@ const AlertDashboardPage: React.FC = () => {
                         }
                       }}
                     >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
                         {alert._id.substring(0, 8)}...
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

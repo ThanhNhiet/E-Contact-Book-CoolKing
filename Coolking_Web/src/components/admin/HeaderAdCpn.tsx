@@ -33,7 +33,7 @@ const HeaderAdCpn: React.FC = () => {
                 Tài khoản
               </a>
               <a 
-                href="#" 
+                href="/admin/chats" 
                 className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 px-3 py-2 rounded-md hover:bg-gray-50"
               >
                 Đoạn Chat

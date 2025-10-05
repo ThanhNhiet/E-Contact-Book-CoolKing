@@ -214,7 +214,7 @@ const AccountsDashboardPage: React.FC = () => {
                 ) : (
                   accounts.map((account, index) => (
                     <tr key={account.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
                         {account.user_id}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
