@@ -11,6 +11,7 @@ import ProtectedRoute from '../components/auth/ProtectedRoute';
 import AlertDbPage from '../pages/admin/Alert/AlertDashboardPage';
 import ChatDbPage from '../pages/admin/Chat/ChatDashboardPage';
 import CourseSectionSLPage from '../pages/admin/Chat/CourseSectionSLPage';
+import StatisticsMainPage from '../pages/admin/Statistics/StatisticsMainPage';
 
 const Router: React.FC = () => {
   return (
@@ -40,7 +41,6 @@ const Router: React.FC = () => {
             </ProtectedRoute>
           } 
         />
-
         <Route 
           path="/admin/chat/course-sections" 
           element={
@@ -49,12 +49,19 @@ const Router: React.FC = () => {
             </ProtectedRoute>
           } 
         />
-
         <Route 
           path="/admin/chats" 
           element={
             <ProtectedRoute requiredRole="ADMIN">
               <ChatDbPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/statistics"
+          element={
+            <ProtectedRoute requiredRole="ADMIN">
+              <StatisticsMainPage />
             </ProtectedRoute>
           } 
         />
