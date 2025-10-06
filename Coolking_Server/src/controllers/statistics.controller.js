@@ -95,3 +95,25 @@ exports.getCourseSectionsOverviewStatisticsByFaculty = async (req, res) => {
         return res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+
+// GET /api/statistics/all-faculties
+exports.getAllFaculties = async (req, res) => {
+    try {
+        const result = await statisticsRepo.getAllFaculty();
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in getAllFaculties:', error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+// GET /api/statistics/all-sessions
+exports.getAllSessions = async (req, res) => {
+    try {
+        const result = await statisticsRepo.getAllSession();
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in getAllSessions:', error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};

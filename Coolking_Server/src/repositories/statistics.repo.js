@@ -27,7 +27,7 @@ const getFacultyStatisticsBySession = async (faculty_id, session_id) => {
 
         // Lấy thông tin session
         const session = await models.Session.findByPk(session_id, {
-            attributes: ['name']
+            attributes: ['name', 'years']
         });
 
         // Sử dụng raw query để tối ưu hiệu suất
@@ -102,7 +102,7 @@ const getFacultyStatisticsBySession = async (faculty_id, session_id) => {
         return {
             faculty_id,
             faculty_name: faculty.name,
-            session_name: session?.name || 'N/A',
+            session_name: session ? `${session.name} ${session.years}` : 'N/A',
             total_subjects: parseInt(stats.total_subjects) || 0,
             total_course_sections: parseInt(stats.total_course_sections) || 0,
             total_lecturers: parseInt(stats.total_lecturers) || 0,
@@ -157,7 +157,7 @@ const getLecturerStatisticsBySession = async (lecturer_id, session_id) => {
 
         // Lấy thông tin session
         const session = await models.Session.findByPk(session_id, {
-            attributes: ['name']
+            attributes: ['name', 'years']
         });
 
         // Thống kê cơ bản của giảng viên
@@ -247,7 +247,7 @@ const getLecturerStatisticsBySession = async (lecturer_id, session_id) => {
             lecturer_id,
             lecturer_name: lecturer.name,
             faculty_name: lecturer.faculty?.name || 'N/A',
-            session_name: session?.name || 'N/A',
+            session_name: session ? `${session.name} ${session.years}` : 'N/A',
             total_course_sections: parseInt(stats.total_course_sections) || 0,
             total_subjects: parseInt(stats.total_subjects) || 0,
             total_students: parseInt(stats.total_students) || 0,
@@ -296,7 +296,7 @@ const getLecturersStatisticsByFaculty = async (faculty_id, session_id) => {
         }
 
         const session = await models.Session.findByPk(session_id, {
-            attributes: ['name']
+            attributes: ['name', 'years']
         });
 
         // Lấy danh sách giảng viên của khoa có dạy trong học kỳ
@@ -415,7 +415,7 @@ const getLecturersStatisticsByFaculty = async (faculty_id, session_id) => {
         return {
             faculty_id,
             faculty_name: faculty.name,
-            session_name: session?.name || 'N/A',
+            session_name: session ? `${session.name} ${session.years}` : 'N/A',
             total_lecturers: lecturerStatistics.length,
             faculty_summary: {
                 total_course_sections: totalStats.total_course_sections,
@@ -472,7 +472,7 @@ const getCourseSectionStatisticsBySession = async (course_section_id, session_id
                 {
                     model: models.Session,
                     as: 'session',
-                    attributes: ['id', 'name']
+                    attributes: ['id', 'name', 'years']
                 },
                 {
                     model: models.LecturerCourseSection,
@@ -561,7 +561,7 @@ const getCourseSectionStatisticsBySession = async (course_section_id, session_id
                 subjectName: courseSection.subject?.name || 'N/A',
                 subjectCredit: (courseSection.subject?.theo_credit || 0) + (courseSection.subject?.pra_credit || 0),
                 className: courseSection.clazz?.name || 'N/A',
-                sessionName: courseSection.session?.name || 'N/A',
+                sessionName: courseSection.session ? `${courseSection.session.name} ${courseSection.session.years}` : 'N/A',
                 facultyName: courseSection.subject?.faculty?.name || 'N/A',
                 lecturerName: courseSection.lecturers_course_sections?.[0]?.lecturer?.name || 'N/A',
                 lecturerId: courseSection.lecturers_course_sections?.[0]?.lecturer?.lecturer_id || null
@@ -625,7 +625,7 @@ const getCourseSectionsStatisticsByFaculty = async (faculty_id, session_id) => {
         }
 
         const session = await models.Session.findByPk(session_id, {
-            attributes: ['name']
+            attributes: ['name', 'years']
         });
 
         // Lấy danh sách tất cả lớp học phần của khoa trong học kỳ
@@ -717,7 +717,7 @@ const getCourseSectionsStatisticsByFaculty = async (faculty_id, session_id) => {
                     subjectName: cs.subject_name || 'N/A',
                     subjectCredit: cs.subject_credit || 0,
                     className: cs.class_name || 'N/A',
-                    sessionName: session?.name || 'N/A',
+                    sessionName: session ? `${session.name} ${session.years}` : 'N/A',
                     facultyName: faculty.name,
                     lecturerName: cs.lecturer_name || 'N/A',
                     lecturerId: cs.lecturer_id
@@ -792,7 +792,7 @@ const getCourseSectionsStatisticsByFaculty = async (faculty_id, session_id) => {
         return {
             faculty_id,
             faculty_name: faculty.name,
-            session_name: session?.name || 'N/A',
+            session_name: session ? `${session.name} ${session.years}` : 'N/A',
             faculty_summary: {
                 total_course_sections: totalStats.total_course_sections,
                 total_students: totalStats.total_students,
@@ -811,10 +811,63 @@ const getCourseSectionsStatisticsByFaculty = async (faculty_id, session_id) => {
     }
 };
 
+/**
+ * Lấy danh sách tất cả các khoa
+ * @returns {Array} Danh sách các khoa với faculty_id và name
+ */
+const getAllFaculty = async () => {
+    try {
+        const faculties = await models.Faculty.findAll({
+            attributes: ['faculty_id', 'name'],
+            order: [['name', 'ASC']]
+        });
+
+        return faculties.map(faculty => ({
+            faculty_id: faculty.faculty_id,
+            name: faculty.name
+        }));
+
+    } catch (error) {
+        console.error('Error in getAllFaculty:', error);
+        throw error;
+    }
+};
+
+/**
+ * Lấy danh sách tất cả các học kỳ
+ * @returns {Array} Danh sách các học kỳ với id, name, years - sắp xếp theo name và years giảm dần
+ */
+const getAllSession = async () => {
+    try {
+        const sessions = await models.Session.findAll({
+            attributes: ['id', 'name', 'years'],
+            order: [
+                ['years', 'DESC'],
+                ['name', 'DESC']
+            ]
+        });
+
+        if (!sessions || sessions.length === 0) {
+            throw new Error('No sessions found');
+        }
+
+        return sessions.map(session => ({
+            id: session.id,
+            nameSession: session.name + ' ' + session.years
+        }));
+
+    } catch (error) {
+        console.error('Error in getAllSession:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     getFacultyStatisticsBySession,
     getLecturerStatisticsBySession,
     getLecturersStatisticsByFaculty,
     getCourseSectionStatisticsBySession,
-    getCourseSectionsStatisticsByFaculty
+    getCourseSectionsStatisticsByFaculty,
+    getAllFaculty,
+    getAllSession
 };
