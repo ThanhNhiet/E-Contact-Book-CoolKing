@@ -989,7 +989,7 @@ const getNonChatCourseSections = async (page = 1, pageSize = 10) => {
                 {
                     model: models.Session,
                     as: 'session',
-                    attributes: ['name']
+                    attributes: ['name', 'years']
                 },
                 {
                     model: models.LecturerCourseSection,
@@ -1028,7 +1028,7 @@ const getNonChatCourseSections = async (page = 1, pageSize = 10) => {
                 className: cs.clazz?.name || 'N/A',
                 course_section_id: cs.id,
                 facultyName: cs.subject?.faculty?.name || 'N/A',
-                sessionName: cs.session?.name || 'N/A',
+                sessionName: cs.session ? `${cs.session.name} ${cs.session.years}` : 'N/A',
                 lecturerName: lecturer?.name || 'N/A',
                 start_lesson: schedule?.start_lesson || 'N/A',
                 end_lesson: schedule?.end_lesson || 'N/A',
@@ -1208,7 +1208,7 @@ const searchNonChatCourseSections = async (keyword, page = 1, pageSize = 10) => 
                 {
                     model: models.Session,
                     as: 'session',
-                    attributes: ['name']
+                    attributes: ['name', 'years']
                 },
                 {
                     model: models.LecturerCourseSection,
@@ -1247,7 +1247,7 @@ const searchNonChatCourseSections = async (keyword, page = 1, pageSize = 10) => 
                 className: cs.clazz?.name || 'N/A',
                 course_section_id: cs.id,
                 facultyName: cs.subject?.faculty?.name || 'N/A',
-                sessionName: cs.session?.name || 'N/A',
+                sessionName: cs.session ? `${cs.session.name} ${cs.session.years}` : 'N/A',
                 lecturerName: lecturer?.name || 'N/A',
                 start_lesson: schedule?.start_date ? datetimeFormatter.formatDateVN(schedule.start_date) : 'N/A',
                 end_lesson: schedule?.end_date ? datetimeFormatter.formatDateVN(schedule.end_date) : 'N/A',
