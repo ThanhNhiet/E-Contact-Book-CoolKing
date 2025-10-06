@@ -12,7 +12,7 @@ const app = express();
 
 // Bật cors cho phép frontend gọi API
 app.use(cors({
-  origin: "http://localhost:5173", // domain React (vite)
+  origin: "*", // domain React (vite)
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true, // nếu cần gửi cookie/token
