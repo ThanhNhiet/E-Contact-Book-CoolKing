@@ -198,7 +198,7 @@ const AccountsCreateModal: React.FC<AccountsCreateModalProps> = ({ isOpen, onClo
           {/* Role Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Vai trò *
+              Vai trò <span className="text-red-500">*</span>
             </label>
             <select
               value={formData.role}
@@ -206,9 +206,9 @@ const AccountsCreateModal: React.FC<AccountsCreateModalProps> = ({ isOpen, onClo
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             >
               <option value="ADMIN">ADMIN</option>
-              <option value="STUDENT">STUDENT</option>
-              <option value="LECTURER">LECTURER</option>
-              <option value="PARENT">PARENT</option>
+              <option value="STUDENT">Sinh Viên</option>
+              <option value="LECTURER">Giảng Viên</option>
+              <option value="PARENT">Phụ Huynh</option>
             </select>
             {showUserIdWarning && (
               <p className="text-red-500 text-xs mt-1">Chưa rõ ID người dùng</p>
@@ -278,7 +278,7 @@ const AccountsCreateModal: React.FC<AccountsCreateModalProps> = ({ isOpen, onClo
           {/* User ID (Read-only when found) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              User ID {formData.role !== 'ADMIN' ? '*' : ''}
+              User ID
             </label>
             <input
               type="text"
