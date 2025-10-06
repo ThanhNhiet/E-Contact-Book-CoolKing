@@ -26,4 +26,16 @@ router.delete('/:chatID', chatController.deleteChat);
 // GET /api/chats?page=&pageSize=
 router.get('/', chatController.getUserChats);
 
+// GET /api/chats/all?page=1&pageSize=10
+router.get('/all', chatController.getAllChats);
+
+// GET /api/chats/all/search?keyword=<keyword>&page=1&pageSize=10
+router.get('/all/search', chatController.searchAllChats);
+
+// GET /api/chats/nonchat-course-sections?page=1&pageSize=10
+router.get('/nonchat-course-sections', chatController.getNonChatCourseSections);
+
+// GET /api/Chats/nonchat-course-sections/search?keyword=<keyword>&page=1&pageSize=10
+router.get('/nonchat-course-sections/search', chatController.searchNonChatCourseSections);
+
 module.exports = router;

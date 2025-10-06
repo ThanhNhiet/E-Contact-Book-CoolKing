@@ -9,7 +9,6 @@ require('dotenv').config();
 require('./src/services/redis.service');
 
 const app = express();
-app.use(express.json());
 
 // Bật cors cho phép frontend gọi API
 app.use(cors({
@@ -17,7 +16,19 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true, // nếu cần gửi cookie/token
+  // preflightContinue: false,
+  // optionsSuccessStatus: 200
 }));
+
+// // Middleware xử lý empty body trước JSON parser
+// app.use((req, res, next) => {
+//   if (req.method === 'POST' && req.get('content-length') === '0') {
+//     req.body = {};
+//   }
+//   next();
+// });
+
+app.use(express.json());
 
 // Test route
 app.get('/', (req, res) => {

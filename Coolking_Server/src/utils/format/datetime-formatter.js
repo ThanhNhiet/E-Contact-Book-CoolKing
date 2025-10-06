@@ -1,15 +1,20 @@
 const formatDateTimeVN = (isoString) => {
   const date = new Date(isoString);
 
-  const dd = String(date.getDate()).padStart(2, '0');
-  const MM = String(date.getMonth() + 1).padStart(2, '0');
-  const yyyy = date.getFullYear();
+  // Tùy chọn định dạng riêng cho ngày và giờ
+  const dateOptions = { 
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  };
+  const timeOptions = { 
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
+  };
 
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  const ss = String(date.getSeconds()).padStart(2, '0');
+  const formattedDate = new Intl.DateTimeFormat('vi-VN', dateOptions).format(date);
+  const formattedTime = new Intl.DateTimeFormat('vi-VN', timeOptions).format(date);
 
-  return `${dd}-${MM}-${yyyy} ${hh}:${mm}:${ss}`;
+  return `${formattedDate} ${formattedTime}`;
 };
 
 const formatDateVN = (isoString) => {
@@ -18,10 +23,6 @@ const formatDateVN = (isoString) => {
   const dd = String(date.getDate()).padStart(2, '0');
   const MM = String(date.getMonth() + 1).padStart(2, '0');
   const yyyy = date.getFullYear();
-
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  const ss = String(date.getSeconds()).padStart(2, '0');
 
   return `${dd}-${MM}-${yyyy}`;
 };
@@ -35,8 +36,11 @@ const convertddMMyyyy2yyyyMMdd = (dateString) => {
 // Hàm convert dd-MM-yyyy hh:mm:ss -> Date (UTC+0)
 const parseDDMMYYYY2UTC = (dateString) => {
   const [datePart, timePart] = dateString.split(' ');
-  const [dd, MM, yyyy] = datePart.split('-');
-  const [hh, mm, ss] = timePart.split(':');
+  // chấp nhận cả "-" hoặc "/"
+  const [dd, MM, yyyy] = datePart.includes('-')
+    ? datePart.split('-')
+    : datePart.split('/');
+  const [hh, mm, ss] = timePart ? timePart.split(':') : [0, 0, 0];
   return new Date(Date.UTC(yyyy, MM - 1, dd, hh, mm, ss));
 };
 

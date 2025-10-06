@@ -7,8 +7,11 @@ import ChangePasswordPage from '../pages/auth/ChangePasswordPage';
 import AccountDbPage from '../pages/admin/Account/AccountsDashboardPage';
 import ClazzListPage from '../pages/lecturer/clazz/ClazzListPage';
 import SchedulePage from '../pages/lecturer/schedule/SchedulePage';
-import ApiTestPage from '../pages/test/ApiTestPage';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
+import AlertDbPage from '../pages/admin/Alert/AlertDashboardPage';
+import ChatDbPage from '../pages/admin/Chat/ChatDashboardPage';
+import CourseSectionSLPage from '../pages/admin/Chat/CourseSectionSLPage';
+import StatisticsMainPage from '../pages/admin/Statistics/StatisticsMainPage';
 
 const Router: React.FC = () => {
   return (
@@ -20,7 +23,6 @@ const Router: React.FC = () => {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/otp-confirm" element={<OTPConfirmPage />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
-        <Route path="/test" element={<ApiTestPage />} />
         
         {/* Admin routes - cần bearer token và role admin */}
         <Route 
@@ -31,7 +33,39 @@ const Router: React.FC = () => {
             </ProtectedRoute>
           } 
         />
-        
+        <Route 
+          path="/admin/alerts" 
+          element={
+            <ProtectedRoute requiredRole="ADMIN">
+              <AlertDbPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/chat/course-sections" 
+          element={
+            <ProtectedRoute requiredRole="ADMIN">
+              <CourseSectionSLPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/chats" 
+          element={
+            <ProtectedRoute requiredRole="ADMIN">
+              <ChatDbPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/statistics"
+          element={
+            <ProtectedRoute requiredRole="ADMIN">
+              <StatisticsMainPage />
+            </ProtectedRoute>
+          } 
+        />
+
         {/* Lecturer routes - cần bearer token và role lecturer */}
         <Route 
           path="/lecturer/clazz" 

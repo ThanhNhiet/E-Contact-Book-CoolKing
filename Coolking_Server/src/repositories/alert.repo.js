@@ -225,7 +225,7 @@ const markAlertAsRead = async (alertId, userID) => {
         const alert = await Alert.findOneAndUpdate(
             {
                 _id: alertId,
-                receiverID: userID, 
+                receiverID: userID,
                 targetScope: 'person'
             },
             {
@@ -364,12 +364,191 @@ const deleteAlert4Receiver = async (alertID, receiverID) => {
     }
 };
 
+/**
+ * Lấy tất cả thông báo (dành cho admin)
+ * @param {Number} page - Trang hiện tại
+ * @param {Number} pageSize - Số lượng alert mỗi trang
+ * @returns {Object} - Danh sách thông báo
+ */
+const getAllAlerts4Admin = async (page = 1, pageSize = 10) => {
+    try {
+        const skip = (page - 1) * pageSize;
+
+        // Lấy toàn bộ thông báo (bao gồm all + person)
+        const alerts = await Alert.find({})
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(pageSize)
+            .select('_id senderID receiverID header body targetScope isRead createdAt updatedAt');
+
+        // Đếm tổng số
+        const total = await Alert.countDocuments({});
+
+        // Chuẩn hóa dữ liệu trả về
+        const processedAlerts = alerts.map(alert => ({
+            _id: alert._id,
+            senderID: alert.senderID || 'System',
+            receiverID: alert.receiverID || 'All',
+            header: alert.header,
+            body: alert.body,
+            targetScope: alert.targetScope,
+            isRead: alert.isRead,
+            createdAt: datetimeFormatter.formatDateTimeVN(alert.createdAt),
+            updatedAt: datetimeFormatter.formatDateTimeVN(alert.updatedAt)
+        }));
+
+        // Tạo link pagination
+        const linkPrev = page > 1 ? `/api/alerts/admin?page=${page - 1}&pageSize=${pageSize}` : null;
+        const linkNext = (page - 1) * pageSize + processedAlerts.length < total
+            ? `/api/alerts/admin?page=${page + 1}&pageSize=${pageSize}`
+            : null;
+
+        const totalPages = Math.ceil(total / pageSize);
+        const pages = [];
+        for (let i = 1; i <= totalPages; i++) {
+            if (i >= page && i < page + 3) {
+                pages.push(i);
+            }
+        }
+
+        return {
+            success: true,
+            total,
+            page,
+            pageSize,
+            alerts: processedAlerts,
+            linkPrev,
+            linkNext,
+            pages
+        };
+
+    } catch (error) {
+        console.error('Error in getAllAlertsForAdmin:', error);
+        throw new Error(`Lỗi khi lấy tất cả thông báo: ${error.message}`);
+    }
+};
+
+/**
+ * Tìm kiếm thông báo theo keyword (dành cho admin)
+ * @param {String} keyword - Từ khóa (tìm theo header, senderID, createdAt)
+ * @param {Number} page - Trang hiện tại
+ * @param {Number} pageSize - Số lượng alert mỗi trang
+ * @returns {Object} - Danh sách thông báo
+ */
+const searchAlertsByKeyword4Admin = async (keyword, page = 1, pageSize = 10) => {
+    try {
+        if (!keyword || keyword.trim() === '') {
+            return await getAllAlerts4Admin(page, pageSize);
+        }
+
+        const skip = (page - 1) * pageSize;
+        const regexKeyword = new RegExp(keyword.trim(), 'i');
+
+        // Nếu keyword trông giống ngày dd-MM-yyyy hoặc dd-MM-yyyy hh:mm:ss thì parse
+        let parsedDate = null;
+        const datePattern = /^\d{2}[-/]\d{2}[-/]\d{4}(?: \d{2}:\d{2}:\d{2})?$/;
+        if (datePattern.test(keyword.trim())) {
+            try {
+                parsedDate = datetimeFormatter.parseDDMMYYYY2UTC(keyword.trim());
+            } catch {
+                parsedDate = null;
+            }
+        }
+
+        const query = {
+            $or: [
+                { header: { $regex: regexKeyword } },
+                { senderID: { $regex: regexKeyword } },
+            ]
+        };
+
+        if (parsedDate) {
+            query.$or.push({ createdAt: { $gte: parsedDate } });
+        }
+
+        const alerts = await Alert.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(pageSize)
+            .select('_id senderID receiverID header body targetScope isRead createdAt updatedAt');
+
+        const total = await Alert.countDocuments(query);
+
+        const processedAlerts = alerts.map(alert => ({
+            _id: alert._id,
+            senderID: alert.senderID || 'System',
+            receiverID: alert.receiverID || 'All',
+            header: alert.header,
+            body: alert.body,
+            targetScope: alert.targetScope,
+            isRead: alert.isRead,
+            createdAt: datetimeFormatter.formatDateTimeVN(alert.createdAt),
+            updatedAt: datetimeFormatter.formatDateTimeVN(alert.updatedAt)
+        }));
+
+        const linkPrev = page > 1
+            ? `/api/alerts/admin/search?keyword=${encodeURIComponent(keyword)}&page=${page - 1}&pageSize=${pageSize}`
+            : null;
+
+        const linkNext = (page - 1) * pageSize + processedAlerts.length < total
+            ? `/api/alerts/admin/search?keyword=${encodeURIComponent(keyword)}&page=${page + 1}&pageSize=${pageSize}`
+            : null;
+
+        const totalPages = Math.ceil(total / pageSize);
+        const pages = [];
+        for (let i = 1; i <= totalPages; i++) {
+            if (i >= page && i < page + 3) pages.push(i);
+        }
+
+        return {
+            success: true,
+            total,
+            page,
+            pageSize,
+            alerts: processedAlerts,
+            linkPrev,
+            linkNext,
+            pages
+        };
+
+    } catch (error) {
+        console.error('Error in searchAlertsByKeyword4Admin:', error);
+        throw new Error(`Lỗi khi tìm kiếm thông báo: ${error.message}`);
+    }
+};
+
+/**
+ * Cập nhật thông báo (dành cho admin)
+ * @param {String} alertId - ID thông báo
+ * @param {String} header - Tiêu đề mới
+ * @param {String} body - Nội dung mới
+ * @returns {Object} - Kết quả cập nhật
+ */
+const updateAlert4Admin = async (alertId, header, body) => {
+    try {
+        const updatedAlert = await Alert.findByIdAndUpdate(alertId, { header, body }, { new: true });
+        if (!updatedAlert) {
+            throw new Error('Thông báo không tồn tại');
+        }
+        return {
+            success: true,
+            message: 'Cập nhật thông báo thành công'
+        };
+    } catch (error) {
+        console.error('Error updating alert:', error);
+        throw new Error(`Lỗi khi cập nhật thông báo: ${error.message}`);
+    }
+};
+
 module.exports = {
     sendAlertToAll,
     sendAlertToPerson,
     getAlertsByUser,
+    updateAlert4Admin,
     markAlertAsRead,
     deleteAlert4Admin,
     deleteAlert4Lecturer,
-    deleteAlert4Receiver
+    deleteAlert4Receiver,
+    getAllAlerts4Admin,
+    searchAlertsByKeyword4Admin
 };

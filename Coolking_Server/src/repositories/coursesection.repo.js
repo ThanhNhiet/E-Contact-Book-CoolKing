@@ -52,7 +52,7 @@ const getCourseSectionsByLecturer = async (lecturerId, page, pageSize = 10) => {
                         {
                             model: models.Session,
                             as: 'session',
-                            attributes: ['name']
+                            attributes: ['name', 'years']
                         }
                     ]
                 }
@@ -70,7 +70,7 @@ const getCourseSectionsByLecturer = async (lecturerId, page, pageSize = 10) => {
             subjectName: item.course_section.subject?.name || 'N/A',
             className: item.course_section.clazz?.name || 'N/A',
             facultyName: item.course_section.subject?.faculty?.name || 'N/A',
-            sessionName: item.course_section.session?.name || 'N/A',
+            sessionName: item.course_section.session ? `${item.course_section.session.name} ${item.course_section.session.years}` : 'N/A',
             createdAt: datetimeFormatter.formatDateVN(item.course_section.createdAt)
         }));
         
@@ -160,7 +160,7 @@ const searchCourseSectionsByKeyword4Lecturer = async (lecturer_id, keyword, page
                         {
                             model: models.Session,
                             as: 'session',
-                            attributes: ['name']
+                            attributes: ['name', 'years']
                         }
                     ]
                 }
@@ -176,7 +176,7 @@ const searchCourseSectionsByKeyword4Lecturer = async (lecturer_id, keyword, page
             subjectName: item.course_section.subject?.name || 'N/A',
             className: item.course_section.clazz?.name || 'N/A',
             facultyName: item.course_section.subject?.faculty?.name || 'N/A',
-            sessionName: item.course_section.session?.name || 'N/A',
+            sessionName: item.course_section.session ? `${item.course_section.session.name} ${item.course_section.session.years}` : 'N/A',
             createdAt: datetimeFormatter.formatDateVN(item.course_section.createdAt)
         }));
 
@@ -270,7 +270,7 @@ const filterCourseSections4Lecturer = async (lecturer_id, sessionName, facultyNa
                         {
                             model: models.Session,
                             as: 'session',
-                            attributes: ['name']
+                            attributes: ['name', 'years']
                         }
                     ]
                 }
@@ -287,7 +287,7 @@ const filterCourseSections4Lecturer = async (lecturer_id, sessionName, facultyNa
             subjectName: item.course_section?.subject?.name || 'N/A',
             className: item.course_section?.clazz?.name || 'N/A',
             facultyName: item.course_section?.subject?.faculty?.name || 'N/A',
-            sessionName: item.course_section?.session?.name || 'N/A',
+            sessionName: item.course_section?.session ? `${item.course_section.session.name} ${item.course_section.session.years}` : 'N/A',
             createdAt: item.course_section?.createdAt 
                 ? datetimeFormatter.formatDateVN(item.course_section.createdAt) 
                 : 'N/A'

@@ -72,6 +72,7 @@ const getAllAccounts_paging = async (page, pageSize) => {
       attributes: { exclude: ['password'] },
       limit: pageSize_num,
       offset,
+      order: [['updatedAt', 'DESC']],
       raw: true
     });
 
@@ -116,6 +117,7 @@ const getAllAccounts_keyword = async (keyword, page, pageSize) => {
       attributes: { exclude: ['password'] },
       limit: pageSize_num,
       offset,
+      order: [['updatedAt', 'DESC']],
       raw: true
     });
 
@@ -125,12 +127,12 @@ const getAllAccounts_keyword = async (keyword, page, pageSize) => {
       updatedAt: datetimeFormatter.formatDateTimeVN(acc.updatedAt)
     }));
 
-    const linkPrev = page_num > 1 
-      ? `/api/accounts/search?keyword=${encodeURIComponent(keyword)}&page=${page_num - 1}&pagesize=${pageSize_num}` 
+    const linkPrev = page_num > 1
+      ? `/api/accounts/search?keyword=${encodeURIComponent(keyword)}&page=${page_num - 1}&pagesize=${pageSize_num}`
       : null;
 
-    const linkNext = page_num * pageSize_num < count 
-      ? `/api/accounts/search?keyword=${encodeURIComponent(keyword)}&page=${page_num + 1}&pagesize=${pageSize_num}` 
+    const linkNext = page_num * pageSize_num < count
+      ? `/api/accounts/search?keyword=${encodeURIComponent(keyword)}&page=${page_num + 1}&pagesize=${pageSize_num}`
       : null;
 
     const pages = [];
@@ -182,6 +184,17 @@ const getAccountByUserId = async (user_id) => {
 
 const createAccount = async (accountData) => {
   try {
+    if (accountData.role === 'ADMIN') {
+      // Tự động sinh user_id cho ADMIN, user_id có định dạng ADMINxxx
+      // Đếm số lượng record có role là ADMIN
+      const numberOfAdmins = await models.Account.count({ where: { role: 'ADMIN' } });
+      const newAdminNumber = numberOfAdmins + 1;
+      const paddedNumber = String(newAdminNumber).padStart(3, '0'); // luôn đủ 3 số
+      accountData.user_id = `ADMIN${paddedNumber}`;
+    }
+    if (accountData.email === '') {
+      accountData.email = null;
+    }
     return await models.Account.create(accountData);
   } catch (error) {
     throw error;
@@ -227,7 +240,7 @@ const checkAccountByEmail = async (email) => {
   try {
     const account = await models.Account.findOne({ where: { email } });
     if (!account) return 0; // Tài khoản không tồn tại
-    
+
     const result = await emailService.sendOTP(email);
     if (!result.success) return -1; // Gửi OTP thất bại
 

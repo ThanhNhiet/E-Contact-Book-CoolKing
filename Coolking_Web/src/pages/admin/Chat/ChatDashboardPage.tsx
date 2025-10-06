@@ -1,95 +1,84 @@
 import React, { useState, useEffect } from 'react';
-import { useAccount, type Account } from '../../../hooks/useAccount';
+import { useNavigate } from 'react-router-dom';
+import { useChat, type Chat } from '../../../hooks/useChatAD';
 import HeaderAdCpn from '../../../components/admin/HeaderAdCpn';
 import FooterAdCpn from '../../../components/admin/FooterAdCpn';
-import AccountsCreateModal from './AccountsCreateModal';
-import AccountsEditModal from './AccountsEditModal';
+import CleanUpChatModal from './CleanUpChatModal';
+import UpdateGrchatModal from './UpdateGrchatModal';
+import ChatDetailInfoModal from './ChatDetailInfoModal';
 
-const AccountsDashboardPage: React.FC = () => {
-  const { accounts, loading, error, currentPage, pageSize, pages, getAccounts, searchAccounts, disableAccount, resetPassword, refreshAccounts } = useAccount();
+const ChatDashboardPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { chats, loading, error, currentPage, pageSize, pages, getChats, searchChats, deleteChat} = useChat();
   const [searchKeyword, setSearchKeyword] = useState('');
   const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{ type: 'disable' | 'reset', userId: string } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'delete', chatId: string } | null>(null);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [showCleanUpModal, setShowCleanUpModal] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updatingChat, setUpdatingChat] = useState<Chat | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
 
   useEffect(() => {
-    getAccounts(1, 10);
-  }, [getAccounts]);
+    getChats(1, 10);
+  }, [getChats]);
 
   const handleSearch = async () => {
     if (searchKeyword.trim()) {
-      await searchAccounts(searchKeyword, 1, pageSize);
+      await searchChats(searchKeyword, 1, pageSize);
     } else {
-      getAccounts(1, pageSize);
+      getChats(1, pageSize);
     }
   };
 
   const handlePageChange = (page: number) => {
-    getAccounts(page, pageSize);
+    if (searchKeyword.trim()) {
+      searchChats(searchKeyword, page, pageSize);
+    } else {
+      getChats(page, pageSize);
+    }
   };
 
-  const handleActionClick = (userId: string) => {
-    setShowActionMenu(showActionMenu === userId ? null : userId);
+  const handleActionClick = (chatId: string) => {
+    setShowActionMenu(showActionMenu === chatId ? null : chatId);
   };
 
-  const handleDisableAccount = (userId: string) => {
-    setConfirmAction({ type: 'disable', userId });
+  const handleDeleteChat = (chatId: string) => {
+    setConfirmAction({ type: 'delete', chatId });
     setShowConfirmModal(true);
     setShowActionMenu(null);
   };
 
-  const handleResetPassword = (userId: string) => {
-    setConfirmAction({ type: 'reset', userId });
-    setShowConfirmModal(true);
-    setShowActionMenu(null);
-  };
-
-  const handleEditAccount = (userId: string) => {
-    const account = accounts.find(acc => acc.user_id === userId);
-    if (account) {
-      setEditingAccount(account);
-      setShowEditModal(true);
+  const handleUpdateChat = (chatId: string) => {
+    const chat = chats.find(c => c._id === chatId);
+    if (chat) {
+      setUpdatingChat(chat);
+      setShowUpdateModal(true);
     }
     setShowActionMenu(null);
-  };
-
-  const handleCreateAccount = () => {
-    setShowCreateModal(true);
-  };
-
-  const handleModalSuccess = (message: string) => {
-    setSuccessMessage(message);
-    setShowSuccessNotification(true);
-    refreshAccounts();
-    
-    // Auto hide success notification after 3 seconds
-    setTimeout(() => {
-      setShowSuccessNotification(false);
-    }, 3000);
   };
 
   const handleConfirmAction = async () => {
     if (!confirmAction) return;
 
     try {
-      if (confirmAction.type === 'disable') {
-        await disableAccount(confirmAction.userId);
-        setSuccessMessage(`Đã vô hiệu hóa tài khoản ${confirmAction.userId} thành công!`);
-      } else if (confirmAction.type === 'reset') {
-        await resetPassword(confirmAction.userId);
-        setSuccessMessage(`Đã reset mật khẩu cho tài khoản ${confirmAction.userId} thành công!`);
+      if (confirmAction.type === 'delete') {
+        const result = await deleteChat(confirmAction.chatId);
+        if (result) {
+          setSuccessMessage('Đã xóa chat thành công!');
+          setShowSuccessNotification(true);
+          // Refresh the chats list
+          if (searchKeyword.trim()) {
+            await searchChats(searchKeyword, currentPage, pageSize);
+          } else {
+            await getChats(currentPage, pageSize);
+          }
+        }
       }
       
-      // Show success notification
-      setShowSuccessNotification(true);
-      
-      // Refresh the accounts list
-      refreshAccounts();
       setShowConfirmModal(false);
       setConfirmAction(null);
       
@@ -107,25 +96,60 @@ const AccountsDashboardPage: React.FC = () => {
     setConfirmAction(null);
   };
 
-  const getStatusBadge = (status: string) => {
-    const baseClasses = "px-3 py-1 rounded-full text-xs font-medium";
-    if (status === 'ACTIVE') {
-      return `${baseClasses} bg-green-100 text-green-800`;
+  const handleCleanUpSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setShowSuccessNotification(true);
+    
+    // Refresh the chats list
+    if (searchKeyword.trim()) {
+      searchChats(searchKeyword, currentPage, pageSize);
     } else {
-      return `${baseClasses} bg-red-100 text-red-800`;
+      getChats(currentPage, pageSize);
+    }
+    
+    // Auto hide success notification after 3 seconds
+    setTimeout(() => {
+      setShowSuccessNotification(false);
+    }, 3000);
+  };
+
+  const handleUpdateSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setShowSuccessNotification(true);
+    
+    // Refresh the chats list
+    if (searchKeyword.trim()) {
+      searchChats(searchKeyword, currentPage, pageSize);
+    } else {
+      getChats(currentPage, pageSize);
+    }
+    
+    // Auto hide success notification after 3 seconds
+    setTimeout(() => {
+      setShowSuccessNotification(false);
+    }, 3000);
+  };
+
+  const handleRowClick = (chat: Chat, event: React.MouseEvent) => {
+    // Prevent row click when action menu button is clicked
+    if ((event.target as HTMLElement).closest('button')) {
+      return;
+    }
+    
+    setSelectedChat(chat);
+    setShowDetailModal(true);
+  };
+
+  const getChatTypeBadge = (type: string) => {
+    const baseClasses = "px-3 py-1 rounded-full text-xs font-medium";
+    if (type === 'group') {
+      return `${baseClasses} bg-blue-100 text-blue-800`;
+    } else {
+      return `${baseClasses} bg-green-100 text-green-800`;
     }
   };
 
-  const getRoleBadge = (role: string) => {
-    const baseClasses = "px-3 py-1 rounded-full text-xs font-medium";
-    const colors = {
-      'ADMIN': 'bg-purple-100 text-purple-800',
-      'LECTURER': 'bg-blue-100 text-blue-800',
-      'STUDENT': 'bg-yellow-100 text-yellow-800',
-      'PARENT': 'bg-gray-100 text-gray-800'
-    };
-    return `${baseClasses} ${colors[role as keyof typeof colors] || 'bg-gray-100 text-gray-800'}`;
-  };
+
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -135,14 +159,14 @@ const AccountsDashboardPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm border">
           {/* Header */}
           <div className="px-6 py-4 border-b border-gray-200">
-            <h1 className="text-2xl font-bold text-gray-800 mb-4 text-center">Quản lý Tài Khoản</h1>
+            <h1 className="text-2xl font-bold text-gray-800 mb-4 text-center">Quản lý Chat</h1>
             
             {/* Search and Actions */}
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 flex-1 max-w-md">
                 <input
                   type="text"
-                  placeholder="Tìm kiếm theo ID, Email hoặc SĐT"
+                  placeholder="Tìm kiếm chat theo tên..."
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -160,29 +184,39 @@ const AccountsDashboardPage: React.FC = () => {
               
               <div className="flex gap-3">
                 <button 
-                  onClick={handleCreateAccount}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 font-medium"
+                  onClick={() => navigate('/admin/chat/course-sections')}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 font-medium"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                  <span>Tạo mới</span>
+                  <span>Lớp học phần chưa có chat</span>
+                </button>
+                
+                <button 
+                  onClick={() => setShowCleanUpModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 font-medium"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  <span>Xóa chat đơn không hoạt động</span>
                 </button>
               </div>
             </div>
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto pr-4">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số điện thoại</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vai trò</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Loại chat</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã lớp học phần</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày tạo</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày cập nhật</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tổng thành viên</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
                 </tr>
               </thead>
@@ -205,74 +239,75 @@ const AccountsDashboardPage: React.FC = () => {
                       Lỗi: {error}
                     </td>
                   </tr>
-                ) : accounts.length === 0 ? (
+                ) : chats.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                       Không có dữ liệu
                     </td>
                   </tr>
                 ) : (
-                  accounts.map((account, index) => (
-                    <tr key={account.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  chats.map((chat, index) => (
+                    <tr 
+                      key={chat._id} 
+                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer transition-colors duration-200`}
+                      onClick={(e) => handleRowClick(chat, e)}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={getChatTypeBadge(chat.type)}>
+                          {chat.type === 'group' ? 'Nhóm' : 'Cá nhân'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {chat.name || '-'}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                        {account.user_id}
+                        {chat.course_section_id || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {account.email || '-'}
+                        {chat.createdAt}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {account.phone_number || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={getRoleBadge(account.role)}>
-                          {account.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={getStatusBadge(account.status)}>
-                          {account.status}
-                        </span>
+                        {chat.updatedAt}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {account.updatedAt}
+                        {chat.memberCount || 0}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 relative">
-                        <button
-                          onClick={() => handleActionClick(account.user_id)}
-                          className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
-                        >
-                          <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                          </svg>
-                        </button>
-                        
-                        {showActionMenu === account.user_id && (
-                          <div className="absolute right-0 top-12 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                            <div className="py-1">
-                              <button
-                                onClick={() => handleEditAccount(account.user_id)}
-                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
-                              >
-                                <span className="text-blue-500">✏️</span>
-                                <span>Chỉnh sửa</span>
-                              </button>
-                              <button
-                                onClick={() => handleDisableAccount(account.user_id)}
-                                className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
-                              >
-                                <span className="text-red-500">🚫</span>
-                                <span>Vô hiệu hóa</span>
-                              </button>
-                              <button
-                                onClick={() => handleResetPassword(account.user_id)}
-                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 transition-colors duration-200 flex items-center gap-2"
-                              >
-                                <span className="text-blue-500">🔐</span>
-                                <span>Reset mật khẩu</span>
-                              </button>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div className="relative">
+                          <button
+                            onClick={() => handleActionClick(chat._id)}
+                            className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                          >
+                            <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                            </svg>
+                          </button>
+                          
+                          {showActionMenu === chat._id && (
+                            <div className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] w-48" 
+                                 style={{
+                                   top: `${(index + 2) * 60 + 180}px`, // Điều chỉnh vị trí dựa vào index của row
+                                   right: '24px' // Cách mép phải 24px
+                                 }}>
+                              <div className="py-1">
+                                <button
+                                  onClick={() => handleUpdateChat(chat._id)}
+                                  className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
+                                >
+                                  <span className="text-blue-500">✏️</span>
+                                  <span>Cập nhật</span>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteChat(chat._id)}
+                                  className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-gray-700 transition-colors duration-200 flex items-center gap-2"
+                                >
+                                  <span className="text-red-500">🗑️</span>
+                                  <span>Xóa</span>
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -347,11 +382,10 @@ const AccountsDashboardPage: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Xác nhận hành động
+              Xác nhận xóa chat
             </h3>
             <p className="text-gray-700 mb-6">
-              Bạn có chắc chắn muốn {confirmAction.type === 'disable' ? 'vô hiệu hóa' : 'reset mật khẩu cho'} tài khoản{' '}
-              <span className="font-semibold">{confirmAction.userId}</span> không?
+              Bạn có chắc chắn muốn xóa chat này không? Hành động này không thể hoàn tác.
             </p>
             <div className="flex justify-end space-x-3">
               <button
@@ -364,7 +398,7 @@ const AccountsDashboardPage: React.FC = () => {
                 onClick={handleConfirmAction}
                 className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors duration-200"
               >
-                Xác nhận
+                Xóa
               </button>
             </div>
           </div>
@@ -379,22 +413,29 @@ const AccountsDashboardPage: React.FC = () => {
         />
       )}
 
-      {/* Create Account Modal */}
-      <AccountsCreateModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={handleModalSuccess}
+      {/* Clean Up Chat Modal */}
+      <CleanUpChatModal
+        isOpen={showCleanUpModal}
+        onClose={() => setShowCleanUpModal(false)}
+        onSuccess={handleCleanUpSuccess}
       />
 
-      {/* Edit Account Modal */}
-      <AccountsEditModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        onSuccess={handleModalSuccess}
-        account={editingAccount}
+      {/* Update Group Chat Modal */}
+      <UpdateGrchatModal
+        isOpen={showUpdateModal}
+        onClose={() => setShowUpdateModal(false)}
+        onSuccess={handleUpdateSuccess}
+        chat={updatingChat}
+      />
+
+      {/* Chat Detail Info Modal */}
+      <ChatDetailInfoModal
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        chat={selectedChat}
       />
     </div>
   );
 };
 
-export default AccountsDashboardPage;
+export default ChatDashboardPage;

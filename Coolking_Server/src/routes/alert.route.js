@@ -17,6 +17,15 @@ router.delete('/', alertController.deleteAlert);
 // POST /api/alerts/send-all
 router.post('/send-all', alertController.sendAlertToAll);
 
+// GET /api/alerts/search?keyword=&page=1&pageSize=10
+router.get('/search', alertController.searchAlerts);
+
+// GET /api/alerts?page=1&pageSize=10&keyword=...
+router.get('/', alertController.getAllAlerts);
+
+// PUT /api/alerts/:alertId
+router.put('/:alertId', alertController.updateAlert4Admin);
+
 /**
  * LECTURER ONLY ROUTES
  */

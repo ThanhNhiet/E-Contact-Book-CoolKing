@@ -27,7 +27,7 @@ const getFacultyStatisticsBySession = async (faculty_id, session_id) => {
 
         // Lấy thông tin session
         const session = await models.Session.findByPk(session_id, {
-            attributes: ['name']
+            attributes: ['name', 'years']
         });
 
         // Sử dụng raw query để tối ưu hiệu suất
@@ -57,7 +57,8 @@ const getFacultyStatisticsBySession = async (faculty_id, session_id) => {
         const attendanceStats = await sequelize.query(`
             SELECT 
                 COUNT(*) as total_attendance_records,
-                COUNT(CASE WHEN \`as\`.status = 'present' THEN 1 END) as present_count
+                COUNT(CASE WHEN \`as\`.status = 'present' THEN 1 END) as present_count,
+                COUNT(CASE WHEN \`as\`.status = 'late' THEN 1 END) as late_count
             FROM attendances_students \`as\`
             INNER JOIN attendances a ON \`as\`.attendance_id = a.id
             INNER JOIN course_sections cs ON a.course_section_id = cs.id
@@ -71,7 +72,7 @@ const getFacultyStatisticsBySession = async (faculty_id, session_id) => {
 
         const attendanceData = attendanceStats[0] || {};
         const attendanceRate = attendanceData.total_attendance_records > 0 
-            ? (attendanceData.present_count / attendanceData.total_attendance_records * 100) 
+            ? ((attendanceData.present_count + attendanceData.late_count) / attendanceData.total_attendance_records * 100) 
             : 0;
 
         // Tính phân bố điểm
@@ -102,7 +103,7 @@ const getFacultyStatisticsBySession = async (faculty_id, session_id) => {
         return {
             faculty_id,
             faculty_name: faculty.name,
-            session_name: session?.name || 'N/A',
+            session_name: session ? `${session.name} ${session.years}` : 'N/A',
             total_subjects: parseInt(stats.total_subjects) || 0,
             total_course_sections: parseInt(stats.total_course_sections) || 0,
             total_lecturers: parseInt(stats.total_lecturers) || 0,
@@ -157,7 +158,7 @@ const getLecturerStatisticsBySession = async (lecturer_id, session_id) => {
 
         // Lấy thông tin session
         const session = await models.Session.findByPk(session_id, {
-            attributes: ['name']
+            attributes: ['name', 'years']
         });
 
         // Thống kê cơ bản của giảng viên
@@ -187,7 +188,8 @@ const getLecturerStatisticsBySession = async (lecturer_id, session_id) => {
         const attendanceStats = await sequelize.query(`
             SELECT 
                 COUNT(*) as total_attendance_records,
-                COUNT(CASE WHEN \`as\`.status = 'present' THEN 1 END) as present_count
+                COUNT(CASE WHEN \`as\`.status = 'present' THEN 1 END) as present_count,
+                COUNT(CASE WHEN \`as\`.status = 'late' THEN 1 END) as late_count
             FROM attendances_students \`as\`
             INNER JOIN attendances a ON \`as\`.attendance_id = a.id
             INNER JOIN course_sections cs ON a.course_section_id = cs.id
@@ -201,7 +203,7 @@ const getLecturerStatisticsBySession = async (lecturer_id, session_id) => {
 
         const attendanceData = attendanceStats[0] || {};
         const attendanceRate = attendanceData.total_attendance_records > 0 
-            ? (attendanceData.present_count / attendanceData.total_attendance_records * 100) 
+            ? ((attendanceData.present_count + attendanceData.late_count) / attendanceData.total_attendance_records * 100) 
             : 0;
 
         // Thống kê phân bố điểm
@@ -247,7 +249,7 @@ const getLecturerStatisticsBySession = async (lecturer_id, session_id) => {
             lecturer_id,
             lecturer_name: lecturer.name,
             faculty_name: lecturer.faculty?.name || 'N/A',
-            session_name: session?.name || 'N/A',
+            session_name: session ? `${session.name} ${session.years}` : 'N/A',
             total_course_sections: parseInt(stats.total_course_sections) || 0,
             total_subjects: parseInt(stats.total_subjects) || 0,
             total_students: parseInt(stats.total_students) || 0,
@@ -296,7 +298,7 @@ const getLecturersStatisticsByFaculty = async (faculty_id, session_id) => {
         }
 
         const session = await models.Session.findByPk(session_id, {
-            attributes: ['name']
+            attributes: ['name', 'years']
         });
 
         // Lấy danh sách giảng viên của khoa có dạy trong học kỳ
@@ -345,7 +347,8 @@ const getLecturersStatisticsByFaculty = async (faculty_id, session_id) => {
             const attendanceStats = await sequelize.query(`
                 SELECT 
                     COUNT(*) as total_attendance_records,
-                    COUNT(CASE WHEN \`as\`.status = 'present' THEN 1 END) as present_count
+                    COUNT(CASE WHEN \`as\`.status = 'present' THEN 1 END) as present_count,
+                    COUNT(CASE WHEN \`as\`.status = 'late' THEN 1 END) as late_count
                 FROM attendances_students \`as\`
                 INNER JOIN attendances a ON \`as\`.attendance_id = a.id
                 INNER JOIN course_sections cs ON a.course_section_id = cs.id
@@ -359,7 +362,7 @@ const getLecturersStatisticsByFaculty = async (faculty_id, session_id) => {
 
             const attendanceData = attendanceStats[0] || {};
             const attendanceRate = attendanceData.total_attendance_records > 0 
-                ? (attendanceData.present_count / attendanceData.total_attendance_records * 100) 
+                ? ((attendanceData.present_count + attendanceData.late_count) / attendanceData.total_attendance_records * 100) 
                 : 0;
 
             // Tính pass rate
@@ -388,16 +391,14 @@ const getLecturersStatisticsByFaculty = async (faculty_id, session_id) => {
             total_students: acc.total_students + lecturer.total_students,
             total_score_sum: acc.total_score_sum + (lecturer.average_score * lecturer.students_with_scores),
             total_students_with_scores: acc.total_students_with_scores + lecturer.students_with_scores,
-            total_passed: acc.total_passed + lecturer.students_passed,
-            total_attendance_rate_sum: acc.total_attendance_rate_sum + lecturer.attendance_rate
+            total_passed: acc.total_passed + lecturer.students_passed
         }), {
             total_course_sections: 0,
             total_subjects: 0,
             total_students: 0,
             total_score_sum: 0,
             total_students_with_scores: 0,
-            total_passed: 0,
-            total_attendance_rate_sum: 0
+            total_passed: 0
         });
 
         const facultyAverageScore = totalStats.total_students_with_scores > 0 
@@ -408,14 +409,32 @@ const getLecturersStatisticsByFaculty = async (faculty_id, session_id) => {
             ? Math.round((totalStats.total_passed / totalStats.total_students_with_scores) * 100 * 100) / 100 
             : 0;
 
-        const facultyAttendanceRate = lecturerStatistics.length > 0 
-            ? Math.round((totalStats.total_attendance_rate_sum / lecturerStatistics.length) * 100) / 100 
+        // Tính attendance_rate của khoa dựa trên tổng số record điểm danh (giống getFacultyStatisticsBySession)
+        const facultyAttendanceStats = await sequelize.query(`
+            SELECT 
+                COUNT(*) as total_attendance_records,
+                COUNT(CASE WHEN \`as\`.status = 'present' THEN 1 END) as present_count,
+                COUNT(CASE WHEN \`as\`.status = 'late' THEN 1 END) as late_count
+            FROM attendances_students \`as\`
+            INNER JOIN attendances a ON \`as\`.attendance_id = a.id
+            INNER JOIN course_sections cs ON a.course_section_id = cs.id
+            INNER JOIN subjects s ON cs.subject_id = s.subject_id
+            WHERE s.faculty_id = :faculty_id 
+            AND cs.session_id = :session_id
+        `, {
+            replacements: { faculty_id, session_id },
+            type: sequelize.QueryTypes.SELECT
+        });
+
+        const facultyAttendanceData = facultyAttendanceStats[0] || {};
+        const facultyAttendanceRate = facultyAttendanceData.total_attendance_records > 0 
+            ? Math.round(((facultyAttendanceData.present_count + facultyAttendanceData.late_count) / facultyAttendanceData.total_attendance_records * 100) * 100) / 100
             : 0;
 
         return {
             faculty_id,
             faculty_name: faculty.name,
-            session_name: session?.name || 'N/A',
+            session_name: session ? `${session.name} ${session.years}` : 'N/A',
             total_lecturers: lecturerStatistics.length,
             faculty_summary: {
                 total_course_sections: totalStats.total_course_sections,
@@ -472,7 +491,7 @@ const getCourseSectionStatisticsBySession = async (course_section_id, session_id
                 {
                     model: models.Session,
                     as: 'session',
-                    attributes: ['id', 'name']
+                    attributes: ['id', 'name', 'years']
                 },
                 {
                     model: models.LecturerCourseSection,
@@ -543,7 +562,7 @@ const getCourseSectionStatisticsBySession = async (course_section_id, session_id
             : 0;
 
         const attendanceRate = attendanceData.total_attendance_records > 0 
-            ? (attendanceData.present_count / attendanceData.total_attendance_records * 100) 
+            ? ((attendanceData.present_count + attendanceData.late_count) / attendanceData.total_attendance_records * 100) 
             : 0;
 
         const absentRate = attendanceData.total_attendance_records > 0 
@@ -561,7 +580,7 @@ const getCourseSectionStatisticsBySession = async (course_section_id, session_id
                 subjectName: courseSection.subject?.name || 'N/A',
                 subjectCredit: (courseSection.subject?.theo_credit || 0) + (courseSection.subject?.pra_credit || 0),
                 className: courseSection.clazz?.name || 'N/A',
-                sessionName: courseSection.session?.name || 'N/A',
+                sessionName: courseSection.session ? `${courseSection.session.name} ${courseSection.session.years}` : 'N/A',
                 facultyName: courseSection.subject?.faculty?.name || 'N/A',
                 lecturerName: courseSection.lecturers_course_sections?.[0]?.lecturer?.name || 'N/A',
                 lecturerId: courseSection.lecturers_course_sections?.[0]?.lecturer?.lecturer_id || null
@@ -625,7 +644,7 @@ const getCourseSectionsStatisticsByFaculty = async (faculty_id, session_id) => {
         }
 
         const session = await models.Session.findByPk(session_id, {
-            attributes: ['name']
+            attributes: ['name', 'years']
         });
 
         // Lấy danh sách tất cả lớp học phần của khoa trong học kỳ
@@ -686,7 +705,8 @@ const getCourseSectionsStatisticsByFaculty = async (faculty_id, session_id) => {
             const attendanceStats = await sequelize.query(`
                 SELECT 
                     COUNT(*) as total_attendance_records,
-                    COUNT(CASE WHEN \`as\`.status = 'present' THEN 1 END) as present_count
+                    COUNT(CASE WHEN \`as\`.status = 'present' THEN 1 END) as present_count,
+                    COUNT(CASE WHEN \`as\`.status = 'late' THEN 1 END) as late_count
                 FROM attendances_students \`as\`
                 INNER JOIN attendances a ON \`as\`.attendance_id = a.id
                 INNER JOIN students_coursesections scs ON \`as\`.student_id = scs.student_id 
@@ -707,7 +727,7 @@ const getCourseSectionsStatisticsByFaculty = async (faculty_id, session_id) => {
                 : 0;
 
             const attendanceRate = attendanceData.total_attendance_records > 0 
-                ? (attendanceData.present_count / attendanceData.total_attendance_records * 100) 
+                ? ((attendanceData.present_count + attendanceData.late_count) / attendanceData.total_attendance_records * 100) 
                 : 0;
 
             courseSectionStatistics.push({
@@ -717,7 +737,7 @@ const getCourseSectionsStatisticsByFaculty = async (faculty_id, session_id) => {
                     subjectName: cs.subject_name || 'N/A',
                     subjectCredit: cs.subject_credit || 0,
                     className: cs.class_name || 'N/A',
-                    sessionName: session?.name || 'N/A',
+                    sessionName: session ? `${session.name} ${session.years}` : 'N/A',
                     facultyName: faculty.name,
                     lecturerName: cs.lecturer_name || 'N/A',
                     lecturerId: cs.lecturer_id
@@ -759,7 +779,6 @@ const getCourseSectionsStatisticsByFaculty = async (faculty_id, session_id) => {
             total_students_with_scores: acc.total_students_with_scores + cs.student_statistics.students_with_scores,
             total_passed: acc.total_passed + cs.student_statistics.students_passed,
             total_score_sum: acc.total_score_sum + (cs.score_statistics.average_score * cs.student_statistics.students_with_scores),
-            total_attendance_rate_sum: acc.total_attendance_rate_sum + cs.attendance_statistics.attendance_rate,
             grade_distribution: {
                 excellent: acc.grade_distribution.excellent + cs.score_statistics.grade_distribution.excellent,
                 good: acc.grade_distribution.good + cs.score_statistics.grade_distribution.good,
@@ -773,7 +792,6 @@ const getCourseSectionsStatisticsByFaculty = async (faculty_id, session_id) => {
             total_students_with_scores: 0,
             total_passed: 0,
             total_score_sum: 0,
-            total_attendance_rate_sum: 0,
             grade_distribution: { excellent: 0, good: 0, fair: 0, poor: 0, fail: 0 }
         });
 
@@ -785,14 +803,32 @@ const getCourseSectionsStatisticsByFaculty = async (faculty_id, session_id) => {
             ? Math.round((totalStats.total_passed / totalStats.total_students_with_scores) * 100 * 100) / 100 
             : 0;
 
-        const facultyAttendanceRate = courseSectionStatistics.length > 0 
-            ? Math.round((totalStats.total_attendance_rate_sum / courseSectionStatistics.length) * 100) / 100 
+        // Tính attendance_rate của khoa dựa trên tổng số record điểm danh (giống getFacultyStatisticsBySession)
+        const facultyAttendanceStats = await sequelize.query(`
+            SELECT 
+                COUNT(*) as total_attendance_records,
+                COUNT(CASE WHEN \`as\`.status = 'present' THEN 1 END) as present_count,
+                COUNT(CASE WHEN \`as\`.status = 'late' THEN 1 END) as late_count
+            FROM attendances_students \`as\`
+            INNER JOIN attendances a ON \`as\`.attendance_id = a.id
+            INNER JOIN course_sections cs ON a.course_section_id = cs.id
+            INNER JOIN subjects s ON cs.subject_id = s.subject_id
+            WHERE s.faculty_id = :faculty_id 
+            AND cs.session_id = :session_id
+        `, {
+            replacements: { faculty_id, session_id },
+            type: sequelize.QueryTypes.SELECT
+        });
+
+        const facultyAttendanceData = facultyAttendanceStats[0] || {};
+        const facultyAttendanceRate = facultyAttendanceData.total_attendance_records > 0 
+            ? Math.round(((facultyAttendanceData.present_count + facultyAttendanceData.late_count) / facultyAttendanceData.total_attendance_records * 100) * 100) / 100
             : 0;
 
         return {
             faculty_id,
             faculty_name: faculty.name,
-            session_name: session?.name || 'N/A',
+            session_name: session ? `${session.name} ${session.years}` : 'N/A',
             faculty_summary: {
                 total_course_sections: totalStats.total_course_sections,
                 total_students: totalStats.total_students,
@@ -811,10 +847,63 @@ const getCourseSectionsStatisticsByFaculty = async (faculty_id, session_id) => {
     }
 };
 
+/**
+ * Lấy danh sách tất cả các khoa
+ * @returns {Array} Danh sách các khoa với faculty_id và name
+ */
+const getAllFaculty = async () => {
+    try {
+        const faculties = await models.Faculty.findAll({
+            attributes: ['faculty_id', 'name'],
+            order: [['name', 'ASC']]
+        });
+
+        return faculties.map(faculty => ({
+            faculty_id: faculty.faculty_id,
+            name: faculty.name
+        }));
+
+    } catch (error) {
+        console.error('Error in getAllFaculty:', error);
+        throw error;
+    }
+};
+
+/**
+ * Lấy danh sách tất cả các học kỳ
+ * @returns {Array} Danh sách các học kỳ với id, name, years - sắp xếp theo name và years giảm dần
+ */
+const getAllSession = async () => {
+    try {
+        const sessions = await models.Session.findAll({
+            attributes: ['id', 'name', 'years'],
+            order: [
+                ['years', 'DESC'],
+                ['name', 'DESC']
+            ]
+        });
+
+        if (!sessions || sessions.length === 0) {
+            throw new Error('No sessions found');
+        }
+
+        return sessions.map(session => ({
+            id: session.id,
+            nameSession: session.name + ' ' + session.years
+        }));
+
+    } catch (error) {
+        console.error('Error in getAllSession:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     getFacultyStatisticsBySession,
     getLecturerStatisticsBySession,
     getLecturersStatisticsByFaculty,
     getCourseSectionStatisticsBySession,
-    getCourseSectionsStatisticsByFaculty
+    getCourseSectionsStatisticsByFaculty,
+    getAllFaculty,
+    getAllSession
 };

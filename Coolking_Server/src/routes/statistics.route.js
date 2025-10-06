@@ -17,4 +17,10 @@ router.get('/course-section-overview', statisticsController.getCourseSectionOver
 // GET /api/statistics/courses-sections-overview?faculty_id=&session_id=
 router.get('/courses-sections-overview', statisticsController.getCourseSectionsOverviewStatisticsByFaculty);
 
+// GET /api/statistics/all-faculties
+router.get('/all-faculties', statisticsController.getAllFaculties);
+
+// GET /api/statistics/all-sessions
+router.get('/all-sessions', statisticsController.getAllSessions);
+
 module.exports = router;

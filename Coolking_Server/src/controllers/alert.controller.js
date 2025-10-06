@@ -216,10 +216,105 @@ const deleteAlert = async (req, res) => {
     }
 };
 
+/**
+ * Lấy tất cả thông báo (Admin only)
+ * GET /api/alerts?page=1&pageSize=10&keyword=...
+ */
+const getAllAlerts = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const keyword = req.query.keyword || '';
+
+        // Gọi repository để lấy tất cả thông báo
+        const result = await alertRepo.getAllAlerts4Admin(page, pageSize, keyword);
+
+        res.status(200).json(result);
+
+    } catch (error) {
+        console.error('Error in getAllAlerts controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi lấy danh sách thông báo'
+        });
+    }
+};
+
+/**
+ * Tìm kiếm các thông báo theo từ khóa (Admin only)
+ * GET /api/alerts/search?keyword=&page=1&pageSize=10
+ */
+const searchAlerts = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+
+        const keyword = req.query.keyword || '';
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+
+        // Gọi repository để tìm kiếm thông báo
+        const result = await alertRepo.searchAlertsByKeyword4Admin(keyword, page, pageSize);
+
+        res.status(200).json(result);
+
+    } catch (error) {
+        console.error('Error in searchAlerts controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi tìm kiếm thông báo'
+        });
+    }
+};
+
+/**
+ * Cập nhật thông báo (Admin only)
+ * PUT /api/alerts/:alertId
+ */
+const updateAlert4Admin = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { alertId } = req.params;
+        const { header, body } = req.body;
+        if (!header && !body) {
+            return res.status(400).json({
+                success: false,
+                message: 'Chưa có thay đổi nào để cập nhật'
+            });
+        }
+        const result = await alertRepo.updateAlert4Admin(alertId, header, body);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in updateAlert4Admin controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi cập nhật thông báo'
+        });
+    }
+};
+
 module.exports = {
     sendAlertToAll,
     sendAlertToPerson,
     getMyAlerts,
     markAlertAsRead,
-    deleteAlert
+    deleteAlert,
+    getAllAlerts,
+    searchAlerts,
+    updateAlert4Admin
 };

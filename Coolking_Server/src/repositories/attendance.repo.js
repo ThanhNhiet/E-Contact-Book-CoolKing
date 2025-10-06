@@ -113,7 +113,7 @@ const getCourseSectionDetailByID = async (course_section_id) => {
                 {
                     model: models.Session,
                     as: 'session',
-                    attributes: ['name']
+                    attributes: ['name', 'years']
                 },
                 {
                     model: models.LecturerCourseSection,
@@ -142,7 +142,7 @@ const getCourseSectionDetailByID = async (course_section_id) => {
             subjectName: courseSectionDetail.subject?.name || 'N/A',
             className: courseSectionDetail.clazz?.name || 'N/A',
             facultyName: courseSectionDetail.subject?.faculty?.name || 'N/A',
-            sessionName: courseSectionDetail.session?.name || 'N/A',
+            sessionName: courseSectionDetail.session ? `${courseSectionDetail.session.name} ${courseSectionDetail.session.years}` : 'N/A',
             lecturerName: lecturerName
         };
 

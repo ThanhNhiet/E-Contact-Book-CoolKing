@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import authService from '../../services/authService';
+import authService from '../services/authService';
 
 export interface UserInfo {
   id: string;

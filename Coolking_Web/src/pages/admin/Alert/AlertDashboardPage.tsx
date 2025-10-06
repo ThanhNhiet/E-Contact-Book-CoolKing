@@ -1,71 +1,102 @@
 import React, { useState, useEffect } from 'react';
-import { useAccount, type Account } from '../../../hooks/useAccount';
+import { useAlert, type Alert } from '../../../hooks/useAlertAD';
 import HeaderAdCpn from '../../../components/admin/HeaderAdCpn';
 import FooterAdCpn from '../../../components/admin/FooterAdCpn';
-import AccountsCreateModal from './AccountsCreateModal';
-import AccountsEditModal from './AccountsEditModal';
+import SendFormModal from './SendFormModal';
+import AlertDetailModal from './AlertDetailModal';
+import EditFormModal from './EditFormModal';
 
-const AccountsDashboardPage: React.FC = () => {
-  const { accounts, loading, error, currentPage, pageSize, pages, getAccounts, searchAccounts, disableAccount, resetPassword, refreshAccounts } = useAccount();
+const AlertDashboardPage: React.FC = () => {
+  const { alerts, loading, error, currentPage, pages, getAlerts, searchAlerts, deleteAlert } = useAlert();
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{ type: 'disable' | 'reset', userId: string } | null>(null);
+  const [alertToDelete, setAlertToDelete] = useState<Alert | null>(null);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [editingAlert, setEditingAlert] = useState<Alert | null>(null);
 
   useEffect(() => {
-    getAccounts(1, 10);
-  }, [getAccounts]);
+    getAlerts(1, 10);
+  }, [getAlerts]);
 
   const handleSearch = async () => {
     if (searchKeyword.trim()) {
-      await searchAccounts(searchKeyword, 1, pageSize);
+      await searchAlerts(searchKeyword, 1, 10);
     } else {
-      getAccounts(1, pageSize);
+      getAlerts(1, 10);
     }
   };
 
   const handlePageChange = (page: number) => {
-    getAccounts(page, pageSize);
+    getAlerts(page, 10);
   };
 
-  const handleActionClick = (userId: string) => {
-    setShowActionMenu(showActionMenu === userId ? null : userId);
+  const handleRowClick = (alert: Alert) => {
+    setSelectedAlert(alert);
+    setShowDetailModal(true);
   };
 
-  const handleDisableAccount = (userId: string) => {
-    setConfirmAction({ type: 'disable', userId });
+  const handleActionClick = (alertId: string) => {
+    setShowActionMenu(showActionMenu === alertId ? null : alertId);
+  };
+
+  const handleEditClick = (alert: Alert) => {
+    setEditingAlert(alert);
+    setShowEditModal(true);
+    setShowActionMenu(null);
+  };
+
+  const handleDeleteClick = (alert: Alert) => {
+    setAlertToDelete(alert);
     setShowConfirmModal(true);
     setShowActionMenu(null);
   };
 
-  const handleResetPassword = (userId: string) => {
-    setConfirmAction({ type: 'reset', userId });
-    setShowConfirmModal(true);
-    setShowActionMenu(null);
-  };
+  const handleConfirmDelete = async () => {
+    if (!alertToDelete) return;
 
-  const handleEditAccount = (userId: string) => {
-    const account = accounts.find(acc => acc.user_id === userId);
-    if (account) {
-      setEditingAccount(account);
-      setShowEditModal(true);
+    try {
+      // Xác định loại xóa dựa trên phạm vi
+      if (alertToDelete.targetScope === 'all') {
+        // Xóa thông báo hệ thống: chỉ cần alertID
+        await deleteAlert(alertToDelete._id, '', '');
+      } else {
+        // Xóa thông báo person: cần createdAt và senderID
+        await deleteAlert('', alertToDelete.createdAt, alertToDelete.senderID);
+      }
+      
+      setSuccessMessage('Đã xóa thông báo thành công!');
+      setShowSuccessNotification(true);
+      setShowConfirmModal(false);
+      setAlertToDelete(null);
+      
+      // Refresh data
+      await getAlerts(currentPage, 10);
+      
+      // Auto hide success notification after 3 seconds
+      setTimeout(() => {
+        setShowSuccessNotification(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Delete alert error:', error);
     }
-    setShowActionMenu(null);
   };
 
-  const handleCreateAccount = () => {
-    setShowCreateModal(true);
+  const handleCancelDelete = () => {
+    setShowConfirmModal(false);
+    setAlertToDelete(null);
   };
 
-  const handleModalSuccess = (message: string) => {
+  const handleSendSuccess = (message: string) => {
     setSuccessMessage(message);
     setShowSuccessNotification(true);
-    refreshAccounts();
+    // Refresh data
+    getAlerts(currentPage, 10);
     
     // Auto hide success notification after 3 seconds
     setTimeout(() => {
@@ -73,58 +104,13 @@ const AccountsDashboardPage: React.FC = () => {
     }, 3000);
   };
 
-  const handleConfirmAction = async () => {
-    if (!confirmAction) return;
-
-    try {
-      if (confirmAction.type === 'disable') {
-        await disableAccount(confirmAction.userId);
-        setSuccessMessage(`Đã vô hiệu hóa tài khoản ${confirmAction.userId} thành công!`);
-      } else if (confirmAction.type === 'reset') {
-        await resetPassword(confirmAction.userId);
-        setSuccessMessage(`Đã reset mật khẩu cho tài khoản ${confirmAction.userId} thành công!`);
-      }
-      
-      // Show success notification
-      setShowSuccessNotification(true);
-      
-      // Refresh the accounts list
-      refreshAccounts();
-      setShowConfirmModal(false);
-      setConfirmAction(null);
-      
-      // Auto hide success notification after 3 seconds
-      setTimeout(() => {
-        setShowSuccessNotification(false);
-      }, 3000);
-    } catch (error) {
-      console.error('Action failed:', error);
-    }
-  };
-
-  const handleCancelAction = () => {
-    setShowConfirmModal(false);
-    setConfirmAction(null);
-  };
-
-  const getStatusBadge = (status: string) => {
+  const getScopeBadge = (scope: string) => {
     const baseClasses = "px-3 py-1 rounded-full text-xs font-medium";
-    if (status === 'ACTIVE') {
-      return `${baseClasses} bg-green-100 text-green-800`;
+    if (scope === 'all') {
+      return `${baseClasses} bg-purple-100 text-purple-800`;
     } else {
-      return `${baseClasses} bg-red-100 text-red-800`;
+      return `${baseClasses} bg-blue-100 text-blue-800`;
     }
-  };
-
-  const getRoleBadge = (role: string) => {
-    const baseClasses = "px-3 py-1 rounded-full text-xs font-medium";
-    const colors = {
-      'ADMIN': 'bg-purple-100 text-purple-800',
-      'LECTURER': 'bg-blue-100 text-blue-800',
-      'STUDENT': 'bg-yellow-100 text-yellow-800',
-      'PARENT': 'bg-gray-100 text-gray-800'
-    };
-    return `${baseClasses} ${colors[role as keyof typeof colors] || 'bg-gray-100 text-gray-800'}`;
   };
 
   return (
@@ -132,17 +118,17 @@ const AccountsDashboardPage: React.FC = () => {
       <HeaderAdCpn />
       
       <main className="flex-1 max-w-7xl mx-auto px-6 py-8 w-full">
-        <div className="bg-white rounded-lg shadow-sm border">
+        <div className="bg-white rounded-lg shadow-sm border relative">
           {/* Header */}
           <div className="px-6 py-4 border-b border-gray-200">
-            <h1 className="text-2xl font-bold text-gray-800 mb-4 text-center">Quản lý Tài Khoản</h1>
+            <h1 className="text-2xl font-bold text-gray-800 mb-4 text-center">Quản lý Thông Báo</h1>
             
             {/* Search and Actions */}
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 flex-1 max-w-md">
                 <input
                   type="text"
-                  placeholder="Tìm kiếm theo ID, Email hoặc SĐT"
+                  placeholder="Tìm kiếm thông báo..."
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -160,29 +146,29 @@ const AccountsDashboardPage: React.FC = () => {
               
               <div className="flex gap-3">
                 <button 
-                  onClick={handleCreateAccount}
+                  onClick={() => setShowSendModal(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 font-medium"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                  <span>Tạo mới</span>
+                  <span>Tạo thông báo hệ thống</span>
                 </button>
               </div>
             </div>
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-visible">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số điện thoại</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vai trò</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày cập nhật</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tiêu đề</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Người gửi</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Người nhận</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phạm vi</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày gửi</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
                 </tr>
               </thead>
@@ -205,40 +191,54 @@ const AccountsDashboardPage: React.FC = () => {
                       Lỗi: {error}
                     </td>
                   </tr>
-                ) : accounts.length === 0 ? (
+                ) : alerts.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                       Không có dữ liệu
                     </td>
                   </tr>
                 ) : (
-                  accounts.map((account, index) => (
-                    <tr key={account.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  alerts.map((alert, index) => (
+                    <tr 
+                      key={alert._id} 
+                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer transition-colors duration-200 select-none`}
+                      onClick={(e) => {
+                        // Only trigger detail if not clicking on action buttons and no text is selected
+                        const selection = window.getSelection();
+                        if (!e.defaultPrevented && (!selection || selection.toString().length === 0)) {
+                          handleRowClick(alert);
+                        }
+                      }}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                        {account.user_id}
+                        {alert._id.substring(0, 8)}...
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {account.email || '-'}
+                        <div className="max-w-xs truncate">
+                          {alert.header}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {account.phone_number || '-'}
+                        {alert.senderID}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {alert.receiverID === 'All' ? 'Tất cả' : alert.receiverID}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={getRoleBadge(account.role)}>
-                          {account.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={getStatusBadge(account.status)}>
-                          {account.status}
+                        <span className={getScopeBadge(alert.targetScope)}>
+                          {alert.targetScope === 'all' ? 'Hệ thống' : 'Cá nhân'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {account.updatedAt}
+                        {alert.createdAt}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 relative">
                         <button
-                          onClick={() => handleActionClick(account.user_id)}
+                          data-alert-id={alert._id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleActionClick(alert._id);
+                          }}
                           className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
                         >
                           <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
@@ -246,29 +246,32 @@ const AccountsDashboardPage: React.FC = () => {
                           </svg>
                         </button>
                         
-                        {showActionMenu === account.user_id && (
-                          <div className="absolute right-0 top-12 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                        {showActionMenu === alert._id && (
+                          <div className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[60] w-48" 
+                               style={{
+                                 top: `${(document.querySelector(`[data-alert-id="${alert._id}"]`) as HTMLElement)?.getBoundingClientRect()?.bottom + 5 || 0}px`,
+                                 right: `${window.innerWidth - (document.querySelector(`[data-alert-id="${alert._id}"]`) as HTMLElement)?.getBoundingClientRect()?.right || 0}px`
+                               }}>
                             <div className="py-1">
                               <button
-                                onClick={() => handleEditAccount(account.user_id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditClick(alert);
+                                }}
                                 className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
                               >
                                 <span className="text-blue-500">✏️</span>
                                 <span>Chỉnh sửa</span>
                               </button>
                               <button
-                                onClick={() => handleDisableAccount(account.user_id)}
-                                className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteClick(alert);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-gray-700 transition-colors duration-200 flex items-center gap-2"
                               >
-                                <span className="text-red-500">🚫</span>
-                                <span>Vô hiệu hóa</span>
-                              </button>
-                              <button
-                                onClick={() => handleResetPassword(account.user_id)}
-                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 transition-colors duration-200 flex items-center gap-2"
-                              >
-                                <span className="text-blue-500">🔐</span>
-                                <span>Reset mật khẩu</span>
+                                <span className="text-red-500">🗑️</span>
+                                <span>Xóa</span>
                               </button>
                             </div>
                           </div>
@@ -343,28 +346,28 @@ const AccountsDashboardPage: React.FC = () => {
       )}
 
       {/* Confirmation Modal */}
-      {showConfirmModal && confirmAction && (
+      {showConfirmModal && alertToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Xác nhận hành động
+              Xác nhận xóa thông báo
             </h3>
             <p className="text-gray-700 mb-6">
-              Bạn có chắc chắn muốn {confirmAction.type === 'disable' ? 'vô hiệu hóa' : 'reset mật khẩu cho'} tài khoản{' '}
-              <span className="font-semibold">{confirmAction.userId}</span> không?
+              Bạn có chắc chắn muốn xóa thông báo{' '}
+              <span className="font-semibold">"{alertToDelete.header}"</span> không?
             </p>
             <div className="flex justify-end space-x-3">
               <button
-                onClick={handleCancelAction}
+                onClick={handleCancelDelete}
                 className="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors duration-200"
               >
                 Hủy
               </button>
               <button
-                onClick={handleConfirmAction}
+                onClick={handleConfirmDelete}
                 className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors duration-200"
               >
-                Xác nhận
+                Xác nhận xóa
               </button>
             </div>
           </div>
@@ -374,27 +377,34 @@ const AccountsDashboardPage: React.FC = () => {
       {/* Click outside to close action menu */}
       {showActionMenu && (
         <div 
-          className="fixed inset-0 z-0" 
+          className="fixed inset-0 z-40" 
           onClick={() => setShowActionMenu(null)}
         />
       )}
 
-      {/* Create Account Modal */}
-      <AccountsCreateModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={handleModalSuccess}
+      {/* Send Alert Modal */}
+      <SendFormModal
+        isOpen={showSendModal}
+        onClose={() => setShowSendModal(false)}
+        onSuccess={handleSendSuccess}
       />
 
-      {/* Edit Account Modal */}
-      <AccountsEditModal
+      {/* Alert Detail Modal */}
+      <AlertDetailModal
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        alert={selectedAlert}
+      />
+
+      {/* Edit Alert Modal */}
+      <EditFormModal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-        onSuccess={handleModalSuccess}
-        account={editingAccount}
+        onSuccess={handleSendSuccess}
+        alert={editingAlert}
       />
     </div>
   );
 };
 
-export default AccountsDashboardPage;
+export default AlertDashboardPage;

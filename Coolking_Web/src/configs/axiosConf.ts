@@ -59,13 +59,14 @@ axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = TokenManager.getToken();
     
-    // Chỉ thêm token cho protected routes /admin/* và /lecturer/*
-    // Đặc biệt: /public/logout cũng có thể nhận bearer token để server invalidate token
-    const url = config.url || '';
-    const isProtectedRoute = url.startsWith('/admin/') || url.startsWith('/lecturer/');
-    const isLogoutRoute = url === '/public/logout';
+    // Kiểm tra current page path để xác định có cần token không
+    const currentPath = window.location.pathname;
+    const isAdminPage = currentPath.startsWith('/admin/');
+    const isLecturerPage = currentPath.startsWith('/lecturer/');
+    const isLogoutRequest = config.url === '/public/logout';
     
-    if (token && (isProtectedRoute || isLogoutRoute)) {
+    // Thêm token nếu đang ở trang admin/lecturer hoặc là logout request
+    if (token && (isAdminPage || isLecturerPage || isLogoutRequest)) {
       // Chỉ thêm token nếu chưa có Authorization header
       if (!config.headers.Authorization) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -121,9 +122,9 @@ axiosInstance.interceptors.response.use(
         }
       } catch (refreshError) {
         console.error('[Token Refresh Error]', refreshError);
-        TokenManager.removeTokens();
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
+        // TokenManager.removeTokens();
+        // window.location.href = '/login';
+        // return Promise.reject(refreshError);
       }
     }
     
