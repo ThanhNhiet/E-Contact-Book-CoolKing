@@ -57,6 +57,25 @@ class AlertService {
       return response.data;
    }
    
+   /**  
+    *  Lecturer
+    */
+   // GET /api/alerts/my-alerts?page=1&pageSize=10
+   async getMyAlerts(page: number, pageSize: number) {
+      const response = await axiosInstance.get(`/alerts/my-alerts`, {
+         params: {
+            page: page,
+            pagesize: pageSize
+         }
+      });
+      return response.data;
+   }
+
+   // PUT /api/alerts/<alertId>/read
+   async markAlertAsRead(alertId: string) {
+      const response = await axiosInstance.put(`/alerts/${alertId}/read`);
+      return response.data;
+   }
 }
 // Export singleton instance
 export const alertService = new AlertService();

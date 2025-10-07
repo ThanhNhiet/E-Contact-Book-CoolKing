@@ -64,9 +64,10 @@ axiosInstance.interceptors.request.use(
     const isAdminPage = currentPath.startsWith('/admin/');
     const isLecturerPage = currentPath.startsWith('/lecturer/');
     const isLogoutRequest = config.url === '/public/logout';
+    const isProtectedAPI = config.url?.startsWith('/lecturers/') || config.url?.startsWith('/alerts/');
     
-    // Thêm token nếu đang ở trang admin/lecturer hoặc là logout request
-    if (token && (isAdminPage || isLecturerPage || isLogoutRequest)) {
+    // Thêm token nếu đang ở trang admin/lecturer hoặc là logout request hoặc gọi API protected
+    if (token && (isAdminPage || isLecturerPage || isLogoutRequest || isProtectedAPI)) {
       // Chỉ thêm token nếu chưa có Authorization header
       if (!config.headers.Authorization) {
         config.headers.Authorization = `Bearer ${token}`;

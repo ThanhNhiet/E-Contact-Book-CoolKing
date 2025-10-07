@@ -24,28 +24,28 @@ const HeaderAdCpn: React.FC = () => {
               <img src={logoImg} alt="CoolKing Logo" className="h-10 w-10 object-contain" />
               <span className="text-xl font-bold text-blue-600">CoolKing</span>
             </div>
-            
+
             <nav className="hidden md:flex space-x-6">
-              <a 
-                href="/admin/accounts" 
+              <a
+                href="/admin/accounts"
                 className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 px-3 py-2 rounded-md hover:bg-gray-50"
               >
                 Tài khoản
               </a>
-              <a 
-                href="/admin/chats" 
+              <a
+                href="/admin/chats"
                 className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 px-3 py-2 rounded-md hover:bg-gray-50"
               >
                 Đoạn Chat
               </a>
-              <a 
-                href="/admin/alerts" 
+              <a
+                href="/admin/alerts"
                 className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 px-3 py-2 rounded-md hover:bg-gray-50"
               >
                 Thông báo
               </a>
-              <a 
-                href="/admin/statistics" 
+              <a
+                href="/admin/statistics"
                 className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 px-3 py-2 rounded-md hover:bg-gray-50"
               >
                 Thống kê
@@ -58,7 +58,7 @@ const HeaderAdCpn: React.FC = () => {
             <span className="text-gray-700 text-sm">
               Xin chào <span className="font-semibold text-blue-600">{userInfo?.user_id || 'ADMIN001'}</span>
             </span>
-            
+
             <button
               onClick={handleLogout}
               className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 font-medium"
