@@ -150,8 +150,8 @@ const getAlertsByUser = async (userID, page = 1, pageSize = 10) => {
                 body: alert.body,
                 targetScope: alert.targetScope,
                 isRead: isRead,
-                createdAt: datetimeFormatter.formatDateTimeVN(alert.createdAt),
-                updatedAt: datetimeFormatter.formatDateTimeVN(alert.updatedAt)
+                createdAt: alert.createdAt ? datetimeFormatter.formatDateTimeVN(alert.createdAt) : null,
+                updatedAt: alert.updatedAt ? datetimeFormatter.formatDateTimeVN(alert.updatedAt) : null
             };
         });
 
@@ -393,8 +393,8 @@ const getAllAlerts4Admin = async (page = 1, pageSize = 10) => {
             body: alert.body,
             targetScope: alert.targetScope,
             isRead: alert.isRead,
-            createdAt: datetimeFormatter.formatDateTimeVN(alert.createdAt),
-            updatedAt: datetimeFormatter.formatDateTimeVN(alert.updatedAt)
+            createdAt: alert.createdAt ? datetimeFormatter.formatDateTimeVN(alert.createdAt) : null,
+            updatedAt: alert.updatedAt ? datetimeFormatter.formatDateTimeVN(alert.updatedAt) : null
         }));
 
         // Tạo link pagination
@@ -482,8 +482,8 @@ const searchAlertsByKeyword4Admin = async (keyword, page = 1, pageSize = 10) => 
             body: alert.body,
             targetScope: alert.targetScope,
             isRead: alert.isRead,
-            createdAt: datetimeFormatter.formatDateTimeVN(alert.createdAt),
-            updatedAt: datetimeFormatter.formatDateTimeVN(alert.updatedAt)
+            createdAt: alert.createdAt ? datetimeFormatter.formatDateTimeVN(alert.createdAt) : null,
+            updatedAt: alert.updatedAt ? datetimeFormatter.formatDateTimeVN(alert.updatedAt) : null
         }));
 
         const linkPrev = page > 1
