@@ -163,8 +163,8 @@ exports.changePassword = async (req, res) => {
 		const decoded = jwtUtils.verifyAccessToken(token);
 		const {oldPassword, newPassword } = req.body;
 		await accountRepo.changePassword(decoded.user_id, oldPassword, newPassword);
-		res.status(200).json({ message: 'Đổi mật khẩu thành công' });
+		res.status(200).json({success: true, message: 'Đổi mật khẩu thành công' });
 	} catch (err) {
-		res.status(500).json({ message: err.message });
+		res.status(500).json({ success: false, message: err.message });
 	}
 };
