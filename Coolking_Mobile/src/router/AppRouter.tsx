@@ -24,6 +24,8 @@ import CalendarScreen from "@/src/screens/calendar/CalendarScreen";
 
 //import page profile
 import ProfileScreen from "@/src/screens/profile/ProfileSceen";
+import ProfileDetailScreen from "@/src/screens/profile/ProfileDetailScreen";
+import ProfileChangePasswordScreen from "@/src/screens/profile/ProfileChangePasswordScreen";
 
 
 const Stack = createNativeStackNavigator();
@@ -95,7 +97,20 @@ export default function AppRouter() {
                     headerShown: false,
                 }}
             />
-           
+            <Stack.Screen
+                name="ProfileDetailScreen"
+                component={ProfileDetailScreen}
+                options={{
+                    headerShown: false,
+                }}
+            />
+            <Stack.Screen
+                name="ProfileChangePasswordScreen"
+                component={ProfileChangePasswordScreen}
+                options={{
+                    headerShown: false,
+                }}
+            />
 
         </Stack.Navigator>
     );

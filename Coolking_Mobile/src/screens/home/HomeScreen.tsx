@@ -10,9 +10,11 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import BottomNavigation from "@/src/components/navigations/BottomNavigations";
 import TopNavigations_Home from"@/src/components/navigations/TopNavigations_Home";
+import { useProfile } from "@/src/services/useapi/profile/UseProfile";
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
+  const { profileNavigation } = useProfile();
 
   return (
     <SafeAreaProvider>
@@ -26,8 +28,7 @@ export default function HomeScreen() {
         {/* Top Navigation */}
         <TopNavigations_Home
           navigation={navigation}
-          userName="Trần Tuấn Vương"
-          userAvatar="https://i.pravatar.cc/150?img=3"
+          profileNavigation={profileNavigation}
         />
 
         {/* Nội dung chính */}

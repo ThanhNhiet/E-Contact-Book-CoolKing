@@ -5,15 +5,17 @@ import NotificationModal, { NotificationItem } from "@/src/components/modals/Not
 
 interface Props {
   navigation: any;
-  userName?: string;
-  userAvatar?: string;
+  profileNavigation?: {
+    name: string;
+    avatar: string;
+    student_id: string;
+  };
   initialNotifications?: NotificationItem[];
 }
 
-export default function TopNavigations({
-  navigation,
-  userName = "Nguyễn Văn A",
-  userAvatar = "https://cdn-icons-png.flaticon.com/512/847/847969.png",
+export default function TopNavigations_Home({
+  navigation: any,
+  profileNavigation,
   initialNotifications,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -44,10 +46,10 @@ export default function TopNavigations({
       <View style={styles.container}>
         {/* Avatar + Name */}
         <View style={styles.leftSection}>
-          <Image source={{ uri: userAvatar }} style={styles.avatar} />
+          <Image source={{ uri: profileNavigation?.avatar || "https://i.pravatar.cc/150?img=3" }} style={styles.avatar} />
           <View style={{ marginLeft: 10 }}>
             <Text style={styles.welcomeText}>Xin chào,</Text>
-            <Text style={styles.userName}>{userName}</Text>
+            <Text style={styles.userName}>{profileNavigation?.name || "Người dùng"}</Text>
           </View>
         </View>
 
@@ -80,7 +82,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     height: 70,
-    backgroundColor: "#fff",
+    backgroundColor: "#6e2febff",
     paddingHorizontal: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
@@ -90,9 +92,9 @@ const styles = StyleSheet.create({
   },
   leftSection: { flexDirection: "row", alignItems: "center" },
   avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: "#ddd" },
-  welcomeText: { fontSize: 13, color: "#888" },
-  userName: { fontSize: 16, fontWeight: "700", color: "#333" },
-  iconButton: { padding: 6 },
+  welcomeText: { fontSize: 13, color: "#e5f0f0ff" },
+  userName: { fontSize: 16, fontWeight: "700", color: "#e5f0f0ff" },
+  iconButton: { padding: 6 ,color: "#e5f0f0ff"},
   badge: {
     position: "absolute",
     right: 2,

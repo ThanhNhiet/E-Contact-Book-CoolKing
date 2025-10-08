@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View, Modal, Pressable } from "react-native";
-
+import { StyleSheet, Text, TouchableOpacity, View, Modal, Pressable, Animated } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 type CalendarFilter = "all" | "study" | "exam";
 
 type Props = {
-  onChangeFilter?: (f: CalendarFilter) => void; // callback đổi filter (optional)
-  initialFilter?: CalendarFilter;               // filter ban đầu
+  onChangeFilter?: (f: CalendarFilter) => void;
+  initialFilter?: CalendarFilter;
 };
 
 export default function TopNavigations_Calendar({
@@ -15,40 +15,58 @@ export default function TopNavigations_Calendar({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<CalendarFilter>(initialFilter);
+  const [slideAnim] = useState(new Animated.Value(-300)); // slide animation
 
   const apply = (f: CalendarFilter) => {
     setFilter(f);
     onChangeFilter?.(f);
-    setOpen(false);
+    closeModal();
   };
 
   const labelOf = (f: CalendarFilter) =>
     f === "all" ? "Tất cả" : f === "study" ? "Lịch học" : "Lịch thi";
+
+  const openModal = () => {
+    setOpen(true);
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeModal = () => {
+    Animated.timing(slideAnim, {
+      toValue: -300,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setOpen(false));
+  };
 
   return (
     <>
       <View style={styles.container}>
         <Text style={styles.title}>Lịch học / Lịch thi</Text>
 
-        <TouchableOpacity style={styles.filterBtn} onPress={() => setOpen(true)}>
+        <TouchableOpacity style={styles.filterBtn} onPress={openModal}>
           <Ionicons name="calendar-outline" size={22} color="#333" />
           <Text style={styles.filterText}>{labelOf(filter)}</Text>
           <Ionicons name="chevron-down" size={18} color="#666" />
         </TouchableOpacity>
       </View>
 
-      {/* Modal chọn bộ lọc */}
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <Pressable style={styles.sheet}>
+      {/* Modal chọn bộ lọc bên trái */}
+      <Modal visible={open} transparent animationType="none" onRequestClose={closeModal}>
+        <Pressable style={styles.overlay} onPress={closeModal}>
+          <Animated.View style={[styles.sidePanel, { transform: [{ translateX: slideAnim }] }]}>
+            {/* Header */}
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Chọn bộ lọc</Text>
-              <TouchableOpacity onPress={() => setOpen(false)}>
+              <TouchableOpacity onPress={closeModal}>
                 <Ionicons name="close" size={22} color="#333" />
               </TouchableOpacity>
             </View>
 
-            {/* Option: Tất cả */}
             <OptionRow
               label="Tất cả"
               selected={filter === "all"}
@@ -56,8 +74,6 @@ export default function TopNavigations_Calendar({
               onPress={() => apply("all")}
             />
             <Divider />
-
-            {/* Option: Lịch học */}
             <OptionRow
               label="Lịch học"
               selected={filter === "study"}
@@ -65,18 +81,17 @@ export default function TopNavigations_Calendar({
               onPress={() => apply("study")}
             />
             <Divider />
-
-            {/* Option: Lịch thi */}
             <OptionRow
               label="Lịch thi"
               selected={filter === "exam"}
               icon="reader-outline"
               onPress={() => apply("exam")}
             />
-          </Pressable>
+          </Animated.View>
         </Pressable>
       </Modal>
     </>
+
   );
 }
 
@@ -93,17 +108,19 @@ function OptionRow({
   icon: keyof typeof Ionicons.glyphMap;
 }) {
   return (
+    <SafeAreaView>
     <TouchableOpacity style={rowStyles.row} onPress={onPress} activeOpacity={0.7}>
       <View style={rowStyles.left}>
-        <Ionicons name={icon} size={20} color={selected ? "#007AFF" : "#555"} />
-        <Text style={[rowStyles.text, selected && { color: "#007AFF", fontWeight: "700" }]}>{label}</Text>
+        <Ionicons name={icon} size={20} color={selected ? "#6e2febff" : "#555"} />
+        <Text style={[rowStyles.text, selected && { color: "#6e2febff", fontWeight: "700" }]}>{label}</Text>
       </View>
       <Ionicons
         name={selected ? "radio-button-on" : "radio-button-off"}
         size={20}
-        color={selected ? "#007AFF" : "#999"}
+        color={selected ? "#6e2febff" : "#aaa"}
       />
     </TouchableOpacity>
+    </SafeAreaView>
   );
 }
 
@@ -117,14 +134,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: 12,
-    backgroundColor: "#fff",
+    backgroundColor: "#6e2febff",
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
   title: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#222",
+    color: "#e5f0f0ff",
   },
   filterBtn: {
     flexDirection: "row",
@@ -140,33 +157,34 @@ const styles = StyleSheet.create({
     color: "#333",
     fontWeight: "600",
   },
-
-  backdrop: {
+  overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.25)",
-    justifyContent: "flex-end",
+    flexDirection: "row",
+    justifyContent: "flex-start",
   },
-  sheet: {
+  sidePanel: {
+    width: "70%",
+    height: "100%",
     backgroundColor: "#fff",
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 14,
-    borderTopLeftRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
     borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 16,
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 10,
   },
   sheetHeader: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
+    alignItems: "center",
+    marginBottom: 16,
   },
   sheetTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "700",
     color: "#333",
   },

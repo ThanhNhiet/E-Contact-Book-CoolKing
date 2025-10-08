@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {getlogin,getcheckemail,getVerifyOTP,getchangePassword} from "@/src/services/api/Login/Login_ForgotApi";
+import {getlogin,getcheckemail,getVerifyOTP,getchangePassword,logout} from "@/src/services/api/Login/Login_ForgotApi";
 import { useNavigation } from "@react-navigation/native";
 import React, { useState } from "react";
 import NetInfo from '@react-native-community/netinfo'; // Install if not already
@@ -145,6 +145,33 @@ export const useLogin_out = () => {
         }
     }
 
+    const getlogout = async () => {
+        setIsLoading(true);
+        try {
+            const netInfo = await NetInfo.fetch();
+            if (!netInfo.isConnected) {
+                throw new Error("No internet connection");
+            }
+            const data = await logout();
+            if (!data){
+                throw new Error("Invalid logout response"); 
+                return;
+            }
+            await AsyncStorage.removeItem('token');
+            await AsyncStorage.removeItem('refreshToken');
+            navigation.navigate("LoginScreen");
+            return {
+                "message": data.message
+            };
+
+        } catch (error : any) {
+            console.error("Logout error:", error);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
 
 
     return {
@@ -159,6 +186,7 @@ export const useLogin_out = () => {
         resetOTP,
         verifyOTP,
         changePassword,
+        getlogout,
         isLoading
     }
 };
