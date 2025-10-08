@@ -9,9 +9,8 @@ import {
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import BottomNavigation from "@/src/components/navigations/BottomNavigations";
-import TopNavigations_Home from"@/src/components/navigations/TopNavigations_Home";
 
-export default function HomeScreen() {
+export default function ProfileScreen() {
   const navigation = useNavigation<any>();
 
   return (
@@ -23,16 +22,10 @@ export default function HomeScreen() {
           translucent={false}
           animated
         />
-        {/* Top Navigation */}
-        <TopNavigations_Home
-          navigation={navigation}
-          userName="Trần Tuấn Vương"
-          userAvatar="https://i.pravatar.cc/150?img=3"
-        />
 
         {/* Nội dung chính */}
         <View style={styles.content}>
-          <Text style={styles.title}>Chào mừng bạn đến trang chủ!</Text>
+          <Text style={styles.title}>Chào mừng bạn đến trang hồ sơ!</Text>
         </View>
 
         {/* Thanh điều hướng dưới */}

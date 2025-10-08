@@ -223,8 +223,17 @@ exports.uploadStudentAvatar = async (req, res) => {
         
         if (!decoded || decoded.role !== 'STUDENT') {
             return res.status(403).json({ message: 'Forbidden' });
+
         }
-        const updatedStudent = await studentRepo.updateStudentAvatar(decoded.user_id, req.file);
+        const file = req.file;
+        if (!file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+        const studentId = req.params.id;
+        if (decoded.user_id !== studentId) {
+            return res.status(403).json({ message: 'You can only update your own avatar' });
+        }
+        const updatedStudent = await studentRepo.updateStudentAvatar(studentId, file);
         if (!updatedStudent) return res.status(404).json({ message: 'Sinh viên không tồn tại' });
         res.status(200).json({ message: 'Cập nhật avatar sinh viên thành công', avatar: updatedStudent.avatar });
     } catch (error) {
