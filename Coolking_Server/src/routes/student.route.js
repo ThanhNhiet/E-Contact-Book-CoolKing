@@ -22,13 +22,13 @@ router.get('/exam-schedule/:student_id', studentController.getStudentExamSchedul
 
 // ===== ROUTES CHO STUDENT =====
 // GET /students/info-student - Thông tin cá nhân
-router.get('/info-student', studentController.getStudentInfo);
+router.get('/:student_id', studentController.getStudentInfo);
 
 // PUT /students/update-info - Cập nhật thông tin
 router.put('/update-info', studentController.updateStudentInfo);
 
 // post /students/upload-avatar - Cập nhật avatar
-router.post('/upload-avatar', upload.upload ,studentController.uploadStudentAvatar);
+router.post('/upload-avatar/:id', upload.upload ,studentController.uploadStudentAvatar);
 
 // GET /students/my-schedule - Lịch học của chính mình với exceptions
 router.get('/my-schedule', studentController.getMyScheduleWithExceptions);

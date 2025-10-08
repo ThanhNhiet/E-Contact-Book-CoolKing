@@ -6,7 +6,8 @@
       "@/*": [
         "./*"
       ]
-    }
+    },
+    "types": [] // Exclude all default type definitions, including 'node'
   },
   "include": [
     "**/*.ts",

@@ -1,5 +1,7 @@
 const formatDateTimeVN = (isoString) => {
+  if (!isoString) return null;
   const date = new Date(isoString);
+  if (isNaN(date.getTime())) return null;
 
   // Tùy chọn định dạng riêng cho ngày và giờ
   const dateOptions = { 
@@ -18,7 +20,9 @@ const formatDateTimeVN = (isoString) => {
 };
 
 const formatDateVN = (isoString) => {
+  if (!isoString) return null;
   const date = new Date(isoString);
+  if (isNaN(date.getTime())) return null;
 
   const dd = String(date.getDate()).padStart(2, '0');
   const MM = String(date.getMonth() + 1).padStart(2, '0');

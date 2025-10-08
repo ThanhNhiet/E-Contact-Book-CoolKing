@@ -6,4 +6,7 @@ const upload = require('../middlewares/upload.middleware');
 //GET /parent/:id (Admin mới được quyền truy cập)
 router.get('/:id', parentController.getParentInfo);
 
-module.exports = router;
+//post /parent/upload-avatar/:id - Cập nhật avatar
+router.post('/upload-avatar/:id', upload.upload ,parentController.updateParentAvatar);
+
+module.exports = router; 

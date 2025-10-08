@@ -4,7 +4,7 @@
     "slug": "Coolking-Econtact",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/images/icon.png",
+    "icon": "./src/assets/images/logo.jpg",
     "scheme": "coolkingecontact",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -14,9 +14,9 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./src/assets/images/android-icon-foreground.png",
-        "backgroundImage": "./src/assets/images/android-icon-background.png",
-        "monochromeImage": "./src/assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./src/assets/images/logo.jpg",
+        "backgroundImage": "./src/assets/images/logo.jpg",
+        "monochromeImage": "./src/assets/images/logo.jpg"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false

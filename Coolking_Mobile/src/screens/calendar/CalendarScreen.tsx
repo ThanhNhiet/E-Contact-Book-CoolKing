@@ -9,12 +9,10 @@ import {
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import BottomNavigation from "@/src/components/navigations/BottomNavigations";
-import TopNavigations_Home from"@/src/components/navigations/TopNavigations_Home";
-import { useProfile } from "@/src/services/useapi/profile/UseProfile";
+import TopNavigations_Calendar from "@/src/components/navigations/TopNavigations_Calendar";
 
-export default function HomeScreen() {
+export default function CalendarScreen() {
   const navigation = useNavigation<any>();
-  const { profileNavigation } = useProfile();
 
   return (
     <SafeAreaProvider>
@@ -25,15 +23,20 @@ export default function HomeScreen() {
           translucent={false}
           animated
         />
+
         {/* Top Navigation */}
-        <TopNavigations_Home
-          navigation={navigation}
-          profileNavigation={profileNavigation}
-        />
+        <TopNavigations_Calendar
+            initialFilter="all"
+            onChangeFilter={(f) => {
+              // TODO: lọc danh sách sự kiện theo f
+              // f === "all" | "study" | "exam"
+            }}
+          />
+
 
         {/* Nội dung chính */}
         <View style={styles.content}>
-          <Text style={styles.title}>Chào mừng bạn đến trang chủ!</Text>
+          <Text style={styles.title}>Chào mừng bạn đến trang lịch!</Text>
         </View>
 
         {/* Thanh điều hướng dưới */}

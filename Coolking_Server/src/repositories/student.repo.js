@@ -813,5 +813,6 @@ module.exports = {
     updateStudentInfo,
     getStudentScheduleWithExceptions,
     getStudentBasicSchedule,
-    getStudentExamSchedule
+    getStudentExamSchedule,
+    updateStudentAvatar
 };
