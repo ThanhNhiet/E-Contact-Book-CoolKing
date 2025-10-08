@@ -17,13 +17,20 @@ class LecturerService {
     // POST /api/lecturers/avatar
     async updateLecturerAvatar(file: File) {
         const formData = new FormData();
-        formData.append('avatar', file);
+        formData.append('file', file);
 
         const response = await axiosInstance.post('/lecturers/avatar', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
         });
+        return response.data;
+    }
+
+    // POST /api/accounts/change-password
+    async changePassword(oldPassword: string, newPassword: string) {
+        const data = { oldPassword, newPassword };
+        const response = await axiosInstance.post('/accounts/change-password', data);
         return response.data;
     }
 }

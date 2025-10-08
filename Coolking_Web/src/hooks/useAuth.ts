@@ -60,9 +60,6 @@ export const useAuth = () => {
       
       // Lưu tokens
       authService.saveTokens(data.access_token, data.refresh_token);
-      console.log('Tokens saved:', { accessToken: authService.getToken() });
-      
-      console.log('Login successful:', data.message);
       
       // Redirect dựa trên role
       const role = getUserRole();
@@ -70,7 +67,6 @@ export const useAuth = () => {
         navigate('/admin/accounts');
       } else if (role === 'LECTURER') {
         const lecturerInfo = await lecturerService.getLecturerInfo();
-        console.log('Lecturer info:', lecturerInfo);
         localStorage.setItem('lecturer_name', lecturerInfo.name || '');
         localStorage.setItem('lecturer_avatar_url', lecturerInfo.avatar || '');
         navigate('/lecturer/schedule');
@@ -84,7 +80,6 @@ export const useAuth = () => {
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Đăng nhập thất bại';
       setError(errorMessage);
-      console.error('Login error:', err);
       throw new Error(errorMessage);
     } finally {
       setLoading(false);
@@ -102,9 +97,6 @@ export const useAuth = () => {
       
       // Xóa tokens
       authService.clearTokens();
-      console.log('tokens cleared: ', authService.getToken());
-      
-      console.log('Logout successful:', data.message);
       
       // Redirect về login
       navigate('/login');
@@ -113,7 +105,6 @@ export const useAuth = () => {
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Đăng xuất thất bại';
       setError(errorMessage);
-      console.error('Logout error:', err);
       
       // Vẫn xóa tokens dù API lỗi
       authService.clearTokens();

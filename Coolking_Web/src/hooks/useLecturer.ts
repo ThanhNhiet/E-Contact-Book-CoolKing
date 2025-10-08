@@ -73,6 +73,20 @@ export const useLecturer = () => {
         }
     }, []);
 
+    // Đổi mật khẩu
+    const changePassword = useCallback(async (oldPassword: string, newPassword: string) => {
+        try {
+            setLoading(true);
+            setError('');
+            const response = await lecturerService.changePassword(oldPassword, newPassword);
+            return response;
+        } catch (error: any) {
+            setError(error.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     return {
         loading,
         error,
@@ -80,6 +94,7 @@ export const useLecturer = () => {
 
         getLecturerInfo,
         updateLecturerInfo,
-        updateLecturerAvatar
+        updateLecturerAvatar,
+        changePassword
     };
 };
