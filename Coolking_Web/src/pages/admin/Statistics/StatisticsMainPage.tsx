@@ -134,18 +134,26 @@ const StatisticsMainPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm border">
           {/* Header */}
           <div className="px-6 py-4 border-b border-gray-200">
-            <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">Thống kê Học tập</h1>
+            <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">Thống kê</h1>
             
             {/* Filter Controls */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               {/* Statistics Type Dropdown */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Thống kê theo *
+                  Thống kê theo <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={statisticsType}
-                  onChange={(e) => setStatisticsType(e.target.value as StatisticsType)}
+                  onChange={(e) => {
+                    const newType = e.target.value as StatisticsType;
+                    setStatisticsType(newType);
+                    // Reset results when changing statistics type
+                    if (newType !== statisticsType) {
+                      setShowResults(false);
+                      setStatisticsData(null);
+                    }
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 >
                   <option value="">-- Chọn loại thống kê --</option>
@@ -158,7 +166,7 @@ const StatisticsMainPage: React.FC = () => {
               {/* Session Dropdown with Search */}
               <div className="session-dropdown">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Học kỳ *
+                  Học kỳ <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -200,7 +208,7 @@ const StatisticsMainPage: React.FC = () => {
               {/* Faculty Dropdown with Search */}
               <div className="faculty-dropdown">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Khoa *
+                  Khoa <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input

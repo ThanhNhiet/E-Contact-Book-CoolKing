@@ -149,7 +149,7 @@ const AccountsEditModal: React.FC<AccountsEditModalProps> = ({ isOpen, onClose, 
           {/* Editable fields */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Trạng thái *
+              Trạng thái
             </label>
             <select
               value={formData.status}

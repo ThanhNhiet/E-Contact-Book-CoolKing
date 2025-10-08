@@ -1,6 +1,6 @@
 import React from 'react';
 
-const FooterLeCpn: React.FC = () => {
+const FooterAdCpn: React.FC = () => {
   return (
     <footer className="bg-gray-800 text-white py-4 px-6 mt-auto">
       <div className="max-w-7xl mx-auto text-center">
@@ -12,4 +12,4 @@ const FooterLeCpn: React.FC = () => {
   );
 };
 
-export default FooterLeCpn;
+export default FooterAdCpn;

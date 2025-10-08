@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
-
+import lecturerService from '../services/lecturerServices';
 export interface UserInfo {
   id: string;
   user_id: string;
@@ -69,7 +69,11 @@ export const useAuth = () => {
       if (role === 'ADMIN') {
         navigate('/admin/accounts');
       } else if (role === 'LECTURER') {
-        navigate('/lecturer/clazz');
+        const lecturerInfo = await lecturerService.getLecturerInfo();
+        console.log('Lecturer info:', lecturerInfo);
+        localStorage.setItem('lecturer_name', lecturerInfo.name || '');
+        localStorage.setItem('lecturer_avatar_url', lecturerInfo.avatar || '');
+        navigate('/lecturer/schedule');
       } else {
         const errorMessage = 'Phiên bản web hiện tại chỉ hỗ trợ Admin và Giảng viên. Vui lòng sử dụng ứng dụng di động để đăng nhập với tài khoản Sinh viên hoặc Phụ huynh.';
         setError(errorMessage);
