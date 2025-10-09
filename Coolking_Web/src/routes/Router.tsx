@@ -12,7 +12,7 @@ import AlertDbPage from '../pages/admin/alert/AlertDashboardPage';
 import ChatDbPage from '../pages/admin/chat/ChatDashboardPage';
 import CourseSectionSLPage from '../pages/admin/chat/CourseSectionSLPage';
 import StatisticsMainPage from '../pages/admin/statistics/StatisticsMainPage';
-import ProfileInfoPage from '../pages/lecturer/profile/profileInfoPage';
+import ProfileInfoPage from '../pages/lecturer/profile/ProfileInfoPage';
 
 const Router: React.FC = () => {
   return (
