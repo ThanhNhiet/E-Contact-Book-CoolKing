@@ -133,7 +133,7 @@ const HeaderLECpn: React.FC = () => {
                                 Lịch dạy/gác thi
                             </a>
                             <a
-                                href="#"
+                                href="/lecturer/clazz"
                                 className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 px-3 py-2 rounded-md hover:bg-gray-50"
                             >
                                 Lớp học phần
