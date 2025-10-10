@@ -24,6 +24,14 @@ const datePickerStyles = `
     border-color: #3b82f6;
     box-shadow: 0 0 0 1px #3b82f6;
   }
+  
+  @media (max-width: 640px) {
+    .react-datepicker__input-container input {
+      width: 100px;
+      padding: 0.375rem 0.5rem;
+      font-size: 0.75rem;
+    }
+  }
 `;
 
 const SchedulePage: React.FC = () => {
@@ -94,14 +102,12 @@ const SchedulePage: React.FC = () => {
         }
     };
 
-
-
     // Xử lý click vào ô ngày để chuyển trực tiếp đến ngày đó
-    const handleDateCellClick = (dayDate: Date) => {
-        const formattedDate = `${dayDate.getDate().toString().padStart(2, '0')}/${(dayDate.getMonth() + 1).toString().padStart(2, '0')}/${dayDate.getFullYear()}`;
-        setSelectedDate(formattedDate);
-        getSchedulesByUser(formattedDate);
-    };
+    // const handleDateCellClick = (dayDate: Date) => {
+    //     const formattedDate = `${dayDate.getDate().toString().padStart(2, '0')}/${(dayDate.getMonth() + 1).toString().padStart(2, '0')}/${dayDate.getFullYear()}`;
+    //     setSelectedDate(formattedDate);
+    //     getSchedulesByUser(formattedDate);
+    // };
 
     // Xử lý nút "Hiện tại" để chuyển về ngày hôm nay
     const handleTodayClick = () => {
@@ -109,6 +115,13 @@ const SchedulePage: React.FC = () => {
         const formattedToday = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
         setSelectedDate(formattedToday);
         getSchedulesByUser(formattedToday);
+    };
+
+    // Xử lý click vào ô ngày để chuyển trực tiếp đến ngày đó
+    const handleDateCellClick = (dayDate: Date) => {
+        const formattedDate = `${dayDate.getDate().toString().padStart(2, '0')}/${(dayDate.getMonth() + 1).toString().padStart(2, '0')}/${dayDate.getFullYear()}`;
+        setSelectedDate(formattedDate);
+        getSchedulesByUser(formattedDate);
     };
 
     // Lấy màu sắc cho từng loại lịch
@@ -168,38 +181,38 @@ const SchedulePage: React.FC = () => {
         <div className="min-h-screen bg-gray-50 flex flex-col">
             <style dangerouslySetInnerHTML={{ __html: datePickerStyles }} />
             <HeaderLeCpn />
-            
-            <main className="flex-1 max-w-7xl mx-auto px-6 py-8 w-full">
+
+            <main className="flex-1 max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-8 w-full">
                 <div className="bg-white rounded-lg shadow-sm border">
                     {/* Header */}
-                    <div className="px-6 py-4 border-b border-gray-200">
-                        <div className="flex items-center justify-between">
-                            {/* Navigation Controls */}
-                            <div className="flex items-center gap-4">
-                                {/* Legend */}
-                                <div className="flex items-center gap-2 text-sm">
-                                    <span className="flex items-center gap-1">
-                                        <div className="w-4 h-4 bg-gray-200 border border-gray-400 rounded"></div>
-                                        <span>Lịch học lý thuyết</span>
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                        <div className="w-4 h-4 bg-green-200 border border-green-400 rounded"></div>
-                                        <span>Lịch học thực hành</span>
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                        <div className="w-4 h-4 bg-blue-200 border border-blue-400 rounded"></div>
-                                        <span>Lịch học trực tuyến</span>
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                        <div className="w-4 h-4 bg-yellow-200 border border-yellow-400 rounded"></div>
-                                        <span>Lịch thi</span>
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                        <div className="w-4 h-4 bg-red-200 border border-red-400 rounded"></div>
-                                        <span>Lịch tạm ngưng</span>
-                                    </span>
-                                </div>
+                    <div className="px-3 md:px-6 py-4 border-b border-gray-200">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                            {/* Legend - Hidden on mobile */}
+                            <div className="hidden lg:flex items-center gap-4 text-sm">
+                                <span className="flex items-center gap-1">
+                                    <div className="w-4 h-4 bg-gray-200 border border-gray-400 rounded"></div>
+                                    <span>Lý thuyết</span>
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <div className="w-4 h-4 bg-green-200 border border-green-400 rounded"></div>
+                                    <span>Thực hành</span>
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <div className="w-4 h-4 bg-blue-200 border border-blue-400 rounded"></div>
+                                    <span>Trực tuyến</span>
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <div className="w-4 h-4 bg-yellow-200 border border-yellow-400 rounded"></div>
+                                    <span>Thi</span>
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <div className="w-4 h-4 bg-red-200 border border-red-400 rounded"></div>
+                                    <span>Tạm ngưng</span>
+                                </span>
+                            </div>
 
+                            {/* Controls */}
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                                 {/* Date picker */}
                                 <div className="flex items-center gap-2">
                                     <DatePicker
@@ -220,7 +233,7 @@ const SchedulePage: React.FC = () => {
                                     />
                                     <button
                                         onClick={handleTodayClick}
-                                        className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                                        className="px-2 py-2 md:px-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm whitespace-nowrap"
                                     >
                                         📅 Hiện tại
                                     </button>
@@ -233,22 +246,22 @@ const SchedulePage: React.FC = () => {
                                         disabled={!linkPrev}
                                         className="px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                                     >
-                                        Trước
+                                        ←
                                     </button>
                                     <button
                                         onClick={handleNextWeek}
                                         disabled={!linkNext}
                                         className="px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                                     >
-                                        Sau
+                                        →
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Calendar Grid */}
-                    <div className="p-6">
+                    {/* Calendar Content */}
+                    <div className="p-3 md:p-6">
                         {loading ? (
                             <div className="flex items-center justify-center py-12">
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -259,84 +272,150 @@ const SchedulePage: React.FC = () => {
                                 Lỗi: {error}
                             </div>
                         ) : (
-                            <div className="grid grid-cols-8 gap-1 h-auto">
-                                {/* Header row */}
-                                <div className="bg-yellow-100 border border-gray-300 p-2 text-center font-medium">
-                                    Ca học
-                                </div>
-                                {[1, 2, 3, 4, 5, 6, 7].map((dayOfWeek, index) => {
-                                    let dayDate = new Date();
-                                    
-                                    if (weekStart) {
-                                        // Parse weekStart từ định dạng dd-MM-yyyy
-                                        const [day, month, year] = weekStart.split('-');
-                                        const mondayDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                                        
-                                        // Tính ngày thực tế cho mỗi cột (Thứ 2 = 0, Thứ 3 = 1, ..., Chủ nhật = 6)
-                                        dayDate = new Date(mondayDate);
-                                        dayDate.setDate(mondayDate.getDate() + index);
-                                    }
-                                    
-                                    return (
-                                        <div 
-                                            key={dayOfWeek} 
-                                            className="bg-blue-100 border border-gray-300 p-2 text-center cursor-pointer hover:bg-blue-200 transition-colors"
-                                            onClick={() => handleDateCellClick(dayDate)}
-                                        >
-                                            <div className="font-medium">{getDayName(dayOfWeek)}</div>
-                                            <div className="text-sm">
-                                                {dayDate.getDate().toString().padStart(2, '0')}/{(dayDate.getMonth() + 1).toString().padStart(2, '0')}/{dayDate.getFullYear()}
-                                            </div>
+                            <>
+                                {/* Desktop Grid View */}
+                                <div className="hidden md:block">
+                                    <div className="grid grid-cols-8 gap-1 h-auto overflow-x-auto">
+                                        {/* Header row */}
+                                        <div className="bg-yellow-100 border border-gray-300 p-2 text-center font-medium text-sm">
+                                            Ca học
                                         </div>
-                                    );
-                                })}
+                                        {[1, 2, 3, 4, 5, 6, 7].map((dayOfWeek, index) => {
+                                            let dayDate = new Date();
 
-                                {/* Time slots */}
-                                {['Sáng', 'Chiều', 'Tối'].map((period, periodIndex) => (
-                                    <React.Fragment key={period}>
-                                        <div className="bg-yellow-100 border border-gray-300 p-2 text-center font-medium">
-                                            {period}
-                                        </div>
-                                        {[1, 2, 3, 4, 5, 6, 7].map((dayOfWeek) => {
-                                            const daySchedules = groupedSchedules[dayOfWeek] || [];
-                                            const periodSchedules = daySchedules.filter(schedule => {
-                                                if (periodIndex === 0) return schedule.start_lesson >= 1 && schedule.start_lesson <= 6; // Sáng
-                                                if (periodIndex === 1) return schedule.start_lesson >= 7 && schedule.start_lesson <= 12; // Chiều
-                                                return schedule.start_lesson >= 13; // Tối
-                                            });
+                                            if (weekStart) {
+                                                const [day, month, year] = weekStart.split('-');
+                                                const mondayDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                                                dayDate = new Date(mondayDate);
+                                                dayDate.setDate(mondayDate.getDate() + index);
+                                            }
 
                                             return (
-                                                <div key={`${dayOfWeek}-${period}`} className="border border-gray-300 p-1 min-h-[100px]">
-                                                    {periodSchedules.map((schedule, index) => (
-                                                        <div
-                                                            key={index}
-                                                            className={`mb-1 p-2 rounded text-xs border ${getScheduleColor(schedule)}`}
-                                                        >
-                                                            <div className="font-medium">{schedule.subjectName}</div>
-                                                            <div>{schedule.clazzName}</div>
-                                                            <div>Phòng: {schedule.room}</div>
-                                                            <div>Tiết: {schedule.start_lesson}-{schedule.end_lesson}</div>
-                                                            <div>GV: {schedule.lecturerName}</div>
-                                                            <div className="mt-1 text-xs opacity-80">
-                                                                {getScheduleTypeLabel(schedule)}
-                                                            </div>
-                                                            {schedule.type === 'MAKEUP' && (
-                                                                <div className="text-xs text-blue-600 font-medium">Học bù</div>
-                                                            )}
-                                                            {schedule.status === 'ROOM_CHANGED' && (
-                                                                <div className="text-xs text-orange-600 font-medium">Đổi phòng</div>
-                                                            )}
-                                                            {schedule.status === 'LECTURER_CHANGED' && (
-                                                                <div className="text-xs text-purple-600 font-medium">Đổi GV</div>
-                                                            )}
-                                                        </div>
-                                                    ))}
+                                                <div
+                                                    key={dayOfWeek}
+                                                    className="bg-blue-100 border border-gray-300 p-2 text-center"
+                                                >
+                                                    <div className="font-medium text-sm">{getDayName(dayOfWeek)}</div>
+                                                    <div className="text-xs">
+                                                        {dayDate.getDate().toString().padStart(2, '0')}/{(dayDate.getMonth() + 1).toString().padStart(2, '0')}/{dayDate.getFullYear()}
+                                                    </div>
                                                 </div>
                                             );
                                         })}
-                                    </React.Fragment>
-                                ))}
-                            </div>
+
+                                        {/* Time slots */}
+                                        {['Sáng', 'Chiều', 'Tối'].map((period, periodIndex) => (
+                                            <React.Fragment key={period}>
+                                                <div className="bg-yellow-100 border border-gray-300 p-2 text-center font-medium text-sm">
+                                                    {period}
+                                                </div>
+                                                {[1, 2, 3, 4, 5, 6, 7].map((dayOfWeek) => {
+                                                    const daySchedules = groupedSchedules[dayOfWeek] || [];
+                                                    const periodSchedules = daySchedules.filter(schedule => {
+                                                        if (periodIndex === 0) return schedule.start_lesson >= 1 && schedule.start_lesson <= 6;
+                                                        if (periodIndex === 1) return schedule.start_lesson >= 7 && schedule.start_lesson <= 12;
+                                                        return schedule.start_lesson >= 13;
+                                                    });
+
+                                                    return (
+                                                        <div key={`${dayOfWeek}-${period}`} className="border border-gray-300 p-1 min-h-[80px]">
+                                                            {periodSchedules.map((schedule, index) => (
+                                                                <div
+                                                                    key={index}
+                                                                    className={`mb-1 p-1 rounded text-xs border ${getScheduleColor(schedule)}`}
+                                                                >
+                                                                    <div className="font-medium truncate">{schedule.subjectName}</div>
+                                                                    <div className="truncate">{schedule.clazzName}</div>
+                                                                    <div>Phòng: {schedule.room}</div>
+                                                                    <div>Tiết: {schedule.start_lesson}-{schedule.end_lesson}</div>
+                                                                    <div className="truncate">GV: {schedule.lecturerName}</div>
+                                                                    {schedule.type === 'MAKEUP' && (
+                                                                        <div className="text-xs text-blue-600 font-medium">Học bù</div>
+                                                                    )}
+                                                                    {schedule.status === 'ROOM_CHANGED' && (
+                                                                        <div className="text-xs text-orange-600 font-medium">Đổi phòng</div>
+                                                                    )}
+                                                                    {schedule.status === 'LECTURER_CHANGED' && (
+                                                                        <div className="text-xs text-purple-600 font-medium">Đổi GV</div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </React.Fragment>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Mobile List View */}
+                                <div className="block md:hidden">
+                                    {[1, 2, 3, 4, 5, 6, 7].map((dayOfWeek, index) => {
+                                        let dayDate = new Date();
+
+                                        if (weekStart) {
+                                            const [day, month, year] = weekStart.split('-');
+                                            const mondayDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                                            dayDate = new Date(mondayDate);
+                                            dayDate.setDate(mondayDate.getDate() + index);
+                                        }
+
+                                        const daySchedules = groupedSchedules[dayOfWeek] || [];
+
+                                        return (
+                                            <div key={dayOfWeek} className="mb-6">
+                                                <div
+                                                    className="bg-blue-100 p-3 rounded-t-lg border-b-2 border-blue-300 cursor-pointer"
+                                                    onClick={() => handleDateCellClick(dayDate)}
+                                                >
+                                                    <h3 className="font-semibold text-lg text-blue-800">{getDayName(dayOfWeek)}</h3>
+                                                    <p className="text-sm text-blue-600">
+                                                        {dayDate.getDate().toString().padStart(2, '0')}/{(dayDate.getMonth() + 1).toString().padStart(2, '0')}/{dayDate.getFullYear()}
+                                                    </p>
+                                                </div>
+
+                                                <div className="bg-white border border-gray-200 rounded-b-lg">
+                                                    {daySchedules.length > 0 ? (
+                                                        <div className="divide-y divide-gray-200">
+                                                            {daySchedules.map((schedule, index) => (
+                                                                <div key={index} className="p-4">
+                                                                    <div className={`p-3 rounded-lg ${getScheduleColor(schedule)}`}>
+                                                                        <div className="flex justify-between items-start mb-2">
+                                                                            <h4 className="font-semibold text-base">{schedule.subjectName}</h4>
+                                                                            <span className="text-sm font-medium">
+                                                                                Tiết {schedule.start_lesson}-{schedule.end_lesson}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="space-y-1 text-sm">
+                                                                            <div><strong>Lớp:</strong> {schedule.clazzName}</div>
+                                                                            <div><strong>Phòng:</strong> {schedule.room}</div>
+                                                                            <div><strong>GV:</strong> {schedule.lecturerName}</div>
+                                                                            <div><strong>Loại:</strong> {getScheduleTypeLabel(schedule)}</div>
+                                                                            {schedule.type === 'MAKEUP' && (
+                                                                                <div className="text-blue-600 font-medium">• Học bù</div>
+                                                                            )}
+                                                                            {schedule.status === 'ROOM_CHANGED' && (
+                                                                                <div className="text-orange-600 font-medium">• Đổi phòng</div>
+                                                                            )}
+                                                                            {schedule.status === 'LECTURER_CHANGED' && (
+                                                                                <div className="text-purple-600 font-medium">• Đổi giảng viên</div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="p-4 text-center text-gray-500">
+                                                            Không có lịch học
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
                         )}
                     </div>
                 </div>
