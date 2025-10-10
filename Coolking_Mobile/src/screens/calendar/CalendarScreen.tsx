@@ -7,6 +7,7 @@ import {
   Platform,
   FlatList,
   ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -29,48 +30,48 @@ export default function CalendarScreen() {
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
 
-  const { loading, getMarkedDates, getSchedulesByDate } = useCalendar();
+  const {
+    loading,
+    weekInfo,
+    goPrevWeek,
+    goNextWeek,
+    getSchedulesByDate,
+    getMarkedDates,
+    fetchCalendar,
+  } = useCalendar();
 
-  // Dữ liệu lịch trong ngày
-   // Dữ liệu lịch trong ngày
+    const handleGoToday = () => {
+      const todayISO = dayjs().format("YYYY-MM-DD");
+      const todayForApi = dayjs().format("DD-MM-YYYY");
+      setSelectedDate(todayISO);
+      // gọi API tuần hiện tại
+      fetchCalendar(todayForApi);
+    };
+
+
+
+  // Lấy lịch trong ngày
   const dayEvents = useMemo(() => {
     const schedules = getSchedulesByDate(selectedDate);
     const filtered = schedules.filter((s) => {
       if (filter === "all") return true;
-      if (filter === "study") return s.schedule_info.type === 0;
-      if (filter === "exam") return s.schedule_info.type === 1;
+      if (filter === "study") return s.type !== "EXAM";
+      if (filter === "exam") return s.type === "EXAM";
       return true;
     });
 
-    return filtered
-      .sort((a, b) => (a.schedule_info.start_lesson || 0) - (b.schedule_info.start_lesson || 0))
-      .map((s) => ({
-        id: s.schedule_id,
-        title: s.subject_info.subject_name,
-        // giữ lại time text để hiển thị nhanh
-        time: `Tiết ${s.schedule_info.start_lesson} - ${s.schedule_info.end_lesson}`,
-        // đồng thời truyền riêng start/end để xử lý ngoại lệ đổi tiết
-        startLesson: s.schedule_info.start_lesson,
-        endLesson: s.schedule_info.end_lesson,
-
-        type: s.schedule_info.type === 0 ? "study" : "exam",
-        location: s.schedule_info.room,
-
-        // giảng viên gốc + mới (nếu có)
-        lecturer: s.lecturer_info.original_lecturer,
-        lecturerNew: s.lecturer_info.new_lecturer,
-
-        status: s.schedule_info.status,
-        session: s.subject_info.session_name,
-        academic: s.subject_info.academic_year,
-
-        // truyền nguyên exception_info để card xử lý chi tiết
-        exception_info: s.exception_info,
-      }));
+    return filtered.map((s) => ({
+      id: s.id,
+      title: s.subjectName,
+      type: s.type === "EXAM" ? "exam" : "study",
+      time: `Tiết ${s.start_lesson} - ${s.end_lesson}`,
+      location: s.room,
+      lecturer: s.lecturerName,
+      status: s.status,
+    }));
   }, [selectedDate, filter, getSchedulesByDate]);
 
-
-  // Marked dates quanh năm
+  // Marked dates
   const marked = useMemo(() => {
     const base = getMarkedDates();
     return {
@@ -96,6 +97,25 @@ export default function CalendarScreen() {
           onChangeFilter={(f: Filter) => setFilter(f)}
         />
 
+        {/* Thanh chuyển tuần */}
+        <View style={styles.weekHeader}>
+          <TouchableOpacity style={styles.weekBtn} onPress={goPrevWeek}>
+            <Text style={styles.weekBtnText}>⏪ Tuần trước</Text>
+          </TouchableOpacity>
+            <View style={styles.weekCenter}>
+              <Text style={styles.weekLabel} numberOfLines={1}>
+                {weekInfo?.weekStart} → {weekInfo?.weekEnd}
+              </Text>
+              <TouchableOpacity style={styles.todayBtn} onPress={handleGoToday}>
+                <Text style={styles.todayText}>Hôm nay</Text>
+              </TouchableOpacity>
+            </View>
+          <TouchableOpacity style={styles.weekBtn} onPress={goNextWeek}>
+            <Text style={styles.weekBtnText}>Tuần sau ⏩</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Lịch */}
         <View style={styles.calendarWrap}>
           {loading ? (
             <ActivityIndicator style={{ padding: 20 }} size="large" color="#007AFF" />
@@ -120,6 +140,7 @@ export default function CalendarScreen() {
           )}
         </View>
 
+        {/* Danh sách sự kiện */}
         <View style={styles.listWrap}>
           <View style={styles.listHeader}>
             <Text style={styles.sectionTitle}>
@@ -145,7 +166,7 @@ export default function CalendarScreen() {
               data={dayEvents}
               keyExtractor={(i) => i.id}
               renderItem={({ item }) => <EventCard item={item} />}
-              ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
               showsVerticalScrollIndicator={false}
             />
           )}
@@ -159,155 +180,35 @@ export default function CalendarScreen() {
 
 // ================== CARD HIỂN THỊ ==================
 function EventCard({ item }: { item: any }) {
-  const isStudy = item?.type === "study";
+  const isStudy = item.type === "study";
+  const isPractical = /^TH/i.test(item?.location || "");
 
-  // TH nếu room bắt đầu bằng "TH"
-  const isPractical = !!item?.location && /^TH[\s\-_]?/i.test(String(item.location).trim());
-
-  // Màu nhận diện: LT = xanh dương, TH = xanh lá, Thi = đỏ
-  const studyColor = isPractical ? "#22C55E" : "#2E86DE";
-  const color = isStudy ? studyColor : "#E74C3C";
+  const color = isStudy ? (isPractical ? "#22C55E" : "#2E86DE") : "#E74C3C";
   const bg = isStudy ? (isPractical ? "#EAFBF1" : "#E8F1FE") : "#FDECEC";
   const border = isStudy ? (isPractical ? "#BEF3D0" : "#C7DBF9") : "#FAC8C6";
   const typeLabel = isStudy ? (isPractical ? "Học TH" : "Học LT") : "Thi";
 
-  // Ngoại lệ
-  const ex = item?.exception_info ?? null;
-  const changes = ex?.changes ?? {};
-  const isCanceled = ex?.exception_type === "CANCELED";
-
-  // Thời gian
-  const timeOld =
-    item?.time ??
-    ((item?.startLesson && item?.endLesson) ? `Tiết ${item.startLesson} - ${item.endLesson}` : "");
-
-  const timeNew =
-    ex?.new_start_lesson != null && ex?.new_end_lesson != null
-      ? `Tiết ${ex.new_start_lesson} - ${ex.new_end_lesson}`
-      : null;
-
-  // Phòng
-  const roomOld = item?.location ?? "";
-  const roomNew = ex?.new_room ?? null;
-
-  // Giảng viên
-  const lecturerOld = item?.lecturer ?? "";
-  const lecturerNew = (changes?.lecturer_changed && item?.lecturerNew) ? item.lecturerNew : null;
-
-  // Ngày (nếu có đổi ngày)
-  const fmt = (d?: string | null) =>
-    d ? dayjs(d, ["YYYY-MM-DD", "DD-MM-YYYY"]).format("DD/MM/YYYY") : null;
-
-  const dateOld = fmt(ex?.original_date);
-  const dateNew = fmt(ex?.new_date);
-
-  // Màu trạng thái
-  const statusColor = isCanceled ? "#DC2626" : (ex ? "#D97706" : "#10B981");
-
   return (
-    <View style={[styles.card, isCanceled && { opacity: 0.85 }]}>
-      {/* Header: Pill + Time (có gạch ngang nếu đổi tiết) */}
+    <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={[styles.typePill, { backgroundColor: bg, borderColor: border }]}>
           <View style={[styles.dot, { backgroundColor: color }]} />
           <Text style={[styles.pillText, { color }]}>{typeLabel}</Text>
         </View>
-
-        {!timeNew ? (
-          !!timeOld && <Text style={styles.timeText}>{timeOld}</Text>
-        ) : (
-          <View style={{ alignItems: "flex-end" }}>
-            <Text style={[styles.timeText, { textDecorationLine: "line-through", color: "#64748b" }]}>
-              {timeOld}
-            </Text>
-            <Text style={[styles.timeText, { color }]}>{timeNew}</Text>
-          </View>
-        )}
+        <Text style={styles.timeText}>{item.time}</Text>
       </View>
 
-      {/* Tiêu đề + học kỳ/năm */}
-      {!!item?.title && <Text style={styles.titleText}>{item.title}</Text>}
-      {(item?.session || item?.academic) && (
-        <Text style={styles.courseInfo}>
-          {item?.session ?? ""}{item?.session && item?.academic ? " - " : ""}{item?.academic ?? ""}
-        </Text>
-      )}
-
-      {/* Địa điểm */}
-      {!!roomOld && !roomNew && (
-        <Text style={styles.subText}>
-          Địa điểm: {roomOld}
-          {isStudy && <Text style={{ color, fontWeight: "700" }}> {isPractical ? "(TH)" : "(LT)"}</Text>}
-        </Text>
-      )}
-      {!!roomNew && (
-        <View style={{ marginTop: 2 }}>
-          <Text style={[styles.subText, { textDecorationLine: "line-through", color: "#64748b" }]}>
-            Địa điểm: {roomOld}
-          </Text>
-          <Text style={[styles.subText, { color }]}>
-            → {roomNew}
-            {isStudy && (
-              <Text style={{ fontWeight: "700" }}>
-                {" "}{/^TH/i.test(roomNew) ? "(TH)" : "(LT)"}
-              </Text>
-            )}
-          </Text>
-        </View>
-      )}
-
-      {/* Giảng viên */}
-      {!!lecturerOld && !lecturerNew && (
-        <Text style={styles.subText}>Giảng viên: {lecturerOld}</Text>
-      )}
-      {!!lecturerNew && (
-        <View style={{ marginTop: 2 }}>
-          <Text style={[styles.subText, { textDecorationLine: "line-through", color: "#64748b" }]}>
-            Giảng viên: {lecturerOld}
-          </Text>
-          <Text style={[styles.subText, { color }]}>&rarr; {lecturerNew}</Text>
-        </View>
-      )}
-
-      {/* Trạng thái / Ngoại lệ */}
-      {isCanceled ? (
-        <View style={[styles.exceptionWrap, { backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}>
-          <Text style={[styles.exceptionText, { color: "#DC2626" }]}>
-            ĐÃ HỦY{dateOld ? ` (gốc: ${dateOld})` : ""}
-          </Text>
-        </View>
-      ) : ex ? (
-        <View style={[styles.exceptionWrap, { backgroundColor: "#FFFAEB", borderColor: "#FDE68A" }]}>
-          {changes?.date_changed && (dateOld || dateNew) && (
-            <Text style={[styles.exceptionText, { color: "#D97706" }]}>
-              Đổi ngày{dateOld ? ` ${dateOld}` : ""}{dateNew ? ` → ${dateNew}` : ""}
-            </Text>
-          )}
-          {changes?.time_changed && timeNew && (
-            <Text style={[styles.exceptionText, { color: "#D97706" }]}>
-              Đổi tiết {timeOld} → {timeNew}
-            </Text>
-          )}
-          {changes?.room_changed && roomNew && (
-            <Text style={[styles.exceptionText, { color: "#D97706" }]}>
-              Đổi phòng {roomOld} → {roomNew}
-            </Text>
-          )}
-          {changes?.lecturer_changed && lecturerNew && (
-            <Text style={[styles.exceptionText, { color: "#D97706" }]}>
-              Đổi giảng viên {lecturerOld} → {lecturerNew}
-            </Text>
-          )}
-        </View>
-      ) : (
-        !!item?.status && (
-          <Text style={[styles.statusText, { color: statusColor }]}>{item.status}</Text>
-        )
-      )}
+      <Text style={styles.titleText}>{item.title}</Text>
+      <Text style={styles.subText}>
+        {item.lecturer ? `Giảng viên: ${item.lecturer}` : " "}
+      </Text>
+      <Text style={styles.subText}>
+        {item.location ? `Địa điểm: ${item.location}` : ""}
+      </Text>
+      <Text style={[styles.statusText, { color: "#10B981" }]}>{item.status}</Text>
     </View>
   );
 }
-
 
 // ================== EMPTY STATE ==================
 function EmptyState({ filter }: { filter: Filter }) {
@@ -328,6 +229,19 @@ function EmptyState({ filter }: { filter: Filter }) {
 // ================== STYLES ==================
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8f9fa" },
+  weekHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#e5e7eb",
+  },
+  weekBtn: { padding: 4 },
+  weekBtnText: { color: "#007AFF", fontWeight: "600" },
+
   calendarWrap: {
     backgroundColor: "#fff",
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -335,27 +249,76 @@ const styles = StyleSheet.create({
   },
   calendar: { borderRadius: 12 },
 
-  listWrap: { flex: 1, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 70 },
+  listWrap: {
+    flex: 1,
+    paddingHorizontal: 0,      // 🔹 Giảm padding để card chiếm gần full width
+    paddingTop: 12,
+    paddingBottom: 78,
+  },
   listHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
+    paddingHorizontal: 14,       // 🔹 Canh đều hai bên
   },
-  sectionTitle: { fontSize: 15, fontWeight: "800", color: "#0f172a" },
-  eventCount: { fontSize: 13, color: "#64748b", fontWeight: "600" },
+  weekCenter: {
+    flex: 1,
+    flexDirection: 'column', // Quan trọng: Xếp các phần tử theo chiều dọc
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weekLabel: {
+    fontSize: 13,
+    fontWeight: '600', // Cho chữ to và đậm hơn một chút
+    color: '#333',
+    marginBottom: 6, // Tạo khoảng cách với nút bên dưới
+  },
+  todayBtn: {
+    backgroundColor: '#e7f3ff', // Tạo nền màu xanh nhạt cho nút
+    paddingVertical: 5,
+    paddingHorizontal: 15,
+    borderRadius: 20, // Bo tròn các góc để tạo thành hình viên thuốc
+  },
+  todayText: {
+    color: '#007bff', // Cho chữ màu xanh dương đậm
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0f172a",
+  },
+  eventCount: {
+    fontSize: 13,
+    color: "#64748b",
+    fontWeight: "600",
+  },
 
-  card: {
+   card: {
     backgroundColor: "#fff",
     borderRadius: 14,
-    padding: 12,
+    padding: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#E5E7EB",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
     elevation: 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#EDF2F7",
+    width: "100%",
+    marginHorizontal: 4,
+    alignSelf: "center",
+  },
+  // Khoảng cách giữa các card
+  listContent: {
+    paddingBottom: 16,
+  },
+
+  // Nếu bạn dùng ItemSeparatorComponent
+  separator: {
+    height: 10,
   },
   cardHeader: {
     flexDirection: "row",
@@ -375,11 +338,9 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4 },
   pillText: { fontWeight: "800" },
   timeText: { color: "#334155", fontWeight: "700", marginBottom: 8 },
-
-  titleText: { fontSize: 15, fontWeight: "800", color: "#0f172a", marginBottom: 2 },
+  titleText: { fontSize: 15, fontWeight: "800", color: "#0f172a", marginBottom: 4 },
   subText: { color: "#475569", fontWeight: "600" },
-  courseInfo: { fontSize: 12, color: "#64748b", marginBottom: 4, fontWeight: "500" },
-
+  statusText: { marginTop: 6, fontSize: 13, fontWeight: "600" },
   empty: {
     backgroundColor: "#fff",
     borderRadius: 14,
@@ -391,15 +352,4 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontWeight: "800", color: "#0f172a", marginBottom: 4 },
   emptyDesc: { color: "#64748b" },
-
-  statusText: { marginTop: 4, fontSize: 13, fontWeight: "600" },
-  exceptionWrap: {
-    marginTop: 8,
-    padding: 8,
-    backgroundColor: "#FEF2F2",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#FECACA",
-  },
-  exceptionText: { color: "#DC2626", fontSize: 13, fontWeight: "600" },
 });

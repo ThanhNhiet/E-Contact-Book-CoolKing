@@ -1,42 +1,171 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   StatusBar,
   Platform,
+  ActivityIndicator,
+  TouchableOpacity,
+  FlatList,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import BottomNavigation from "@/src/components/navigations/BottomNavigations";
-import TopNavigations_Home from"@/src/components/navigations/TopNavigations_Home";
+import TopNavigations_Home from "@/src/components/navigations/TopNavigations_Home";
 import { useProfile } from "@/src/services/useapi/profile/UseProfile";
+import { useCalendar } from "@/src/services/useapi/calendar/UseCalender";
+import dayjs from "dayjs";
+import {Ionicons } from "@expo/vector-icons";
+
+type TodayItem = {
+  id: string;
+  title: string;
+  type: "study" | "exam";
+  timeText: string;
+  startLesson?: number;
+  endLesson?: number;
+  location?: string;
+  lecturer?: string;
+  status?: string;
+};
+
+// Danh sách các chức năng để dễ dàng quản lý và render
+const features = [
+  { id: "1", title: "Lịch học", icon: "calendar-outline", screen: "CalendarScreen" },
+  { id: "2", title: "Xem điểm", icon: "school-outline", screen: "GradesScreen" },
+  { id: "3", title: "Nhắn tin", icon: "chatbubble-outline", screen: "MessagesScreen" },
+  { id: "4", title: "Điểm danh", icon: "checkmark-circle-outline", screen: "AttendanceScreen" },
+  { id: "5", title: "Mật khẩu", icon: "lock-closed-outline", screen: "ProfileChangePasswordScreen" },
+  // Thêm các chức năng khác ở đây
+];
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const { profileNavigation } = useProfile();
+  const { loading, getSchedulesByDate } = useCalendar();
+
+  const todayStr = dayjs().format("YYYY-MM-DD");
+
+  // Lấy lịch hôm nay
+  const todayEvents = useMemo<TodayItem[]>(() => {
+    const list = getSchedulesByDate(todayStr);
+    return list.map((s) => ({
+      id: s.id,
+      title: s.subjectName,
+      type: s.type === "EXAM" ? "exam" : "study",
+      startLesson: s.start_lesson,
+      endLesson: s.end_lesson,
+      timeText: `Tiết ${s.start_lesson}-${s.end_lesson}`,
+      location: s.room,
+      lecturer: s.lecturerName,
+      status: s.status,
+    }));
+  }, [getSchedulesByDate, todayStr]);
+
+  // 🔹 Render từng item
+  const renderTodayItem = ({ item }: { item: TodayItem }) => {
+    const isStudy = item.type === "study";
+    const isPractical = !!item.location && /^TH[\s\-_]?/i.test(item.location);
+    const color = isStudy ? (isPractical ? "#22C55E" : "#2E86DE") : "#E74C3C";
+    const dotStyle = [styles.dot, { backgroundColor: color }];
+
+    return (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={styles.row}
+        onPress={() => navigation.navigate("CalendarScreen")}
+      >
+        <View style={styles.rowLeft}>
+          <View style={dotStyle} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle} numberOfLines={1}>
+              {item.title}
+            </Text>
+            <Text style={styles.rowMeta} numberOfLines={1}>
+              {item.timeText}
+              {!!item.location && ` • ${item.location}`}
+            </Text>
+          </View>
+        </View>
+
+        <Text
+          style={[
+            styles.badge,
+            isStudy
+              ? isPractical
+                ? { backgroundColor: "#EAFBF1", color: "#22C55E", borderColor: "#BEF3D0" }
+                : { backgroundColor: "#E8F1FE", color: "#2E86DE", borderColor: "#C7DBF9" }
+              : { backgroundColor: "#FDECEC", color: "#E74C3C", borderColor: "#FAC8C6" },
+          ]}
+        >
+          {item.type === "exam" ? "Thi" : isPractical ? "Học TH" : "Học LT"}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
         <StatusBar
           barStyle={Platform.OS === "ios" ? "dark-content" : "dark-content"}
-          backgroundColor={Platform.OS === "android" ? "#f8f9fa" : "transparent"}
+          backgroundColor={Platform.OS === "android" ? "#F7F8FA" : "transparent"}
           translucent={false}
           animated
         />
+
         {/* Top Navigation */}
-        <TopNavigations_Home
-          navigation={navigation}
-          profileNavigation={profileNavigation}
-        />
+        <TopNavigations_Home navigation={navigation} profileNavigation={profileNavigation} />
 
         {/* Nội dung chính */}
         <View style={styles.content}>
-          <Text style={styles.title}>Chào mừng bạn đến trang chủ!</Text>
+          {/* Card Lịch học hôm nay */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.title}>Lịch học hôm nay</Text>
+              <TouchableOpacity onPress={() => navigation.navigate("CalendarScreen")}>
+                <Text style={styles.link}>Xem tất cả</Text>
+              </TouchableOpacity>
+            </View>
+
+            {loading ? (
+              <Text style={{ color: "#64748b", fontStyle: "italic" }}>Đang tải...</Text>
+            ) : todayEvents.length === 0 ? (
+              <Text style={{ color: "#64748b", fontStyle: "italic" }}>Hôm nay bạn không có lịch học.</Text>
+            ) : (
+              <FlatList
+                data={todayEvents}
+                renderItem={renderTodayItem}
+                keyExtractor={(i) => i.id}
+                ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+                showsVerticalScrollIndicator={false}
+              />
+            )}
+          </View>
+
+          {/* Card Chức năng (mẫu, tuỳ bạn bind data) */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Chức năng</Text>
+            <View style={styles.featuresGrid}>
+              {features.map((feature) => (
+                <TouchableOpacity
+                  key={feature.id}
+                  style={styles.featureButton}
+                  onPress={() => navigation.navigate(feature.screen)}
+                >
+                  {/* Thay thế Text bằng component Icon của bạn */}
+                  <View style={styles.iconContainer}>
+                      <Ionicons name={feature.icon as any} size={30} color="#007bff" />
+                  </View>
+                  <Text style={styles.featureText}>{feature.title}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
         </View>
 
-        {/* Thanh điều hướng dưới */}
+        {/* Bottom Navigation */}
         <View style={styles.bottomWrapper}>
           <BottomNavigation navigation={navigation} />
         </View>
@@ -45,26 +174,155 @@ export default function HomeScreen() {
   );
 }
 
+// --------- Nút chức năng gọn ----------
+function FeatureButton({
+  label,
+  sub,
+  onPress,
+}: {
+  label: string;
+  sub?: string;
+  onPress?: () => void;
+}) {
+  return (
+    <TouchableOpacity style={styles.featureItem} activeOpacity={0.85} onPress={onPress}>
+      <View style={styles.featureBtn}>
+        <Text style={styles.featureText}>{label}</Text>
+        {!!sub && <Text style={styles.featureSub}>{sub}</Text>}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f9fa",
-  },
+  container: { flex: 1, backgroundColor: "#F7F8FA" },
+
   content: {
     flex: 1,
-    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 78, // chừa chỗ cho BottomNavigation
+  },
+
+  // ==== Card chung ====
+  // Style cho Card
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    // Thêm bóng đổ cho đẹp hơn
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#343a40",
+    marginBottom: 12,
+  },
+   featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  featureButton: {
+    width: '48%', // Chia làm 2 cột
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+    paddingVertical: 20,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  iconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  cardHeader: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: "#333",
+  title: { fontSize: 18, fontWeight: "800", color: "#0F172A" },
+  link: { color: "#2563EB", fontSize: 13, fontWeight: "700" },
+
+  emptyWrap: {
+    paddingVertical: 12,
   },
+  emptyText: { color: "#64748B", fontSize: 14, fontWeight: "500" },
+
+  // ==== Row sự kiện hôm nay ====
+  row: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  rowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+  dot: { width: 10, height: 10, borderRadius: 5 },
+  rowTitle: { fontSize: 15, fontWeight: "700", color: "#0F172A" },
+  rowMeta: { fontSize: 12, fontWeight: "600", color: "#64748B", marginTop: 2 },
+
+  badge: {
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: "800",
+    overflow: "hidden",
+    includeFontPadding: false,
+    textAlignVertical: "center",
+  },
+
+  // ==== Chức năng ====
+  featureGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginHorizontal: -6,
+    marginTop: 8,
+  },
+  featureItem: { width: "50%", paddingHorizontal: 6, paddingVertical: 6 },
+  featureBtn: {
+    backgroundColor: "#F8FAFF",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  featureText: { color: "#0F172A", fontSize: 14, fontWeight: "800" },
+  featureSub: { color: "#64748B", fontSize: 12, marginTop: 2, fontWeight: "500" },
+
+  // ==== Bottom nav holder ====
   bottomWrapper: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
     width: "100%",
+    backgroundColor: "#FFFFFF",
   },
 });
