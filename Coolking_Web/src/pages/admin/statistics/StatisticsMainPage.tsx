@@ -171,31 +171,34 @@ const StatisticsMainPage: React.FC = () => {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Tìm kiếm học kỳ..."
-                    value={sessionSearch}
+                    placeholder="Tìm và chọn học kỳ..."
+                    value={selectedSession ? sessions.find(s => s.id === selectedSession)?.nameSession || '' : sessionSearch}
                     onChange={(e) => {
                       setSessionSearch(e.target.value);
-                      setShowSessionDropdown(true);
+                      if (selectedSession && e.target.value !== sessions.find(s => s.id === selectedSession)?.nameSession) {
+                        setSelectedSession('');
+                      }
                     }}
                     onFocus={() => setShowSessionDropdown(true)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
-                  {showSessionDropdown && sessionSearch && (
+                  {showSessionDropdown && (
                     <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {filteredSessions.map((session) => (
-                        <button
-                          key={session.id}
-                          onClick={() => {
-                            setSelectedSession(session.id);
-                            setSessionSearch(session.nameSession);
-                            setShowSessionDropdown(false);
-                          }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-                        >
-                          {session.nameSession}
-                        </button>
-                      ))}
-                      {filteredSessions.length === 0 && (
+                      {filteredSessions.length > 0 ? (
+                        filteredSessions.map((session) => (
+                          <div
+                            key={session.id}
+                            onClick={() => {
+                              setSelectedSession(session.id);
+                              setSessionSearch('');
+                              setShowSessionDropdown(false);
+                            }}
+                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                          >
+                            {session.nameSession}
+                          </div>
+                        ))
+                      ) : (
                         <div className="px-4 py-2 text-gray-500 text-center">
                           Không tìm thấy học kỳ nào
                         </div>
@@ -213,32 +216,35 @@ const StatisticsMainPage: React.FC = () => {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Tìm kiếm khoa..."
-                    value={facultySearch}
+                    placeholder="Tìm và chọn khoa..."
+                    value={selectedFaculty ? faculties.find(f => f.faculty_id === selectedFaculty)?.name || '' : facultySearch}
                     onChange={(e) => {
                       setFacultySearch(e.target.value);
-                      setShowFacultyDropdown(true);
+                      if (selectedFaculty && e.target.value !== faculties.find(f => f.faculty_id === selectedFaculty)?.name) {
+                        setSelectedFaculty('');
+                      }
                     }}
                     onFocus={() => setShowFacultyDropdown(true)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
-                  {showFacultyDropdown && facultySearch && (
+                  {showFacultyDropdown && (
                     <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {filteredFaculties.map((faculty) => (
-                        <button
-                          key={faculty.faculty_id}
-                          onClick={() => {
-                            setSelectedFaculty(faculty.faculty_id);
-                            setFacultySearch(`${faculty.faculty_id} - ${faculty.name}`);
-                            setShowFacultyDropdown(false);
-                          }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-                        >
-                          <div className="font-medium">{faculty.faculty_id}</div>
-                          <div className="text-sm text-gray-600">{faculty.name}</div>
-                        </button>
-                      ))}
-                      {filteredFaculties.length === 0 && (
+                      {filteredFaculties.length > 0 ? (
+                        filteredFaculties.map((faculty) => (
+                          <div
+                            key={faculty.faculty_id}
+                            onClick={() => {
+                              setSelectedFaculty(faculty.faculty_id);
+                              setFacultySearch('');
+                              setShowFacultyDropdown(false);
+                            }}
+                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                          >
+                            <div className="font-medium">{faculty.faculty_id}</div>
+                            <div className="text-sm text-gray-600">{faculty.name}</div>
+                          </div>
+                        ))
+                      ) : (
                         <div className="px-4 py-2 text-gray-500 text-center">
                           Không tìm thấy khoa nào
                         </div>
