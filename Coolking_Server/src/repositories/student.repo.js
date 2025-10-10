@@ -43,7 +43,7 @@ const getStudentsScoreByCourseSectionId4Lecturer = async (course_section_id) => 
                 {
                     model: models.Session,
                     as: 'session',
-                    attributes: ['name']
+                    attributes: ['name', 'years']
                 },
                 {
                     model: models.LecturerCourseSection,
@@ -76,7 +76,7 @@ const getStudentsScoreByCourseSectionId4Lecturer = async (course_section_id) => 
                 course_section_id: courseSectionDetail.id,
                 subjectName: courseSectionDetail.subject?.name || 'N/A',
                 className: courseSectionDetail.clazz?.name || 'N/A',
-                sessionName: courseSectionDetail.session?.name || 'N/A',
+                sessionName: courseSectionDetail?.session ? courseSectionDetail.session.name + ' ' + courseSectionDetail.session.years : 'N/A',
                 facultyName: courseSectionDetail.subject?.faculty?.name || 'N/A',
                 lecturerName: courseSectionDetail.lecturers_course_sections?.[0]?.lecturer?.name || 'N/A',
                 students: []
@@ -175,7 +175,7 @@ const getStudentsScoreByCourseSectionId4Lecturer = async (course_section_id) => 
             course_section_id: courseSectionDetail.id,
             subjectName: courseSectionDetail.subject?.name || 'N/A',
             className: courseSectionDetail.clazz?.name || 'N/A',
-            sessionName: courseSectionDetail.session?.name || 'N/A',
+            sessionName: courseSectionDetail?.session ? courseSectionDetail.session.name + ' ' + courseSectionDetail.session.years : 'N/A',
             facultyName: courseSectionDetail.subject?.faculty?.name || 'N/A',
             lecturerName: courseSectionDetail.lecturers_course_sections?.[0]?.lecturer?.name || 'N/A',
             students: students
