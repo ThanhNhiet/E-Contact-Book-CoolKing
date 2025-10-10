@@ -10,13 +10,17 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+
 export type NotificationItem = {
-  id: string;
-  title: string;
+  _id: string;
+  senderID: string;
+  receiverID: string;
+  header: string;
   body?: string;
+  targetScope: string;
+  isRead?: boolean;
   createdAt: string | number | Date;
-  read?: boolean;
-  icon?: keyof typeof Ionicons.glyphMap;
+  updatedAt?: string | number | Date;
 };
 
 interface Props {
@@ -64,25 +68,25 @@ export default function NotificationModal({
           ) : (
             <FlatList
               data={notifications}
-              keyExtractor={(it) => it.id}
+              keyExtractor={(it) => it._id}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[styles.item, !item.read && styles.itemUnread]}
+                  style={[styles.item, !item.isRead && styles.itemUnread]}
                   onPress={() => onPressItem(item)}
                   activeOpacity={0.7}
                 >
-                  <Ionicons
+                  {/* <Ionicons
                     name={item.icon || "notifications-outline"}
                     size={22}
-                    color={item.read ? "#666" : "#007AFF"}
+                    color={item.isRead ? "#666" : "#007AFF"}
                     style={{ marginRight: 10 }}
-                  />
+                  /> */}
                   <View style={{ flex: 1 }}>
                     <Text
-                      style={[styles.itemTitle, !item.read && styles.itemTitleUnread]}
+                      style={[styles.itemTitle, !item.isRead && styles.itemTitleUnread]}
                       numberOfLines={2}
                     >
-                      {item.title}
+                      {item.header}
                     </Text>
                     {!!item.body && (
                       <Text style={styles.itemBody} numberOfLines={2}>
