@@ -2,18 +2,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axiosInstance from "@/src/configs/axiosInstance";
 import { Platform } from 'react-native';
 import {getUserInfoFromToken} from "@/src/utils/DecodeToken";
+import {API_URL} from "@env"; // Removed: .env files cannot be imported directly in TypeScript
 
 // Dynamic URL based on platform
 const getBaseUrl = () => {
     if (Platform.OS === 'web') {
         return 'http://localhost:3000';
     }
-    return 'http://192.168.1.28:3000';
+    return API_URL;
 };
 
 // Set base URL to AsyncStorage for axiosInstance
 const initializeBaseUrl = async () => {
     const baseUrl = getBaseUrl();
+    console.log("Base URL set to:", baseUrl);
     await AsyncStorage.setItem('url', baseUrl);
 };
 
@@ -112,5 +114,10 @@ export const logout = async () => {
     } catch (error) {
         console.error("Logout error:", error);
         throw error;
+    } finally {
+        await AsyncStorage.removeItem('token');
+        await AsyncStorage.removeItem('refreshToken');
+        await AsyncStorage.removeItem('role');
+        await AsyncStorage.removeItem('userId');
     }
 }

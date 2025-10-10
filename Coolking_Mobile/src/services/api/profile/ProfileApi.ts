@@ -9,7 +9,7 @@ export const getProfile = async () => {
         const userId = await AsyncStorage.getItem('userId');
         let URL = '';
         if (role === 'STUDENT') {
-            URL = `/api/students/${userId}`;
+            URL = `/api/students/info-view-le-ad/${userId}`;
         } else if (role === 'PARENT') {
             URL = `/api/parents/${userId}`;
         }
@@ -51,6 +51,40 @@ export const updateAvatar = async (fileData: any) => {
     }
 }
 
+export const changePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+        const response = await axiosInstance.post('/api/accounts/change-password', {
+            oldPassword: currentPassword,
+            newPassword: newPassword
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Change password error:", error);
+        throw error;
+    }
+}
 
-
-
+export const getUpdateProfile = async (profileData: any) => {
+    try {
+        const role = await AsyncStorage.getItem('role');
+        if(!role) throw new Error("No role found");
+        let URL = '';
+        if (role === 'STUDENT') {
+            URL = `/api/students/update-info`;
+        } else if (role === 'PARENT') {
+            URL = `/api/parents/update-info`;
+        }
+        const response = await axiosInstance.put(URL, {
+            name: profileData.name,
+            email: profileData.email,
+            phone: profileData.phone,
+            address: profileData.address,
+            gender: profileData.gender,
+            dob: profileData.dob,
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Get update profile error:", error);
+        throw error;
+    }
+}

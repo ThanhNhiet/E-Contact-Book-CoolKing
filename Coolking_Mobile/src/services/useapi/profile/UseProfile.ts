@@ -1,4 +1,4 @@
-import {getProfile,updateAvatar} from "@/src/services/api/profile/ProfileApi";
+import { getProfile , updateAvatar , changePassword , getUpdateProfile } from "@/src/services/api/profile/ProfileApi";
 import { useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -8,6 +8,8 @@ export const useProfile = () => {
     const [profileNavigation, setProfileNavigation] = useState<any>(null);
     const [role, setRole] = useState<string | null>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [profileParent, setProfileParent] = useState<any>(null);
+    const [profileStudent, setProfileStudent] = useState<any>(null);
 
     const labelMapStudent: Record<string, string> = {
         name: "Họ và tên",
@@ -16,11 +18,12 @@ export const useProfile = () => {
         phone: "Số điện thoại",
         dob: "Ngày sinh",
         majorName: "Chuyên ngành",
-        clazzName: "Lớp",
+        className: "Lớp",
         address: "Địa chỉ",
         gender: "Giới tính",
     };
     const labelMapParent: Record<string, string> = {
+        parent_id: "Mã phụ huynh",
         name: "Họ và tên",
         student_id: "Mã sinh viên", 
         studentName: "Họ tên con",
@@ -49,7 +52,7 @@ export const useProfile = () => {
                 profileData = {
                     name: data.name,
                     student_id: data.student_id,
-                    clazzName: data.clazzName,  
+                    className: data.className,
                     majorName: data.majorName,
                     email: data.email,
                     phone: data.phone,
@@ -57,12 +60,13 @@ export const useProfile = () => {
                     dob: data.dob,
                     gender: data.gender,
                 };
+                setProfileParent(data.parent);
                 navigationData = {
                     name: data.name,
-                    avatar: data.avatar || "https://i.pravatar.cc/150?img=3",
+                    avatar: data?.avatar ,
                     student_id: data.student_id,
                 };
-                setAvatarUrl(data.avatar || "https://i.pravatar.cc/150?img=3");
+                setAvatarUrl(data?.avatar);
         } else if (role === 'PARENT') {
                 profileData = {
                     name: data.name,
@@ -74,12 +78,13 @@ export const useProfile = () => {
                     gender: data.gender,
                     dob: data.dob,
                 };
+                setProfileStudent(data.student);
                 navigationData = {
                     name: data.name,
-                    avatar: data.avatar || "https://i.pravatar.cc/150?img=3",
+                    avatar: data?.avatar,
                     studentName: data.studentName,
                 };
-                setAvatarUrl(data.avatar || "https://i.pravatar.cc/150?img=3");
+                setAvatarUrl(data?.avatar);
         }
             setProfileNavigation(navigationData);
             setProfile(profileData);
@@ -110,6 +115,32 @@ export const useProfile = () => {
             throw error;
         }
     }
+    const getchangePassword = async (currentPassword: string, newPassword: string) => {
+        try {
+            const data = await changePassword(currentPassword, newPassword);
+            if (!data) {
+                throw new Error("Invalid change password response");
+            }
+            return data;
+            
+        } catch (error) {
+            console.error("Change password error:", error);
+            throw error;
+        }
+    }
+
+    const getUpdateProfileData = async (profileData: any) => {
+        try {
+            const data = await getUpdateProfile(profileData);
+            if (!data) {
+                throw new Error("Invalid update profile response");
+            }
+            return data;
+        } catch (error) {
+            console.error("Update profile error:", error);
+            throw error;
+        }
+    }
 
     return{
         profile,
@@ -119,6 +150,13 @@ export const useProfile = () => {
         getUpdateAvatar,
         avatarUrl,
         setAvatarUrl,
+        getchangePassword,
+        labelMapParent,
+        labelMapStudent,
+        profileParent,
+        profileStudent,
+        getUpdateProfileData,
+        fetchProfile,
     }
 
 }

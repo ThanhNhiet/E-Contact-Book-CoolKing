@@ -25,7 +25,7 @@ exports.getStudentInfoViewByLecturer = async (req, res) => {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
         const decoded = jwtUtils.verifyAccessToken(token);
-        if (!decoded || (decoded.role !== 'ADMIN' && decoded.role !== 'LECTURER')) {
+        if (!decoded || (decoded.role === 'ADMIN' && decoded.role === 'LECTURER')) {
             return res.status(403).json({ message: 'Forbidden' });
         }
         const studentId = req.params.student_id;
@@ -54,6 +54,9 @@ exports.updateStudentInfo = async (req, res) => {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
         const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'STUDENT') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
         const updatedStudent = await studentRepo.updateStudentInfo(decoded.user_id, req.body);
         if (!updatedStudent) return res.status(404).json({ message: 'Sinh viên không tồn tại' });
         res.status(200).json({ message: 'Cập nhật thông tin sinh viên thành công' });

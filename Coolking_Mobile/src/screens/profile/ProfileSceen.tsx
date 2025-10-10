@@ -22,32 +22,56 @@ export default function ProfileScreen() {
   const { getlogout } = useLogin_out();
   const { profileNavigation,role } = useProfile();
 
-  const data = [
-  { title: "Thông tin cá nhân", icon: "person-outline", route: "ProfileDetailScreen" },
-  { title: "Đổi mật khẩu", icon: "lock-closed-outline", route: "ProfileChangePasswordScreen" },
-  { title: "Thông báo", icon: "notifications-outline", route: "Notifications" },
-  { title: "Đăng xuất", icon: "log-out-outline",  onPress: getlogout },
-];
+  type MenuItem = {
+  title: string;
+  icon: string;
+  route?: string;
+  onPress?: () => Promise<void> | void;
+};
 
+      const data: MenuItem[] = [
+        { title: "Thông tin cá nhân", icon: "person-outline", route: "ProfileDetailScreen" },
+        { title: "Đổi mật khẩu", icon: "lock-closed-outline", route: "ProfileChangePasswordScreen" },
+        { title: "Thông báo", icon: "notifications-outline", route: "Notifications" },
+        { title: "Đăng xuất", icon: "log-out-outline", onPress: async () => { await getlogout(); } },
+      ];
 
-      const renderItem = ({ item }: { item: typeof data[0] }) =>{
-        const handleLogout = async (item :any) => {
-          try{
-            Alert.alert("Xác nhận", "Bạn có chắc chắn muốn đăng xuất?", [
-              { text: "Hủy", style: "cancel" },
-              { text: "Đăng xuất", style: "destructive", onPress: item.onPress() },
-            ]);
+      const [busy, setBusy] = React.useState(false);
 
-          }catch(error){
-            console.error("Logout error:", error);
-            Alert.alert("Lỗi", "Đăng xuất không thành công. Vui lòng thử lại.");
-          }
-        }
-        return(
+      const renderItem = ({ item }: { item: MenuItem }) => {
+        const handleLogout = (item: MenuItem) => {
+          Alert.alert("Xác nhận", "Bạn có chắc chắn muốn đăng xuất?", [
+            { text: "Hủy", style: "cancel" },
+            {
+              text: "Đăng xuất",
+              style: "destructive",
+              onPress: async () => {
+                if (busy) return;
+                try {
+                  setBusy(true);
+                  await item.onPress?.();   // ✅ CHỈ GỌI KHI USER XÁC NHẬN
+                } catch (error) {
+                  console.error("Logout error:", error);
+                  Alert.alert("Lỗi", "Đăng xuất không thành công. Vui lòng thử lại.");
+                } finally {
+                  setBusy(false);
+                }
+              },
+            },
+          ]);
+        };
+
+        const onPressItem = () => {
+          if (item.onPress) return handleLogout(item);
+          if (item.route) return navigation.navigate(item.route);
+        };
+
+        return (
           <TouchableOpacity
             style={styles.item}
             activeOpacity={0.7}
-            onPress={() => item.onPress ? handleLogout(item) : navigation.navigate(item.route)}
+            onPress={onPressItem}
+            disabled={busy && !!item.onPress} // tránh spam khi đang logout
           >
             <View style={styles.itemLeft}>
               <View style={styles.iconContainer}>
@@ -56,9 +80,10 @@ export default function ProfileScreen() {
               <Text style={styles.itemText}>{item.title}</Text>
             </View>
 
-            <Ionicons name="chevron-forward" size={20} color="#999" />
+            {/* Ẩn chevron với mục Đăng xuất (không điều hướng) */}
+            {!item.onPress && <Ionicons name="chevron-forward" size={20} color="#999" />}
           </TouchableOpacity>
-      );
+        );
       };
 
   return (
