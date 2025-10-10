@@ -21,9 +21,6 @@ router.get('/exam-schedule/:student_id', studentController.getStudentExamSchedul
 
 
 // ===== ROUTES CHO STUDENT =====
-// GET /students/info-student - Thông tin cá nhân
-router.get('/:student_id', studentController.getStudentInfo);
-
 // PUT /students/update-info - Cập nhật thông tin
 router.put('/update-info', studentController.updateStudentInfo);
 
@@ -38,5 +35,8 @@ router.get('/my-basic-schedule', studentController.getMyBasicSchedule);
 
 // GET /students/my-exam-schedule - Lịch thi của chính mình
 router.get('/my-exam-schedule', studentController.getMyExamSchedule);
+
+// GET /students/:student_id - Thông tin cá nhân (PHẢI ĐẶT CUỐI CÙNG)
+router.get('/:student_id', studentController.getStudentInfo);
 
 module.exports = router;

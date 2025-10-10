@@ -44,3 +44,43 @@ exports.updateParentAvatar = async (req, res) => {
         return res.status(500).json({ message: 'Internal server error' });
     }
 };
+
+// PUT /parents/update-info
+exports.updateParentInfo = async (req, res) => {
+    try {   
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'PARENT') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const updatedParent = await parentRepo.updateParentInfo(decoded.user_id, req.body);
+        if (!updatedParent) return res.status(404).json({ message: 'Phụ huynh không tồn tại' });
+        res.status(200).json({ message: 'Cập nhật thông tin phụ huynh thành công' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// GET /parents/my-schedule - Lịch học của con với exceptions
+exports.getParentScheduleWithExceptions = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);  
+        if (!decoded || decoded.role !== 'PARENT') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const parentId = decoded.user_id;
+        const paginationOptions = {
+            page: req.query.page,
+            limit: req.query.limit,
+            sortBy: req.query.sortBy,
+            sortOrder: req.query.sortOrder
+        };
+        const schedule = await parentRepo.getParentScheduleWithExceptions(parentId, paginationOptions);
+        res.status(200).json(schedule);
+    }catch (error) {
+        res.status(500).json({ message: error.message });
+    }   
+};

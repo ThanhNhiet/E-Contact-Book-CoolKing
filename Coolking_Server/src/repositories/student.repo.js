@@ -369,10 +369,10 @@ const updateStudentInfo = async (student_id, updateData) => {
 }
 
 /**
- * Lấy lịch học của sinh viên bao gồm cả exception (thay đổi lịch) với phân trang
+ * Lấy lịch học và lịch thi của sinh viên bao gồm cả exception (thay đổi lịch) với phân trang
  * @param {string} student_id - Mã sinh viên (VD: SV2100001)
  * @param {Object} options - Tùy chọn phân trang {page: 1, limit: 10, sortBy: 'day_of_week', sortOrder: 'ASC'}
- * @returns {Object} - Thông tin lịch học chi tiết với phân trang
+ * @returns {Object} - Thông tin lịch học và lịch thi chi tiết với phân trang
  */
 const getStudentScheduleWithExceptions = async (student_id, options = {}) => {
     try {
@@ -384,16 +384,16 @@ const getStudentScheduleWithExceptions = async (student_id, options = {}) => {
         // Default pagination options
         const page = parseInt(options.page) || 1;
         const limit = parseInt(options.limit) || 10;
-        const sortBy = options.sortBy || 'day_of_week';
+        const sortBy = options.sortBy || 'schedule_type';
         const sortOrder = options.sortOrder || 'ASC';
         const offset = (page - 1) * limit;
 
         // Validate sortBy to prevent SQL injection
-        const allowedSortFields = ['day_of_week', 'start_lesson', 'exam_date', 'subject_name', 'session_name'];
-        const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'day_of_week';
+        const allowedSortFields = ['day_of_week', 'start_lesson', 'schedule_date', 'subject_name', 'session_name', 'schedule_type'];
+        const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'schedule_type';
         const safeSortOrder = ['ASC', 'DESC'].includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'ASC';
 
-        // Đếm tổng số records
+        // Đếm tổng số records (bao gồm cả lịch học và lịch thi)
         const countResults = await sequelize.query(`
             SELECT COUNT(*) as total
             FROM students AS ST 
@@ -407,9 +407,11 @@ const getStudentScheduleWithExceptions = async (student_id, options = {}) => {
             JOIN sessions AS se ON se.id = co_se.session_id
             JOIN lecturers_coursesections AS le_co ON le_co.course_section_id = co_se.id
             JOIN lecturers AS le2 ON le2.lecturer_id = le_co.lecturer_id
-            WHERE SH.isExam = 0 
-              AND SH.isCompleted = 0 
-              AND SH.user_id = :student_id
+            WHERE SH.user_id = :student_id
+              AND (
+                (SH.isExam = 0 AND SH.isCompleted = 0) OR 
+                (SH.isExam = 1)
+              )
         `, {
             replacements: { student_id },
             type: sequelize.QueryTypes.SELECT
@@ -421,7 +423,7 @@ const getStudentScheduleWithExceptions = async (student_id, options = {}) => {
         if (totalRecords === 0) {
             return {
                 student_id: student_id,
-                message: "Không tìm thấy lịch học cho sinh viên này",
+                message: "Không tìm thấy lịch học hoặc lịch thi cho sinh viên này",
                 pagination: {
                     current_page: page,
                     total_pages: 0,
@@ -430,11 +432,12 @@ const getStudentScheduleWithExceptions = async (student_id, options = {}) => {
                     has_next: false,
                     has_prev: false
                 },
-                schedules: []
+                schedules: [],
+                exams: []
             };
         }
 
-        // Lấy dữ liệu với phân trang
+        // Lấy dữ liệu với phân trang (bao gồm cả lịch học và lịch thi)
         const results = await sequelize.query(`
             SELECT  
                 ST.student_id,
@@ -443,18 +446,30 @@ const getStudentScheduleWithExceptions = async (student_id, options = {}) => {
                 su.name AS subject_name,
                 se.name AS session_name,
                 se.years AS academic_year,
+                -- Ngày bắt đầu và kết thúc của môn học
+                SH.start_date AS course_start_date,
+                SH.end_date AS course_end_date,
                 le2.name AS original_lecturer,
                 COALESCE(le1.name, le2.name) AS current_lecturer,
-                SH.start_lesson,
-                SH.end_lesson,
-                SH.day_of_week,
-                SH.date AS exam_date,
-                COALESCE(shex.new_room, SH.room) AS current_room,
+                -- Hiển thị thông tin đã thay đổi nếu có exception
+                COALESCE(shex.new_start_lesson, SH.start_lesson) AS display_start_lesson,
+                COALESCE(shex.new_end_lesson, SH.end_lesson) AS display_end_lesson,
+                COALESCE(shex.new_date, SH.date) AS display_date,
+                COALESCE(shex.new_room, SH.room) AS display_room,
+                -- Thông tin gốc để so sánh
+                SH.start_lesson AS original_start_lesson,
+                SH.end_lesson AS original_end_lesson,
+                SH.day_of_week AS original_day_of_week,
+                SH.date AS original_date,
+                SH.room AS original_room,
+                -- Thông tin exception
                 shex.exception_type,
-                shex.original_date,
-                shex.new_date,
+                shex.original_date AS exception_original_date,
+                shex.new_date AS exception_new_date,
                 shex.new_start_lesson,
                 shex.new_end_lesson,
+                shex.new_room,
+                SH.isExam,
                 CASE 
                     WHEN shex.id IS NOT NULL THEN 'Có thay đổi'
                     ELSE 'Lịch bình thường'
@@ -472,11 +487,16 @@ const getStudentScheduleWithExceptions = async (student_id, options = {}) => {
             JOIN sessions AS se ON se.id = co_se.session_id
             JOIN lecturers_coursesections AS le_co ON le_co.course_section_id = co_se.id
             JOIN lecturers AS le2 ON le2.lecturer_id = le_co.lecturer_id
-            WHERE SH.isExam = 0 
-              AND SH.isCompleted = 0 
-              AND SH.user_id = :student_id
+            WHERE SH.user_id = :student_id
+              AND (
+                (SH.isExam = 0 AND SH.isCompleted = 0) OR 
+                (SH.isExam = 1)
+              )
             ORDER BY ${safeSortBy === 'subject_name' ? 'su.name' : 
                       safeSortBy === 'session_name' ? 'se.name' : 
+                      safeSortBy === 'schedule_type' ? 'SH.isExam' :
+                      safeSortBy === 'schedule_date' ? 'COALESCE(shex.new_date, SH.date)' :
+                      safeSortBy === 'start_lesson' ? 'COALESCE(shex.new_start_lesson, SH.start_lesson)' :
                       `SH.${safeSortBy}`} ${safeSortOrder}
             LIMIT :limit OFFSET :offset
         `, {
@@ -484,44 +504,76 @@ const getStudentScheduleWithExceptions = async (student_id, options = {}) => {
             type: sequelize.QueryTypes.SELECT
         });
 
-        // Format lại dữ liệu để dễ sử dụng
-        const formattedSchedules = results.map(schedule => ({
-            schedule_id: schedule.schedule_id,
-            course_section_id: schedule.course_section_id,
-            student_info: {
-                student_id: schedule.student_id,
-                student_name: schedule.student_name,
-                class_name: schedule.class_name
-            },
-            subject_info: {
-                subject_name: schedule.subject_name,
-                session_name: schedule.session_name,
-                academic_year: schedule.academic_year
-            },
-            schedule_info: {
-                day_of_week: schedule.day_of_week,
-                start_lesson: schedule.start_lesson,
-                end_lesson: schedule.end_lesson,
-                exam_date: schedule.exam_date,
-                room: schedule.current_room,
-                status: schedule.schedule_status
-            },
-            lecturer_info: {
-                original_lecturer: schedule.original_lecturer,
-                current_lecturer: schedule.current_lecturer
-            },
-            exception_info: schedule.exception_type ? {
-                exception_type: schedule.exception_type,
-                original_date: schedule.original_date,
-                new_date: schedule.new_date,
-                new_start_lesson: schedule.new_start_lesson,
-                new_end_lesson: schedule.new_end_lesson
-            } : null
-        }));
+        // Tách dữ liệu thành lịch học và lịch thi
+        const classSchedules = [];
+        const examSchedules = [];
 
-        // Thống kê tổng quan (không phân trang)
+        results.forEach(item => {
+            const formattedItem = {
+                schedule_id: item.schedule_id,
+                course_section_id: item.course_section_id,
+                student_info: {
+                    student_id: item.student_id,
+                    student_name: item.student_name,
+                    class_name: item.class_name
+                },
+                subject_info: {
+                    subject_name: item.subject_name,
+                    session_name: item.session_name,
+                    academic_year: item.academic_year,
+                    // Ngày bắt đầu và kết thúc của môn học
+                    course_start_date: item.course_start_date ? datetimeFormatter.formatDateVN(item.course_start_date) : null,
+                    course_end_date: item.course_end_date ? datetimeFormatter.formatDateVN(item.course_end_date) : null
+                },
+                schedule_info: {
+                    // Hiển thị thông tin đã thay đổi (nếu có exception)
+                    day_of_week: item.original_day_of_week,
+                    start_lesson: item.display_start_lesson,
+                    end_lesson: item.display_end_lesson,
+                    schedule_date: item.display_date,
+                    room: item.display_room,
+                    type: item.isExam ,
+                    status: item.schedule_status
+                },
+                lecturer_info: {
+                    original_lecturer: item.original_lecturer,
+                    // Chỉ hiển thị giảng viên mới khi có thay đổi, còn không thì null
+                    new_lecturer: item.exception_type === 'LECTURER_CHANGED' ? item.current_lecturer : null
+                },
+                // Thông tin gốc để so sánh
+                original_info: {
+                    start_lesson: item.original_start_lesson,
+                    end_lesson: item.original_end_lesson,
+                    date: item.original_date,
+                    room: item.original_room
+                },
+                exception_info: item.exception_type ? {
+                    exception_type: item.exception_type,
+                    original_date: item.exception_original_date,
+                    new_date: item.exception_new_date,
+                    new_start_lesson: item.new_start_lesson,
+                    new_end_lesson: item.new_end_lesson,
+                    new_room: item.new_room,
+                    changes: {
+                        time_changed: item.new_start_lesson || item.new_end_lesson ? true : false,
+                        date_changed: item.exception_new_date ? true : false,
+                        room_changed: item.new_room ? true : false,
+                        lecturer_changed: item.exception_type === 'LECTURER_CHANGED' ? true : false
+                    }
+                } : null
+            };
+
+            if (item.isExam === 1) {
+                examSchedules.push(formattedItem);
+            } else {
+                classSchedules.push(formattedItem);
+            }
+        });
+
+        // Thống kê tổng quan
         const allResults = await sequelize.query(`
             SELECT 
+                SH.isExam,
                 CASE WHEN shex.id IS NOT NULL THEN 'Có thay đổi' ELSE 'Lịch bình thường' END AS schedule_status,
                 shex.exception_type
             FROM students AS ST 
@@ -529,16 +581,20 @@ const getStudentScheduleWithExceptions = async (student_id, options = {}) => {
             LEFT JOIN schedule_exceptions AS shex ON SH.id = shex.schedule_id
             JOIN course_sections AS co_se ON co_se.id = SH.course_section_id
             JOIN lecturers_coursesections AS le_co ON le_co.course_section_id = co_se.id
-            WHERE SH.isExam = 0 
-              AND SH.isCompleted = 0 
-              AND SH.user_id = :student_id
+            WHERE SH.user_id = :student_id
+              AND (
+                (SH.isExam = 0 AND SH.isCompleted = 0) OR 
+                (SH.isExam = 1)
+              )
         `, {
             replacements: { student_id },
             type: sequelize.QueryTypes.SELECT
         });
 
         const stats = {
-            total_schedules: totalRecords,
+            total_items: totalRecords,
+            total_class_schedules: allResults.filter(s => s.isExam === 0).length,
+            total_exam_schedules: allResults.filter(s => s.isExam === 1).length,
             normal_schedules: allResults.filter(s => s.schedule_status === 'Lịch bình thường').length,
             exception_schedules: allResults.filter(s => s.schedule_status === 'Có thay đổi').length,
             exception_types: [...new Set(allResults
@@ -559,7 +615,8 @@ const getStudentScheduleWithExceptions = async (student_id, options = {}) => {
                 has_next: page < totalPages,
                 has_prev: page > 1
             },
-            schedules: formattedSchedules
+            schedules: classSchedules,
+            exams: examSchedules
         };
 
     } catch (error) {
