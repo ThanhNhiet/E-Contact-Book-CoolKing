@@ -85,10 +85,10 @@ const getStudentsScoreByCourseSectionId4Lecturer = async (course_section_id) => 
 
         // Lấy thông tin từng sinh viên và điểm số
         const students = [];
-        
+
         for (let i = 0; i < studentCourseSections.length; i++) {
             const studentId = studentCourseSections[i].student_id;
-            
+
             // Lấy thông tin sinh viên từ Student bằng student_id
             const student = await models.Student.findOne({
                 where: { student_id: studentId },
@@ -102,9 +102,9 @@ const getStudentsScoreByCourseSectionId4Lecturer = async (course_section_id) => 
 
             // Lấy thông tin điểm từ Score theo từng student_id và course_section_id
             const score = await models.Score.findOne({
-                where: { 
-                    student_id: studentId, 
-                    course_section_id: course_section_id 
+                where: {
+                    student_id: studentId,
+                    course_section_id: course_section_id
                 },
                 attributes: [
                     'theo_regular1', 'theo_regular2', 'theo_regular3',
@@ -138,21 +138,21 @@ const getStudentsScoreByCourseSectionId4Lecturer = async (course_section_id) => 
 
             // Tính toán initial_evaluate
             let initial_evaluate = 'ok';
-            
+
             if (score) {
                 // Tính điểm trung bình của regular (cả theo và pra)
                 const regularScores = [
                     score.theo_regular1, score.theo_regular2, score.theo_regular3,
                     score.pra_regular1, score.pra_regular2, score.pra_regular3
                 ].filter(s => s !== null && s !== undefined);
-                
+
                 let regularAverage = null;
                 if (regularScores.length > 0) {
                     regularAverage = regularScores.reduce((sum, s) => sum + s, 0) / regularScores.length;
                 }
-                
+
                 // Kiểm tra các điều kiện danger
-                if ((regularAverage !== null && regularAverage < 1) || 
+                if ((regularAverage !== null && regularAverage < 1) ||
                     (score.mid !== null && score.mid < 4) ||
                     (score.final !== null && score.final < 3) ||
                     (score.final !== null && score.final < 4)) {
@@ -169,6 +169,29 @@ const getStudentsScoreByCourseSectionId4Lecturer = async (course_section_id) => 
                 initial_evaluate: initial_evaluate
             });
         }
+
+        // Sắp xếp danh sách sinh viên theo tên tiếng Việt
+        students.sort((a, b) => {
+            // Tách tên ra khỏi họ và tên đệm
+            const lastNameA = a.name.split(' ').pop();
+            const lastNameB = b.name.split(' ').pop();
+
+            // So sánh tên trước
+            const nameComparison = lastNameA.localeCompare(lastNameB, 'vi');
+
+            // Nếu tên khác nhau, trả về kết quả so sánh tên
+            if (nameComparison !== 0) {
+                return nameComparison;
+            }
+
+            // Nếu tên giống nhau, so sánh toàn bộ họ tên để giữ trật tự họ và tên đệm
+            return a.name.localeCompare(b.name, 'vi');
+        });
+
+        // Gán lại số thứ tự (no) sau khi đã sắp xếp
+        students.forEach((student, index) => {
+            student.no = index + 1;
+        });
 
         // Trả về kết quả hoàn chỉnh
         return {
@@ -192,35 +215,35 @@ const updateStudentAvatar = async (student_id, file) => {
         const student = await models.Student.findOne({ where: { student_id } });
         if (!student) throw new Error("Student not found");
 
-         const folder = 'account_avatar';
-          
-            // Xóa avatar cũ nếu có
-            if (student.avatar) {
-              try {
+        const folder = 'account_avatar';
+
+        // Xóa avatar cũ nếu có
+        if (student.avatar) {
+            try {
                 const publicId = cloudinaryUtils.getPublicIdFromUrl(student.avatar, folder);
                 await cloudinaryService.deleteFromCloudinary(publicId);
-              } catch (deleteError) {
+            } catch (deleteError) {
                 console.log('Warning: Could not delete old avatar:', deleteError.message);
-              }
             }
-            
-            // Upload avatar mới
-            const uploadResult = await cloudinaryService.upload2Cloudinary(file.buffer, folder, file.originalname);
-            if (!uploadResult.success) {
-              throw new Error('Avatar upload failed');
-            }
-            
+        }
 
-            // Cập nhật avatar URL trong database
-            student.avatar = uploadResult.url;
-            await student.save();
+        // Upload avatar mới
+        const uploadResult = await cloudinaryService.upload2Cloudinary(file.buffer, folder, file.originalname);
+        if (!uploadResult.success) {
+            throw new Error('Avatar upload failed');
+        }
 
-            return {
-              student_id: student.student_id,
-              name: student.name,
-              avatar: student.avatar,
-              message: 'Avatar uploaded successfully'
-            };
+
+        // Cập nhật avatar URL trong database
+        student.avatar = uploadResult.url;
+        await student.save();
+
+        return {
+            student_id: student.student_id,
+            name: student.name,
+            avatar: student.avatar,
+            message: 'Avatar uploaded successfully'
+        };
     } catch (error) {
         console.error("Error in uploadAvatar:", error);
         throw error;
@@ -278,7 +301,7 @@ const getStudentInfoById4Lecturer = async (student_id) => {
         });
 
         let genderParent = null;
-        if (parent){
+        if (parent) {
             genderParent = parent.gender == "1" ? "Nam" : "Nữ";
         }
 
@@ -318,12 +341,12 @@ const getStudentByStudent_id = async (student_id) => {
                 {
                     model: models.Clazz,
                     as: 'clazz',
-                    attributes: ['name','id'],
+                    attributes: ['name', 'id'],
                     required: false
                 },
                 {
                     model: models.Major,
-                    as: 'major', 
+                    as: 'major',
                     attributes: ['name', 'major_id'],
                     required: false
                 }
@@ -332,7 +355,7 @@ const getStudentByStudent_id = async (student_id) => {
         if (!result) throw new Error("Student not found");
 
         const gender = result.gender === "1" ? "Nam" : "Nữ";
-        return{
+        return {
             student_id: result.student_id,
             name: result.name,
             dob: datetimeFormatter.formatDateVN(result.dob),
@@ -348,7 +371,7 @@ const getStudentByStudent_id = async (student_id) => {
             createdAt: datetimeFormatter.formatDateTimeVN(result.createdAt),
             updatedAt: datetimeFormatter.formatDateTimeVN(result.updatedAt),
         }
-        
+
     } catch (error) {
         console.error("Error in getStudentByStudent_id:", error);
         throw error;
@@ -492,12 +515,12 @@ const getStudentScheduleWithExceptions = async (student_id, options = {}) => {
                 (SH.isExam = 0 AND SH.isCompleted = 0) OR 
                 (SH.isExam = 1)
               )
-            ORDER BY ${safeSortBy === 'subject_name' ? 'su.name' : 
-                      safeSortBy === 'session_name' ? 'se.name' : 
-                      safeSortBy === 'schedule_type' ? 'SH.isExam' :
-                      safeSortBy === 'schedule_date' ? 'COALESCE(shex.new_date, SH.date)' :
-                      safeSortBy === 'start_lesson' ? 'COALESCE(shex.new_start_lesson, SH.start_lesson)' :
-                      `SH.${safeSortBy}`} ${safeSortOrder}
+            ORDER BY ${safeSortBy === 'subject_name' ? 'su.name' :
+                safeSortBy === 'session_name' ? 'se.name' :
+                    safeSortBy === 'schedule_type' ? 'SH.isExam' :
+                        safeSortBy === 'schedule_date' ? 'COALESCE(shex.new_date, SH.date)' :
+                            safeSortBy === 'start_lesson' ? 'COALESCE(shex.new_start_lesson, SH.start_lesson)' :
+                                `SH.${safeSortBy}`} ${safeSortOrder}
             LIMIT :limit OFFSET :offset
         `, {
             replacements: { student_id, limit, offset },
@@ -532,7 +555,7 @@ const getStudentScheduleWithExceptions = async (student_id, options = {}) => {
                     end_lesson: item.display_end_lesson,
                     schedule_date: item.display_date,
                     room: item.display_room,
-                    type: item.isExam ,
+                    type: item.isExam,
                     status: item.schedule_status
                 },
                 lecturer_info: {
@@ -717,9 +740,9 @@ const getStudentBasicSchedule = async (student_id, options = {}) => {
             WHERE SH.isExam = 0 
               AND SH.isCompleted = 0 
               AND SH.user_id = :student_id
-            ORDER BY ${safeSortBy === 'subject_name' ? 'su.name' : 
-                      safeSortBy === 'session_name' ? 'se.name' : 
-                      `SH.${safeSortBy}`} ${safeSortOrder}
+            ORDER BY ${safeSortBy === 'subject_name' ? 'su.name' :
+                safeSortBy === 'session_name' ? 'se.name' :
+                    `SH.${safeSortBy}`} ${safeSortOrder}
             LIMIT :limit OFFSET :offset
         `, {
             replacements: { student_id, limit, offset },
@@ -832,10 +855,10 @@ const getStudentExamSchedule = async (student_id, options = {}) => {
             JOIN lecturers AS le ON le.lecturer_id = le_co.lecturer_id
             WHERE SH.isExam = 1 
               AND SH.user_id = :student_id
-            ORDER BY ${safeSortBy === 'subject_name' ? 'su.name' : 
-                      safeSortBy === 'session_name' ? 'se.name' : 
-                      safeSortBy === 'exam_date' ? 'SH.date' : 
-                      `SH.${safeSortBy}`} ${safeSortOrder}
+            ORDER BY ${safeSortBy === 'subject_name' ? 'su.name' :
+                safeSortBy === 'session_name' ? 'se.name' :
+                    safeSortBy === 'exam_date' ? 'SH.date' :
+                        `SH.${safeSortBy}`} ${safeSortOrder}
             LIMIT :limit OFFSET :offset
         `, {
             replacements: { student_id, limit, offset },
