@@ -131,7 +131,8 @@ const searchCourseSectionsByKeyword4Lecturer = async (lecturer_id, keyword, page
                 lecturer_id: lecturer_id,
                 [Op.or]: [
                     { '$course_section.subject.name$': { [Op.like]: keyword_lower } },
-                    { '$course_section.clazz.name$': { [Op.like]: keyword_lower } }
+                    { '$course_section.clazz.name$': { [Op.like]: keyword_lower } },
+                    { '$course_section.id$': { [Op.like]: keyword_lower } }
                 ]
             },
             include: [
@@ -218,7 +219,7 @@ const searchCourseSectionsByKeyword4Lecturer = async (lecturer_id, keyword, page
  * @param {number} pageSize - Số lượng bản ghi trên một trang
  * @returns {Object} success + message + data: { total, page, pageSize, courseSections, linkPrev, linkNext, pages }
  */
-const filterCourseSections4Lecturer = async (lecturer_id, sessionName, facultyName, page, pageSize = 10) => {
+const filterCourseSections4Lecturer = async (lecturer_id, sessionId, facultyId, page, pageSize = 10) => {
     try {
         // Validate input
         if (!lecturer_id) {
@@ -231,11 +232,11 @@ const filterCourseSections4Lecturer = async (lecturer_id, sessionName, facultyNa
 
         // Tạo điều kiện where động cho filter
         const whereClause = {};
-        if (sessionName && sessionName.trim() !== '') {
-            whereClause['$course_section.session.name$'] = sessionName.trim();
+        if (sessionId && sessionId.trim() !== '') {
+            whereClause['$course_section.session.id$'] = sessionId.trim();
         }
-        if (facultyName && facultyName.trim() !== '') {
-            whereClause['$course_section.subject.faculty.name$'] = facultyName.trim();
+        if (facultyId && facultyId.trim() !== '') {
+            whereClause['$course_section.subject.faculty.faculty_id$'] = facultyId.trim();
         }
 
         // Query trực tiếp với filter + pagination
