@@ -1,152 +1,276 @@
 import React from "react";
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  StyleSheet,
   ScrollView,
   Image,
   TouchableOpacity,
-  Alert
+  Alert,
 } from "react-native";
-import * as DocumentPicker from 'expo-document-picker';
+import * as DocumentPicker from "expo-document-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+
 import TopNavigations_ProfileDetail from "@/src/components/navigations/TopNavigations_Profile_Screen";
-import {useProfile} from "@/src/services/useapi/profile/UseProfile";
+import { useProfile } from "@/src/services/useapi/profile/UseProfile";
+import UpdateProfileModal, { ProfileForm } from "@/src/components/modals/UpdateProfileModal";
 
 
-
+const getGenderText = (gender: String) => (gender === "Nam" ? true : false);
 export default function ProfileDetailScreen() {
   const navigation = useNavigation<any>();
-  const { profile, profileNavigation,labelMap, getUpdateAvatar, avatarUrl, setAvatarUrl } = useProfile();
+  const {
+    profile,
+    labelMap,
+    getUpdateAvatar,
+    avatarUrl,
+    setAvatarUrl,
+    profileParent,
+    profileStudent,
+    role,
+    labelMapParent,
+    labelMapStudent,
+    getUpdateProfileData,
+    fetchProfile,
+  } = useProfile();
 
   const [fileAvatar, setFileAvatar] = React.useState<Object | null>(null);
+  const [openModal, setOpenModal] = React.useState(false);
+  const isStudent = role === "STUDENT";
+  const initialValues: ProfileForm = {
+    name: profile?.name || "",
+    email: profile?.email || "",
+    phone: profile?.phone || "",
+    address: profile?.address || "",
+    gender: (getGenderText(profile?.gender as any)) || false,
+    dob: profile?.dob || "",
+  };
   
 
-
   const pickFile = async () => {
-        try {
-            const result = await DocumentPicker.getDocumentAsync({
-                multiple: false,
-                copyToCacheDirectory: true,
-            });
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        multiple: false,
+        copyToCacheDirectory: true,
+      });
 
-            if (result.canceled) return;
+      if (result.canceled) return;
 
-            // API mới trả về mảng assets
-            const asset = result.assets?.[0] || result;
-            if (asset) {
-                setFileAvatar(asset);
-                setAvatarUrl(asset.uri);
+      const asset = result.assets?.[0] || result;
+      if (asset) {
+        setFileAvatar(asset);
+        setAvatarUrl(asset.uri);
+      }
+    } catch (err) {
+      console.log("Lỗi chọn file:", err);
+    }
+  };
+
+  const handleUpdateAvatar = async (file: any) => {
+    if (!file) return;
+    Alert.alert(
+      "Cập nhật ảnh đại diện",
+      "Bạn có chắc chắn muốn cập nhật ảnh đại diện không?",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Đồng ý",
+          onPress: async () => {
+            const data = await getUpdateAvatar(file);
+            if (!data) {
+              Alert.alert(
+                "Lỗi",
+                "Cập nhật ảnh đại diện thất bại. Vui lòng thử lại."
+              );
+            } else {
+              Alert.alert(
+                "Thành công",
+                data.message || "Cập nhật ảnh đại diện thành công."
+              );
+              await fetchProfile(); // làm mới dữ liệu
+              setFileAvatar(null);
             }
-        } catch (err) {
-            console.log("Lỗi chọn file:", err);
-        }
-    };
+          },
+        },
+      ]
+    );
+  };
 
-   const handleUpdateAvatar = async (file: any) => {
-        if (!file) return;
-        Alert.alert("Cập nhật ảnh đại diện", "Bạn có chắc chắn muốn cập nhật ảnh đại diện không?", [
-            {
-                text: "Hủy",
-                style: "cancel",
-            },
-            {
-                text: "Đồng ý",
-                onPress: async () => {
-                    // Gọi API cập nhật ảnh đại diện ở đây
-                  const data =   await getUpdateAvatar(file);
-                  if (!data){
-                    Alert.alert("Lỗi", "Cập nhật ảnh đại diện thất bại. Vui lòng thử lại.");
-                  }
-                  else {
-                    Alert.alert("Thành công", data.message || "Cập nhật ảnh đại diện thành công.");
-                    setFileAvatar(null);
-                  }
-                },
-            },
-        ]);
-    };
+  
+
+  const handleSubmitProfile = async (values: ProfileForm) => {
+    try {
+      // gọi API cập nhật
+      const data = await getUpdateProfileData(values);
+      await fetchProfile(); // làm mới dữ liệu
+      Alert.alert("Thành công", data?.message || "Cập nhật hồ sơ thành công!");
+      setOpenModal(false);
+    } catch (e: any) {
+      Alert.alert("Lỗi", e?.message || "Không thể cập nhật hồ sơ");
+      throw e; // để modal có thể hiển thị lại nếu cần
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
       <View style={styles.container}>
-        {/* Thanh điều hướng trên */}
-        <TopNavigations_ProfileDetail navigation={navigation} name="Thông tin chi tiết" />
+        <TopNavigations_ProfileDetail
+          navigation={navigation}
+          name="Thông tin chi tiết"
+        />
 
-        {/* Nội dung chi tiết */}
-        <View style={styles.contentContainer} ></View>
+        <View style={styles.contentContainer} />
         <ScrollView contentContainerStyle={styles.content}>
-
-            {/* Ảnh đại diện */}
-            <TouchableOpacity onPress={pickFile}>
+          {/* Avatar + nút chỉnh */}
+          <View style={styles.avatarWrap}>
             <Image
-              source={{ uri: avatarUrl || " " }}
+              source={{
+                uri: avatarUrl || "https://i.pravatar.cc/200?img=14",
+              }}
               style={styles.avatar}
             />
+            <TouchableOpacity
+              style={styles.avatarEditBtn}
+              onPress={pickFile}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="camera" size={18} color="#fff" />
             </TouchableOpacity>
+          </View>
 
-            {/* Nút cập nhật ảnh đại diện */}
-            {fileAvatar && (
-              <TouchableOpacity style={styles.buttonAvatar} onPress={() => handleUpdateAvatar(fileAvatar)}>
-                <Text style={styles.buttonText}>Cập nhật ảnh đại diện</Text>
-              </TouchableOpacity>
-            )}
+          {/* Nút cập nhật ảnh đại diện */}
+          {fileAvatar && (
+            <TouchableOpacity
+              style={styles.buttonAvatar}
+              onPress={() => handleUpdateAvatar(fileAvatar)}
+            >
+              <Text style={styles.buttonText}>Cập nhật ảnh đại diện</Text>
+            </TouchableOpacity>
+          )}
 
-            {/*Thông tin chi tiết*/}
-            {Object.entries(profile || {})
-              .map(([key, value]) => (
-                <View key={key} style={styles.infoRow}>
-                  <Text style={styles.label}>{labelMap[key] || key}</Text>
-                  <Text style={styles.value}>{String(value)}</Text>
-                </View>
-              ))}
+          {/* Tên + vai trò */}
+          <View style={styles.headerBlock}>
+            <Text style={styles.displayName}>
+              {profile?.full_name || profile?.name || "Người dùng"}
+            </Text>
+            <View style={styles.roleChip}>
+              <Ionicons name="shield-checkmark" size={14} color="#007AFF" />
+              <Text style={styles.roleChipText}>
+                {role?.toUpperCase() || "USER"}
+              </Text>
+            </View>
+          </View>
+
+          {/* Thông tin tài khoản */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Thông tin tài khoản</Text>
+            {Object.entries(profile || {}).map(([key, value]) => (
+              <View key={key} style={styles.infoRow}>
+                <Text style={styles.label}>{labelMap[key] || key}</Text>
+                <Text style={styles.value} numberOfLines={1}>
+                  {String(value ?? "")}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Thông tin phụ huynh / học sinh */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>
+              {isStudent ? "Thông tin phụ huynh" : "Thông tin học sinh"}
+            </Text>
+            {(isStudent
+              ? Object.entries(profileParent || {})
+              : Object.entries(profileStudent || {})
+            )
+            .map(([key, value]) => (
+              <View key={key} style={styles.infoRow}>
+                <Text style={styles.label}>
+                  {isStudent
+                    ? labelMapParent[key] || key
+                    : labelMapStudent[key] || key}
+                </Text>
+                <Text style={styles.value} numberOfLines={1}>
+                  {String(value ?? "")}
+                </Text>
+              </View>
+            ))}
+          </View>
+          {/* Nút chỉnh sửa hồ sơ */}
+          <TouchableOpacity
+              style={{ alignSelf: "center", marginTop: 8, marginBottom: 4 }}
+              onPress={() => setOpenModal(true)}>
+              <Text style={{ color: "#4A90E2", fontWeight: "800" }}>Chỉnh sửa hồ sơ</Text>
+          </TouchableOpacity>
+          <UpdateProfileModal
+              visible={openModal}
+              onClose={() => setOpenModal(false)}
+              initialValues={initialValues}
+              onSubmit={handleSubmitProfile}
+          />
         </ScrollView>
       </View>
     </SafeAreaView>
   );
 }
 
-
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f4f6f8",
+    backgroundColor: "#F3F6FB",
   },
-
   contentContainer: {
     height: 8,
     backgroundColor: "#fff",
     marginBottom: 8,
   },
-
   content: {
     flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingHorizontal: 18,
+    paddingBottom: 28,
   },
 
-  /* Ảnh đại diện */
-  avatar: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
+  /* ===== Avatar ===== */
+  avatarWrap: {
     alignSelf: "center",
-    marginVertical: 20,
+    marginTop: 14,
+    marginBottom: 12,
+  },
+  avatar: {
+    width: 132,
+    height: 132,
+    borderRadius: 66,
     borderWidth: 3,
-    borderColor: "#4a90e2",
+    borderColor: "#4A90E2",
     backgroundColor: "#eaeaea",
   },
+  avatarEditBtn: {
+    position: "absolute",
+    right: -2,
+    bottom: -2,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#4A90E2",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
 
-  /* Nút cập nhật ảnh đại diện */
+  /* Nút cập nhật avatar */
   buttonAvatar: {
-    backgroundColor: "#4a90e2",
+    backgroundColor: "#4A90E2",
     paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 25,
+    paddingHorizontal: 22,
+    borderRadius: 24,
     alignSelf: "center",
-    marginBottom: 25,
+    marginBottom: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -155,32 +279,82 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#fff",
-    fontWeight: "600",
-    fontSize: 15,
+    fontWeight: "700",
+    fontSize: 14.5,
+    letterSpacing: 0.2,
   },
 
-  /* Hàng thông tin */
+  /* ===== Header tên + role ===== */
+  headerBlock: {
+    alignItems: "center",
+    marginBottom: 10,
+    paddingHorizontal: 14,
+  },
+  displayName: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#1f2937",
+    marginBottom: 8,
+  },
+  roleChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: "#E8F1FE",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#C7DBF9",
+  },
+  roleChipText: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: "#1f2937",
+    textTransform: "uppercase",
+  },
+
+  /* ===== Card ===== */
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  cardTitle: {
+    fontSize: 15.5,
+    fontWeight: "800",
+    color: "#0f172a",
+    marginBottom: 6,
+    paddingVertical: 2,
+  },
+
+  /* ===== Info rows ===== */
   infoRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#ccc",
+    borderBottomColor: "#e5e7eb",
   },
-
   label: {
     flex: 1,
-    fontSize: 15,
-    color: "#333",
-    fontWeight: "700",
+    fontSize: 14.5,
+    color: "#334155",
+    fontWeight: "800",
+    paddingRight: 8,
   },
-
   value: {
     flex: 1.2,
     textAlign: "right",
-    fontSize: 15,
-    color: "#444",
-    fontWeight: "500",
+    fontSize: 14.5,
+    color: "#111827",
+    fontWeight: "600",
   },
 });

@@ -14,11 +14,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import TopNavigations_Profile from "@/src/components/navigations/TopNavigations_Profile_Screen";
-import { useLogin_out } from "@/src/services/useapi/Login/UseLogin_Forgot";
+import { useProfile } from "@/src/services/useapi/profile/UseProfile";
 
 export default function ProfileChangePasswordScreen() {
   const navigation = useNavigation<any>();
-  const { changePassword } = useLogin_out();
+  const { getchangePassword } = useProfile();
 
   const [currentPwd, setCurrentPwd] = useState("");
   const [nextPwd, setNextPwd] = useState("");
@@ -28,13 +28,21 @@ export default function ProfileChangePasswordScreen() {
   const [show3, setShow3] = useState(false);
 
   const onChangePassword = async () => {
-    if (!nextPwd || !confirm)
+    if (!nextPwd || !confirm || !currentPwd)
       return Alert.alert("Thiếu thông tin", "Vui lòng điền đầy đủ các trường.");
     if (nextPwd.length < 6)
       return Alert.alert("Yêu cầu", "Mật khẩu mới phải tối thiểu 6 ký tự.");
     if (nextPwd !== confirm)
       return Alert.alert("Lỗi", "Xác nhận mật khẩu không khớp.");
-    Alert.alert("Thành công", "Đổi mật khẩu thành công!");
+    const result = await getchangePassword(currentPwd, nextPwd);
+    if (result) {
+      setCurrentPwd("");
+      setNextPwd("");
+      setConfirm("");
+      Alert.alert("Thành công", result.message || "Đổi mật khẩu thành công.");
+    } else {
+      Alert.alert("Lỗi", result.message || "Đổi mật khẩu thất bại.");
+    }
   };
 
   const renderPwdRow = (

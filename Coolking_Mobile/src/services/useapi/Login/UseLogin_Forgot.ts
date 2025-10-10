@@ -148,29 +148,29 @@ export const useLogin_out = () => {
     const getlogout = async () => {
         setIsLoading(true);
         try {
-            const netInfo = await NetInfo.fetch();
-            if (!netInfo.isConnected) {
-                throw new Error("No internet connection");
-            }
+            // Cố gắng gọi API (nếu offline vẫn chạy được vì logout() đã best-effort)
             const data = await logout();
-            if (!data){
-                throw new Error("Invalid logout response"); 
-                return;
-            }
-            await AsyncStorage.removeItem('token');
-            await AsyncStorage.removeItem('refreshToken');
-            navigation.navigate("LoginScreen");
-            return {
-                "message": data.message
-            };
 
-        } catch (error : any) {
-            console.error("Logout error:", error);
-            throw error;
+            // Điều hướng về Login và xoá history
+            navigation.reset({
+            index: 0,
+            routes: [{ name: 'LoginScreen' }],
+            });
+
+            return { message: data.message };
+        } catch (error: any) {
+            console.error('Logout error:', error);
+            // Dù lỗi — vẫn chắc chắn đã xoá token trong logout()
+            navigation.reset({
+            index: 0,
+            routes: [{ name: 'LoginScreen' }],
+            });
+            return { message: 'Đã đăng xuất (local)' };
         } finally {
             setIsLoading(false);
         }
-    }
+    };
+
 
 
 
