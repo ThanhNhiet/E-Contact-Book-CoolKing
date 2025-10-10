@@ -4,6 +4,7 @@ import { useAlert } from '../../hooks/useAlert';
 import type { Alert } from '../../hooks/useAlert';
 import AlertDetailModal from './AlertDetailModal';
 import logoImg from '../../assets/img/logo.png';
+import noImage from '../../assets/img/no-image.jpg';
 
 const HeaderLECpn: React.FC = () => {
     const { logout } = useAuth();
@@ -124,7 +125,7 @@ const HeaderLECpn: React.FC = () => {
                         </button>
 
                         {/* Desktop Navigation */}
-                        <nav className="hidden md:flex space-x-6">
+                        <nav className="hidden md:flex space-x-1">
                             <a
                                 href="/lecturer/schedule"
                                 className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 px-3 py-2 rounded-md hover:bg-gray-50"
@@ -266,7 +267,7 @@ const HeaderLECpn: React.FC = () => {
                                     alt="Avatar"
                                     className="w-8 h-8 rounded-full object-cover"
                                     onError={(e) => {
-                                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/32x32?text=U';
+                                        (e.target as HTMLImageElement).src = noImage;
                                     }}
                                 />
                             )}

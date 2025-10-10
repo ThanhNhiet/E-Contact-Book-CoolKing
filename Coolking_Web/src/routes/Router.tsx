@@ -4,14 +4,15 @@ import LoginPage from '../pages/auth/LoginPage';
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
 import OTPConfirmPage from '../pages/auth/OTPConfirmPage';
 import ChangePasswordPage from '../pages/auth/ChangePasswordPage';
-import AccountDbPage from '../pages/admin/Account/AccountsDashboardPage';
+import AccountDbPage from '../pages/admin/account/AccountsDashboardPage';
 import ClazzListPage from '../pages/lecturer/clazz/ClazzListPage';
 import SchedulePage from '../pages/lecturer/schedule/SchedulePage';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
-import AlertDbPage from '../pages/admin/Alert/AlertDashboardPage';
-import ChatDbPage from '../pages/admin/Chat/ChatDashboardPage';
-import CourseSectionSLPage from '../pages/admin/Chat/CourseSectionSLPage';
-import StatisticsMainPage from '../pages/admin/Statistics/StatisticsMainPage';
+import AlertDbPage from '../pages/admin/alert/AlertDashboardPage';
+import ChatDbPage from '../pages/admin/chat/ChatDashboardPage';
+import CourseSectionSLPage from '../pages/admin/chat/CourseSectionSLPage';
+import StatisticsMainPage from '../pages/admin/statistics/StatisticsMainPage';
+import ProfileInfoPage from '../pages/lecturer/profile/ProfileInfoPage';
 
 const Router: React.FC = () => {
   return (
@@ -67,6 +68,14 @@ const Router: React.FC = () => {
         />
 
         {/* Lecturer routes - cần bearer token và role lecturer */}
+        <Route 
+          path="/lecturer/profile" 
+          element={
+            <ProtectedRoute requiredRole="LECTURER">
+              <ProfileInfoPage />
+            </ProtectedRoute>
+          } 
+        />
         <Route 
           path="/lecturer/clazz" 
           element={

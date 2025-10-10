@@ -127,9 +127,35 @@ const AccountsCreateModal: React.FC<AccountsCreateModalProps> = ({ isOpen, onClo
     }
   };
 
+  // Hàm validate mật khẩu mạnh
+  const validatePassword = (password: string): string | null => {
+    if (!password) return null; // Cho phép để trống
+    
+    if (password.length < 8) {
+      return 'Mật khẩu phải có tối thiểu 8 ký tự';
+    }
+    
+    if (!/[a-zA-Z]/.test(password)) {
+      return 'Mật khẩu phải chứa ít nhất 1 chữ cái';
+    }
+    
+    if (!/\d/.test(password)) {
+      return 'Mật khẩu phải chứa ít nhất 1 chữ số';
+    }
+    
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      return 'Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt';
+    }
+    
+    return null;
+  };
+
   const validateForm = () => {
     // Check required fields
     if (formData.role !== 'ADMIN' && !formData.user_id) return false;
+    
+    // Validate password if provided
+    if (formData.password && validatePassword(formData.password)) return false;
     
     // Email is optional, but if provided must be valid format
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return false;
@@ -302,6 +328,32 @@ const AccountsCreateModal: React.FC<AccountsCreateModalProps> = ({ isOpen, onClo
               placeholder="Có thể để trống để hệ thống tự tạo"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />
+            {formData.password && (
+              <div className="mt-2 text-sm text-gray-600">
+                <p className="font-medium mb-1">Yêu cầu mật khẩu:</p>
+                <ul className="space-y-1 text-xs">
+                  <li className={`flex items-center ${formData.password.length >= 8 ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className="mr-2">{formData.password.length >= 8 ? '✓' : '•'}</span>
+                    Tối thiểu 8 ký tự
+                  </li>
+                  <li className={`flex items-center ${/[a-zA-Z]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className="mr-2">{/[a-zA-Z]/.test(formData.password) ? '✓' : '•'}</span>
+                    Ít nhất 1 chữ cái
+                  </li>
+                  <li className={`flex items-center ${/\d/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className="mr-2">{/\d/.test(formData.password) ? '✓' : '•'}</span>
+                    Ít nhất 1 chữ số
+                  </li>
+                  <li className={`flex items-center ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className="mr-2">{/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password) ? '✓' : '•'}</span>
+                    Ít nhất 1 ký tự đặc biệt
+                  </li>
+                </ul>
+              </div>
+            )}
+            {formData.password && validatePassword(formData.password) && (
+              <p className="text-red-500 text-xs mt-1">{validatePassword(formData.password)}</p>
+            )}
           </div>
 
           {/* Email */}
