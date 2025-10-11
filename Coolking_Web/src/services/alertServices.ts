@@ -71,9 +71,32 @@ class AlertService {
       return response.data;
    }
 
+   // GET /api/alerts/lecturer?page=1&pageSize=10
+   async getAlertsForLecturer(page: number, pageSize: number) {
+      const response = await axiosInstance.get(`/alerts/lecturer`, {
+         params: {
+            page: page,
+            pagesize: pageSize
+         }
+      });
+      return response.data;
+   }
+
    // PUT /api/alerts/<alertId>/read
    async markAlertAsRead(alertId: string) {
       const response = await axiosInstance.put(`/alerts/${alertId}/read`);
+      return response.data;
+   }
+
+   // POST /api/alerts/system/:alertId/read
+   async markSystemAlertAsRead(alertId: string) {
+      const response = await axiosInstance.post(`/alerts/system/${alertId}/read`);
+      return response.data;
+   }
+
+   // DELETE /api/alerts/system/:alertId
+   async deleteSystemAlert4User(alertId: string) {
+      const response = await axiosInstance.delete(`/alerts/system/${alertId}`);
       return response.data;
    }
 

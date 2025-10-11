@@ -8,13 +8,32 @@ import noImage from '../../assets/img/no-image.jpg';
 
 const HeaderLECpn: React.FC = () => {
     const { logout } = useAuth();
-    const { getMyAlerts, alerts, loading, unreadCount, pages, currentPage } = useAlert();
+    const { 
+        getMyAlerts, 
+        alerts, 
+        loading, 
+        unreadCount, 
+        pages, 
+        currentPage,
+        markSystemAlertAsRead,
+        deleteSystemAlert,
+        deleteAllReadSystemAlerts
+    } = useAlert();
 
     const [showAlertBox, setShowAlertBox] = useState(false);
     const [alertPage, setAlertPage] = useState(1);
     const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [showMobileMenu, setShowMobileMenu] = useState(false);
+    const [toast, setToast] = useState<{
+        show: boolean;
+        message: string;
+        type: 'success' | 'error';
+    }>({
+        show: false,
+        message: '',
+        type: 'success'
+    });
     const alertBoxRef = useRef<HTMLDivElement>(null);
     const mobileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -73,15 +92,58 @@ const HeaderLECpn: React.FC = () => {
         setAlertPage(page);
     };
 
-    const handleAlertClick = (alert: Alert) => {
+    const showToast = (message: string, type: 'success' | 'error') => {
+        setToast({ show: true, message, type });
+        setTimeout(() => {
+            setToast({ show: false, message: '', type: 'success' });
+        }, 3000);
+    };
+
+    const handleAlertClick = async (alert: Alert) => {
         setSelectedAlert(alert);
         setShowDetailModal(true);
         setShowAlertBox(false);
+
+        // Đánh dấu đã đọc nếu là thông báo hệ thống và chưa đọc
+        if (alert.targetScope === 'all' && !alert.isRead) {
+            try {
+                const response = await markSystemAlertAsRead(alert._id);
+                if (response?.success) {
+                    // Reload alerts để cập nhật trạng thái
+                    getMyAlerts(alertPage, 10);
+                }
+            } catch (error) {
+                console.error('Error marking alert as read:', error);
+            }
+        }
     };
 
     const closeDetailModal = () => {
         setShowDetailModal(false);
         setSelectedAlert(null);
+    };
+
+    const handleDeleteAlert = async (alertId: string, e: React.MouseEvent) => {
+        e.stopPropagation(); // Ngăn không cho click event lan truyền đến parent
+        try {
+            const response = await deleteSystemAlert(alertId);
+            if (response?.success) {
+                showToast('Xóa thông báo thành công', 'success');
+                getMyAlerts(alertPage, 10); // Reload alerts
+            }
+        } catch (error) {
+            showToast('Có lỗi xảy ra khi xóa thông báo', 'error');
+        }
+    };
+
+    const handleDeleteAllReadAlerts = async () => {
+        try {
+            await deleteAllReadSystemAlerts();
+            showToast('Xóa tất cả thông báo đã đọc thành công', 'success');
+            getMyAlerts(alertPage, 10); // Reload alerts
+        } catch (error) {
+            showToast('Có lỗi xảy ra khi xóa thông báo', 'error');
+        }
     };
 
     const formatTargetScope = (targetScope: string) => {
@@ -95,6 +157,9 @@ const HeaderLECpn: React.FC = () => {
     const closeMobileMenu = () => {
         setShowMobileMenu(false);
     };
+
+    // Kiểm tra xem có thể xóa tất cả thông báo không (tất cả đều đã đọc)
+    const canDeleteAll = alerts.length > 0 && alerts.every(alert => alert.isRead && alert.targetScope === 'all');
 
     return (
         <header className="bg-white shadow-md border-b">
@@ -180,8 +245,17 @@ const HeaderLECpn: React.FC = () => {
                             <div
                                 className="absolute right-1/2 translate-x-1/3 sm:right-0 sm:translate-x-0 top-12 w-[90vw] sm:w-96 bg-white rounded-lg shadow-xl border z-50"
                             >
-                                <div className="p-4 border-b bg-gray-50">
+                                <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
                                     <h3 className="font-semibold text-gray-800">Thông báo</h3>
+                                    {canDeleteAll && (
+                                        <button
+                                            onClick={handleDeleteAllReadAlerts}
+                                            className="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors"
+                                            title="Xóa tất cả thông báo đã đọc"
+                                        >
+                                            Xóa tất cả
+                                        </button>
+                                    )}
                                 </div>
 
                                 <div className="max-h-80 overflow-y-auto">
@@ -199,19 +273,32 @@ const HeaderLECpn: React.FC = () => {
                                             <div
                                                 key={alert._id}
                                                 onClick={() => handleAlertClick(alert)}
-                                                className="p-4 border-b hover:bg-gray-50 cursor-pointer"
+                                                className="p-4 border-b hover:bg-gray-50 cursor-pointer relative group"
                                             >
                                                 <div className="flex justify-between items-start mb-2">
-                                                    <h4 className="font-medium text-gray-800 text-sm overflow-hidden" style={{
+                                                    <h4 className="font-medium text-gray-800 text-sm overflow-hidden pr-8" style={{
                                                         display: '-webkit-box',
                                                         WebkitLineClamp: 2,
                                                         WebkitBoxOrient: 'vertical'
                                                     }}>
                                                         {alert.header}
                                                     </h4>
-                                                    {!alert.isRead && (
-                                                        <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2 mt-1"></span>
-                                                    )}
+                                                    <div className="flex items-center space-x-2">
+                                                        {alert.isRead && alert.targetScope === 'all' && (
+                                                            <button
+                                                                onClick={(e) => handleDeleteAlert(alert._id, e)}
+                                                                className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 p-1"
+                                                                title="Xóa thông báo"
+                                                            >
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                </svg>
+                                                            </button>
+                                                        )}
+                                                        {!alert.isRead && (
+                                                            <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <p className="text-gray-600 text-xs mb-2 overflow-hidden" style={{
                                                     display: '-webkit-box',
@@ -358,6 +445,28 @@ const HeaderLECpn: React.FC = () => {
                 isOpen={showDetailModal}
                 onClose={closeDetailModal}
             />
+
+            {/* Toast Notification */}
+            {toast.show && (
+                <div className={`fixed top-4 right-4 z-[60] p-4 rounded-lg shadow-lg transform transition-all duration-300 ${
+                    toast.type === 'success' 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-red-500 text-white'
+                }`}>
+                    <div className="flex items-center">
+                        {toast.type === 'success' ? (
+                            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                        ) : (
+                            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                        )}
+                        <span className="font-medium">{toast.message}</span>
+                    </div>
+                </div>
+            )}
         </header>
     );
 };
