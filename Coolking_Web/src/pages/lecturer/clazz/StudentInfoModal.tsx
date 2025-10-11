@@ -182,7 +182,7 @@ const StudentInfoModal: React.FC<StudentInfoModalProps> = ({
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {student.initial_evaluate === 'ok' ? 'Bình thường' : 'Cần cảnh báo'}
+                      {student.initial_evaluate === 'ok' ? 'Bình thường' : 'Cần nhắc nhở'}
                     </div>
                   </div>
                 </div>

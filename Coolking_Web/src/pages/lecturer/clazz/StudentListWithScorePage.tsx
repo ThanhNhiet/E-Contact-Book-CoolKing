@@ -231,7 +231,7 @@ const StudentListWithScorePage: React.FC = () => {
                               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                           }`}
                         >
-                          Gửi cảnh báo
+                          Gửi nhắc nhở
                         </button>
                       </td>
                     </tr>
