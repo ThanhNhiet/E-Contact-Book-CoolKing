@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+import {deleteRefreshToken, getRefreshToken,saveRefreshToken} from "@/src/utils/TokenManager";
+//import NavigationService from '../services/NavigationService';
 
 // Axios instance config
 const axiosInstance = axios.create({
@@ -98,7 +100,7 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = await AsyncStorage.getItem('refreshToken');
+        const refreshToken = await getRefreshToken();
         const base = await AsyncStorage.getItem('url');
 
         if (!refreshToken) throw new Error('No refresh token available');
@@ -106,7 +108,6 @@ axiosInstance.interceptors.response.use(
 
         // GỌI REFRESH (không dùng axiosInstance để tránh interceptor auth)
         const tokenResponse = await axios.post(`${base}${REFRESH_ENDPOINT}`, {
-          grant_type: 'refresh_token',
           refresh_token: refreshToken,
         });
 
@@ -117,7 +118,7 @@ axiosInstance.interceptors.response.use(
 
         // Lưu token mới
         await AsyncStorage.setItem('token', newAccessToken);
-        if (newRefreshToken) await AsyncStorage.setItem('refreshToken', newRefreshToken);
+        if (newRefreshToken) await saveRefreshToken(newRefreshToken);
 
         // Thông báo queue
         processQueue(null, newAccessToken);
@@ -130,11 +131,11 @@ axiosInstance.interceptors.response.use(
 
         // Xoá token, thông báo queue lỗi
         await AsyncStorage.removeItem('token');
-        await AsyncStorage.removeItem('refreshToken');
+        await deleteRefreshToken();
         processQueue(refreshError, null);
 
         // Tuỳ bạn: có thể điều hướng về màn Login ở đây
-        // e.g., NavigationService.navigate('Login');
+        //NavigationService.navigate('LoginScreen');
 
         return Promise.reject(error);
       } finally {
