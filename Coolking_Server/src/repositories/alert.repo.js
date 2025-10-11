@@ -1,5 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
-const { Alert } = require('../databases/mongodb/schemas');
+const { Alert, IsReadAlert } = require('../databases/mongodb/schemas');
 const mongoose = require('mongoose');
 const datetimeFormatter = require("../utils/format/datetime-formatter");
 
@@ -118,30 +118,61 @@ const getAlertsByUser = async (userID, page = 1, pageSize = 10) => {
         }
 
         const skip = (page - 1) * pageSize;
-        const currentDate = new Date();
-        const sevenDaysAgo = new Date(currentDate.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-        // Lấy thông báo cho user cụ thể và thông báo cho tất cả
-        const alerts = await Alert.find({
-            $or: [
-                { receiverID: userID, targetScope: 'person' }, // Thông báo cá nhân
-                { targetScope: 'all' } // Thông báo cho tất cả
-            ]
+        // Lấy thông báo cá nhân
+        const personalAlerts = await Alert.find({
+            receiverID: userID,
+            targetScope: 'person'
         })
-            .sort({ createdAt: -1 }) // Sắp xếp theo thời gian createdAt giảm dần
-            .skip(skip)
-            .limit(pageSize)
-            .select('_id senderID receiverID header body targetScope isRead createdAt createdAt');
+            .sort({ createdAt: -1 })
+            .select('_id senderID receiverID header body targetScope isRead createdAt updatedAt');
 
-        // Xử lý dữ liệu alerts
-        const processedAlerts = alerts.map(alert => {
-            let isRead = alert.isRead;
+        // Lấy thông báo hệ thống (all)
+        const systemAlerts = await Alert.find({
+            targetScope: 'all'
+        })
+            .sort({ createdAt: -1 })
+            .select('_id senderID receiverID header body targetScope isRead createdAt updatedAt');
 
-            // Xử lý logic đặc biệt cho targetScope: 'all'
-            if (alert.targetScope === 'all' && alert.createdAt < sevenDaysAgo) {
-                isRead = true; // Mặc định set isRead = true nếu quá 7 ngày
-            }
+        // Lấy trạng thái đọc/xóa của thông báo hệ thống cho user này
+        const systemAlertIds = systemAlerts.map(alert => alert._id);
+        const isReadAlerts = await IsReadAlert.find({
+            alertID: { $in: systemAlertIds },
+            receiverID: userID
+        });
 
+        // Tạo map để tra cứu nhanh trạng thái isRead và isDelete
+        const isReadAlertMap = {};
+        isReadAlerts.forEach(item => {
+            isReadAlertMap[item.alertID] = {
+                isRead: item.isRead,
+                isDelete: item.isDelete
+            };
+        });
+
+        // Xử lý thông báo hệ thống - loại bỏ những thông báo đã bị xóa
+        const processedSystemAlerts = systemAlerts
+            .filter(alert => {
+                const readInfo = isReadAlertMap[alert._id];
+                return !readInfo || !readInfo.isDelete; // Chỉ lấy những thông báo chưa bị xóa
+            })
+            .map(alert => {
+                const readInfo = isReadAlertMap[alert._id];
+                return {
+                    _id: alert._id,
+                    senderID: alert.senderID,
+                    receiverID: alert.receiverID,
+                    header: alert.header,
+                    body: alert.body,
+                    targetScope: alert.targetScope,
+                    isRead: readInfo ? readInfo.isRead : false, // Mặc định chưa đọc nếu chưa có bản ghi
+                    createdAt: alert.createdAt ? datetimeFormatter.formatDateTimeVN(alert.createdAt) : null,
+                    updatedAt: alert.updatedAt ? datetimeFormatter.formatDateTimeVN(alert.updatedAt) : null
+                };
+            });
+
+        // Xử lý thông báo cá nhân
+        const processedPersonalAlerts = personalAlerts.map(alert => {
             return {
                 _id: alert._id,
                 senderID: alert.senderID,
@@ -149,39 +180,30 @@ const getAlertsByUser = async (userID, page = 1, pageSize = 10) => {
                 header: alert.header,
                 body: alert.body,
                 targetScope: alert.targetScope,
-                isRead: isRead,
+                isRead: alert.isRead,
                 createdAt: alert.createdAt ? datetimeFormatter.formatDateTimeVN(alert.createdAt) : null,
                 updatedAt: alert.updatedAt ? datetimeFormatter.formatDateTimeVN(alert.updatedAt) : null
             };
         });
 
-        // Đếm tổng số thông báo
-        const total = await Alert.countDocuments({
-            $or: [
-                { receiverID: userID, targetScope: 'person' },
-                { targetScope: 'all' }
-            ]
-        });
+        // Gộp tất cả thông báo và sắp xếp theo thời gian
+        const allAlerts = [...processedSystemAlerts, ...processedPersonalAlerts]
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(skip, skip + pageSize);
+
+        // Đếm tổng số thông báo (không bao gồm thông báo hệ thống đã xóa)
+        const totalPersonal = personalAlerts.length;
+        const totalSystem = processedSystemAlerts.length;
+        const total = totalPersonal + totalSystem;
 
         // Đếm số thông báo chưa đọc
-        const personalUnreadCount = await Alert.countDocuments({
-            receiverID: userID,
-            targetScope: 'person',
-            isRead: false
-        });
-
-        // Đếm thông báo 'all' chưa đọc (chỉ tính những thông báo trong vòng 7 ngày)
-        const allUnreadCount = await Alert.countDocuments({
-            targetScope: 'all',
-            isRead: false,
-            createdAt: { $gte: sevenDaysAgo }
-        });
-
-        const unreadCount = personalUnreadCount + allUnreadCount;
+        const personalUnreadCount = personalAlerts.filter(alert => !alert.isRead).length;
+        const systemUnreadCount = processedSystemAlerts.filter(alert => !alert.isRead).length;
+        const unreadCount = personalUnreadCount + systemUnreadCount;
 
         // Tạo pagination links
         const linkPrev = page > 1 ? `/api/alerts/my-alerts?page=${page - 1}&pageSize=${pageSize}` : null;
-        const linkNext = (page - 1) * pageSize + processedAlerts.length < total ? `/api/alerts/my-alerts?page=${page + 1}&pageSize=${pageSize}` : null;
+        const linkNext = (page - 1) * pageSize + allAlerts.length < total ? `/api/alerts/my-alerts?page=${page + 1}&pageSize=${pageSize}` : null;
 
         // Tạo pages array (3 trang kế tiếp từ trang hiện tại)
         const totalPages = Math.ceil(total / pageSize);
@@ -196,7 +218,7 @@ const getAlertsByUser = async (userID, page = 1, pageSize = 10) => {
             total,
             page,
             pageSize,
-            alerts: processedAlerts,
+            alerts: allAlerts,
             linkPrev,
             linkNext,
             pages,
@@ -250,6 +272,50 @@ const markAlertAsRead = async (alertId, userID) => {
     }
 };
 
+/**
+ *  Đánh dấu thông báo hệ thống (targetScope: 'all') đã đọc
+ *  Tạo bản ghi trong IsReadAlert
+ * @param {String} alertID - ID thông báo
+ * @param {String} receiverID - ID người nhận
+ * @returns {Object} - Kết quả tạo bản ghi
+ */
+const markSystemAlertAsRead = async (alertID, receiverID) => {
+    try {
+        if (!alertID) {
+            throw new Error('AlertID là bắt buộc');
+        }
+        if (!receiverID) {
+            throw new Error('ReceiverID là bắt buộc');
+        }
+
+        // Kiểm tra thông báo có tồn tại và là thông báo hệ thống không
+        const alert = await Alert.findOne({
+            _id: alertID,
+            targetScope: 'all'
+        });
+        if (!alert) {
+            throw new Error('Không tìm thấy thông báo hoặc không phải là thông báo hệ thống');
+        }
+
+        // Tạo bản ghi trong IsReadAlert
+        const isReadAlert = new IsReadAlert({
+            _id: uuidv4(),
+            alertID: alert._id,
+            receiverID: receiverID
+        });
+        await isReadAlert.save();
+
+        return {
+            success: true,
+            message: 'Đánh dấu đã đọc thành công'
+        };
+
+    } catch (error) {
+        console.error('Error in markSystemAlertAsRead:', error);
+        throw new Error(`Lỗi khi đánh dấu đã đọc: ${error.message}`);
+    }
+};
+
 // Xóa thông báo dành cho admin
 const deleteAlert4Admin = async (alertId, senderID, createdAt) => {
     try {
@@ -264,6 +330,7 @@ const deleteAlert4Admin = async (alertId, senderID, createdAt) => {
                 throw new Error('Alert này không phải là thông báo hệ thống');
             }
             await Alert.findByIdAndDelete(alertId);
+            await IsReadAlert.deleteMany({ alertID: alertId });
             return {
                 success: true,
                 message: 'Xóa thông báo thành công'
@@ -360,6 +427,43 @@ const deleteAlert4Receiver = async (alertID, receiverID) => {
 
     } catch (error) {
         console.error('Error in deleteAlert4Lecturer:', error);
+        throw new Error(`Lỗi khi xóa thông báo: ${error.message}`);
+    }
+};
+
+/**
+ * Xóa mềm thông báo ở phạm vi all dành cho người nhận
+ * @param {String} alertID - ID thông báo
+ * @param {String} receiverID - ID người nhận
+ */
+const deleteAlertSystem4Receiver = async (alertID, receiverID) => {
+    try {
+        if (!alertID) {
+            throw new Error('AlertID là bắt buộc');
+        }
+        if (!receiverID) {
+            throw new Error('ReceiverID là bắt buộc');
+        }
+
+        // Tìm thông báo
+        const isReadAlertRecord = await IsReadAlert.findOne({
+            alertID: alertID,
+            receiverID: receiverID
+        });
+        if (!isReadAlertRecord) {
+            throw new Error('Không tìm thấy thông báo');
+        }
+
+        // Xóa mềm thông báo
+        isReadAlertRecord.isDelete = true;
+        await isReadAlertRecord.save();
+
+        return {
+            success: true,
+            message: 'Xóa thông báo thành công'
+        };
+    } catch (error) {
+        console.error('Error in deleteAlertSystem4Receiver:', error);
         throw new Error(`Lỗi khi xóa thông báo: ${error.message}`);
     }
 };
@@ -540,6 +644,70 @@ const updateAlert4Admin = async (alertId, header, body) => {
     }
 };
 
+/**
+ * Lấy danh sách thông báo dựa theo người gửi
+ * @param {String} senderID - ID người gửi
+ * @param {Number} page - Trang hiện tại (default: 1)
+ * @param {Number} pageSize - Số lượng alert mỗi trang (default: 10)
+ * @returns {Object} - Danh sách thông báo
+ */
+const getAlertsBySender = async (senderID, page = 1, pageSize = 10) => {
+    try {
+        if (!senderID) {
+            throw new Error('SenderID là bắt buộc');
+        }
+
+        const skip = (page - 1) * pageSize;
+
+        const alerts = await Alert.find({ senderID })
+            .skip(skip)
+            .limit(pageSize)
+            .sort({ createdAt: -1 });
+
+        const total = await Alert.countDocuments({ senderID });
+
+        // Chuẩn hóa dữ liệu trả về
+        const processedAlerts = alerts.map(alert => ({
+            _id: alert._id,
+            senderID: alert.senderID || 'System',
+            receiverID: alert.receiverID || 'All',
+            header: alert.header,
+            body: alert.body,
+            targetScope: alert.targetScope,
+            isRead: alert.isRead,
+            createdAt: alert.createdAt ? datetimeFormatter.formatDateTimeVN(alert.createdAt) : null,
+            updatedAt: alert.updatedAt ? datetimeFormatter.formatDateTimeVN(alert.updatedAt) : null
+        }));
+
+        const linkPrev = page > 1 ? `/api/alerts/sender/${senderID}?page=${page - 1}&pageSize=${pageSize}` : null;
+        const linkNext = (page - 1) * pageSize + processedAlerts.length < total
+            ? `/api/alerts/sender/${senderID}?page=${page + 1}&pageSize=${pageSize}`
+            : null;
+        
+        const totalPages = Math.ceil(total / pageSize);
+        const pages = [];
+        for (let i = 1; i <= totalPages; i++) {
+            if (i >= page && i < page + 3) {
+                pages.push(i);
+            }
+        }
+
+        return {
+            success: true,
+            total,
+            page,
+            pageSize,
+            alerts: processedAlerts,
+            linkPrev,
+            linkNext,
+            pages
+        };
+    } catch (error) {
+        console.error('Error getting alerts by sender:', error);
+        throw new Error(`Lỗi khi lấy danh sách thông báo: ${error.message}`);
+    }
+};
+
 module.exports = {
     sendAlertToAll,
     sendAlertToPerson,
@@ -550,5 +718,8 @@ module.exports = {
     deleteAlert4Lecturer,
     deleteAlert4Receiver,
     getAllAlerts4Admin,
-    searchAlertsByKeyword4Admin
+    searchAlertsByKeyword4Admin,
+    getAlertsBySender,
+    markSystemAlertAsRead,
+    deleteAlertSystem4Receiver
 };

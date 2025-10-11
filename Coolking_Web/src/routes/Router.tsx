@@ -13,6 +13,7 @@ import ChatDbPage from '../pages/admin/chat/ChatDashboardPage';
 import CourseSectionSLPage from '../pages/admin/chat/CourseSectionSLPage';
 import StatisticsMainPage from '../pages/admin/statistics/StatisticsMainPage';
 import ProfileInfoPage from '../pages/lecturer/profile/ProfileInfoPage';
+import StudentListWithScorePage from '../pages/lecturer/clazz/StudentListWithScorePage';
 
 const Router: React.FC = () => {
   return (
@@ -92,7 +93,15 @@ const Router: React.FC = () => {
             </ProtectedRoute>
           } 
         />
-        
+        <Route 
+          path="/lecturer/clazz/students/:course_section_id" 
+          element={
+            <ProtectedRoute requiredRole="LECTURER">
+              <StudentListWithScorePage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Redirect any unknown routes to login */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
