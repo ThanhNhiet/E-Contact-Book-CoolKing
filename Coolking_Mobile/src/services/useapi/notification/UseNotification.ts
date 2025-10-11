@@ -1,6 +1,6 @@
 import { getNotifications, markAsRead } from "@/src/services/api/notification/NotificationApi";
-import { useEffect, useState, useMemo } from "react"; // 👈 Import useMemo
-import { getAlertID, deleteAlertID } from "@/src/utils/AlertManager";
+import { useEffect, useState, useMemo } from "react";
+
 
 export type NotificationItem = {
     _id: string;
@@ -62,7 +62,7 @@ export const UseNotification = () => {
     };
 
 
-    
+
 
     return {
         notifications,
