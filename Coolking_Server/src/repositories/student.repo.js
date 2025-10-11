@@ -152,11 +152,17 @@ const getStudentsScoreByCourseSectionId4Lecturer = async (course_section_id) => 
                 }
 
                 // Kiểm tra các điều kiện danger
-                if ((regularAverage !== null && regularAverage < 1) ||
-                    (score.mid !== null && score.mid < 4) ||
-                    (score.final !== null && score.final < 3) ||
-                    (score.final !== null && score.final < 4)) {
+                // 1. Nếu điểm trung bình regular < 4 và mid < 4 và chưa có final
+                if ((regularAverage !== null && regularAverage < 4) && (score.mid !== null && score.mid < 4) && (score.final === null)) {
                     initial_evaluate = 'danger';
+                }
+                // 2. Nếu final < 3
+                else if (score.final !== null && score.final < 3) {
+                    initial_evaluate = 'Not passed';
+                }
+                // 3. Nếu avr < 4
+                else if (score.avr !== null && score.avr < 4) {
+                    initial_evaluate = 'Not passed';
                 }
             }
 

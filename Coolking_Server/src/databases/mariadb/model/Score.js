@@ -57,7 +57,7 @@ module.exports = function(sequelize, DataTypes) {
     },
     avr: {
       type: DataTypes.DOUBLE,
-      allowNull: false
+      allowNull: true
     }
   }, {
     sequelize,
