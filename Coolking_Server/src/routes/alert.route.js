@@ -11,6 +11,12 @@ router.put('/:alertId/read', alertController.markAlertAsRead);
 // Xóa thông báo (user có thể xóa thông báo của mình)
 router.delete('/', alertController.deleteAlert);
 
+// POST /api/alerts/system/:alertId/read
+router.post('/system/:alertId/read', alertController.markSystemAlertAsRead);
+
+// DELETE /api/alerts/system/:alertId
+router.delete('/system/:alertId', alertController.deleteAlertSystem4Receiver);
+
 /**
  * ADMIN ONLY ROUTES
  */
@@ -31,5 +37,8 @@ router.put('/:alertId', alertController.updateAlert4Admin);
  */
 // POST /api/alerts/send-person
 router.post('/send-person', alertController.sendAlertToPerson);
+
+// GET /api/alerts/lecturer?page=1&pageSize=10
+router.get('/lecturer', alertController.getAlertsBySender);
 
 module.exports = router;

@@ -308,6 +308,77 @@ const updateAlert4Admin = async (req, res) => {
     }
 };
 
+/**
+ * Lấy danh sách thông báo của người gửi hiện tại
+ * GET /api/alerts/lecturer?page=1&pageSize=10
+ */
+const getAlertsBySender = async (req, res) => {
+    try {
+        // Lấy thông tin người dùng từ token
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'LECTURER') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        // Lấy pagination params
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const result = await alertRepo.getAlertsBySender(decoded.user_id, page, pageSize);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in getAlertsBySender controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi lấy danh sách thông báo'
+        });
+    }
+};
+
+/**
+ * Đánh dấu thông báo đã đọc cho thông báo hệ thống
+ * POST /api/alerts/system/:alertId/read
+ */
+const markSystemAlertAsRead = async (req, res) => {
+    try {
+        // Lấy thông tin người dùng từ token
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        const { alertId } = req.params;
+        const result = await alertRepo.markSystemAlertAsRead(alertId, decoded.user_id);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in markSystemAlertAsRead controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi đánh dấu thông báo là đã đọc'
+        });
+    }
+};
+
+/**
+ * Xóa thông báo hệ thống cho người nhận
+ * DELETE /api/alerts/system/:alertId
+ */
+const deleteAlertSystem4Receiver = async (req, res) => {
+    try {
+        // Lấy thông tin người dùng từ token
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        const { alertId } = req.params;
+        const result = await alertRepo.deleteAlertSystem4Receiver(alertId, decoded.user_id);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in deleteAlertSystem4Receiver controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi xóa thông báo hệ thống'
+        });
+    }
+};
+
 module.exports = {
     sendAlertToAll,
     sendAlertToPerson,
@@ -316,5 +387,8 @@ module.exports = {
     deleteAlert,
     getAllAlerts,
     searchAlerts,
-    updateAlert4Admin
+    updateAlert4Admin,
+    getAlertsBySender,
+    markSystemAlertAsRead,
+    deleteAlertSystem4Receiver
 };
