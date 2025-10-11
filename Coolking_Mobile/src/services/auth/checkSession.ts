@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {deleteRefreshToken, getRefreshToken, saveRefreshToken} from "@/src/utils/TokenManager";
 import axios from "axios";
 
 const REFRESH_ENDPOINT = "/api/public/refresh-token";
@@ -10,7 +11,7 @@ const REFRESH_ENDPOINT = "/api/public/refresh-token";
 export const checkAndRefreshSession = async (): Promise<boolean> => {
   try {
     const base = await AsyncStorage.getItem("url");
-    const refreshToken = await AsyncStorage.getItem("refreshToken");
+    const refreshToken = await getRefreshToken();
 
     if (!base || !refreshToken) return false;
 
@@ -27,14 +28,14 @@ export const checkAndRefreshSession = async (): Promise<boolean> => {
 
     // ✅ Lưu token mới
     await AsyncStorage.setItem("token", newAccessToken);
-    if (newRefreshToken) await AsyncStorage.setItem("refreshToken", newRefreshToken);
+    if (newRefreshToken) await saveRefreshToken(newRefreshToken);
     return true;
   } catch (error) {
     console.warn("⚠️ Refresh token hết hạn hoặc lỗi:", error);
 
     // ❌ Xóa token hết hạn
     await AsyncStorage.removeItem("token");
-    await AsyncStorage.removeItem("refreshToken");
+    await deleteRefreshToken();
     return false;
   }
 };

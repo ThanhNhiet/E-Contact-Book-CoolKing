@@ -16,10 +16,15 @@ interface Props {
 export default function TopNavigations_Home({
   navigation: any,
   profileNavigation,
-  initialNotifications,
 }: Props) {
 
-  const {notifications,setNotifications, loading, error } = UseNotification();
+  const {
+    notifications,
+    setNotifications, 
+    loading, 
+    error,  
+    fetchNotifications,
+  } = UseNotification();
   const [open, setOpen] = useState(false);
  
 
@@ -27,9 +32,10 @@ export default function TopNavigations_Home({
 
   const onPressBell = () => setOpen(true);
 
-  const onPressItem = (item: NotificationItem) => {
-    setNotifications(cur => cur.map(n => (n._id === item._id ? { ...n, isRead: true } : n)));
+  const onPressItem =  async (item: NotificationItem) => {
+    //setNotifications(cur => cur.map(n => (n._id === item._id ? { ...n, isRead: true } : n)));
     // ví dụ: điều hướng chi tiết nếu cần
+     await fetchNotifications();
     // navigation.navigate("SomeDetail", { id: item.id });
   };
 
@@ -67,6 +73,7 @@ export default function TopNavigations_Home({
         onClose={() => setOpen(false)}
         onPressItem={onPressItem}
         onMarkAllRead={onMarkAllRead}
+        fetchNotifications={fetchNotifications}
       />
     </>
   );

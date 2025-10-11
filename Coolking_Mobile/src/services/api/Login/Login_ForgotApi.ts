@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {saveRefreshToken,deleteRefreshToken} from "@/src/utils/TokenManager";
 import axiosInstance from "@/src/configs/axiosInstance";
 import { Platform } from 'react-native';
 import {getUserInfoFromToken} from "@/src/utils/DecodeToken";
@@ -43,7 +44,7 @@ export const getlogin = async (username: string, password: string) => {
         }
         // Store tokens
         await AsyncStorage.setItem('token', access_token);
-        await AsyncStorage.setItem('refreshToken', refresh_token);
+        await saveRefreshToken(refresh_token);
         const userInfo = getUserInfoFromToken(access_token);
         if (!userInfo) {
             throw new Error("Invalid token");
@@ -116,7 +117,7 @@ export const logout = async () => {
         throw error;
     } finally {
         await AsyncStorage.removeItem('token');
-        await AsyncStorage.removeItem('refreshToken');
+        await deleteRefreshToken();
         await AsyncStorage.removeItem('role');
         await AsyncStorage.removeItem('userId');
     }

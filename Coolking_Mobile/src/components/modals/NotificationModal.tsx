@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 export type NotificationItem = {
   _id: string;
   senderID: string;
-  receiverID: string;
+  receiverID: string | null; // receiverID can be null
   header: string;
   body?: string;
   targetScope: string;
@@ -29,6 +29,7 @@ interface Props {
   onClose: () => void;
   onPressItem: (item: NotificationItem) => void;
   onMarkAllRead: () => void;
+  fetchNotifications: () => Promise<void>;
 }
 
 const formatTime = (input: string | number | Date) => {
@@ -44,7 +45,13 @@ export default function NotificationModal({
   onClose,
   onPressItem,
   onMarkAllRead,
+  fetchNotifications,
 }: Props) {
+
+
+  const handlePressItem = async (item: NotificationItem) => {
+   
+  };
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
@@ -72,7 +79,7 @@ export default function NotificationModal({
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.item, !item.isRead && styles.itemUnread]}
-                  onPress={() => onPressItem(item)}
+                  onPress={() => {handlePressItem(item)}}
                   activeOpacity={0.7}
                 >
                   {/* <Ionicons
