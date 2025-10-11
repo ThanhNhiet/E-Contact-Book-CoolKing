@@ -39,9 +39,22 @@ export const useAlert = () => {
             setLinkNext(data.linkNext);
             setPages(data.pages);
             setUnreadCount(data.unreadCount || 0);
+        } catch (error: any) {
+            setError(error.message || 'Failed to fetch alerts');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Gửi thông báo đến người dùng cụ thể
+    const sendAlertPersonal = useCallback(async (header: string, body: string, receiversID: string[]) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await alertService.sendAlertPersonal(header, body, receiversID);
             return data;
         } catch (error: any) {
-            setError(error.message);
+            setError(error.message || 'Failed to send alert');
         } finally {
             setLoading(false);
         }
@@ -59,6 +72,7 @@ export const useAlert = () => {
         pages,
         unreadCount,
 
-        getMyAlerts
+        getMyAlerts,
+        sendAlertPersonal
     };
 };

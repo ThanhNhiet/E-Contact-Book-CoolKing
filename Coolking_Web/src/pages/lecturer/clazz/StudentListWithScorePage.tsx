@@ -22,6 +22,7 @@ const StudentListWithScorePage: React.FC = () => {
 
   const handleSendWarning = (student: StudentWithScore) => {
     setSelectedStudent(student);
+    fetchStudentInfo(student.student_id);
     setShowWarningModal(true);
   };
 
@@ -253,6 +254,7 @@ const StudentListWithScorePage: React.FC = () => {
             setSelectedStudent(null);
           }}
           student={selectedStudent}
+          studentInfo={studentInfo}
           courseSectionData={courseSectionData}
         />
       )}

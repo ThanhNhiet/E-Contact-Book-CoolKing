@@ -130,7 +130,7 @@ const ClazzListPage: React.FC = () => {
                 <div className="bg-white rounded-lg shadow-sm border">
                     {/* Header */}
                     <div className="px-6 py-4 border-b border-gray-200">
-                        <h1 className="text-2xl font-bold text-gray-800 mb-4 text-center">Quản lý Lớp học phần</h1>
+                        <h1 className="text-2xl font-bold text-gray-800 mb-4 text-center">Lớp học phần</h1>
 
                         {/* Search and Filter Controls */}
                         <div className="space-y-4">

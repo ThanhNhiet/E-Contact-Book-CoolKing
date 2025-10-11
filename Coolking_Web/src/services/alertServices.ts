@@ -76,6 +76,16 @@ class AlertService {
       const response = await axiosInstance.put(`/alerts/${alertId}/read`);
       return response.data;
    }
+
+   // POST /api/alerts/send-person
+   async sendAlertPersonal(header: string, body: string, receiversID: string[]) {
+      const response = await axiosInstance.post(`/alerts/send-person`, {
+         receiversID,
+         header,
+         body,
+      });
+      return response.data;
+   }
 }
 // Export singleton instance
 export const alertService = new AlertService();
