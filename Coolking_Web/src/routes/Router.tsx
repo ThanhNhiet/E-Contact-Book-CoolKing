@@ -14,6 +14,7 @@ import CourseSectionSLPage from '../pages/admin/chat/CourseSectionSLPage';
 import StatisticsMainPage from '../pages/admin/statistics/StatisticsMainPage';
 import ProfileInfoPage from '../pages/lecturer/profile/ProfileInfoPage';
 import StudentListWithScorePage from '../pages/lecturer/clazz/StudentListWithScorePage';
+import AlertListPage from '../pages/lecturer/alert/AlertListPage';
 
 const Router: React.FC = () => {
   return (
@@ -100,6 +101,14 @@ const Router: React.FC = () => {
               <StudentListWithScorePage />
             </ProtectedRoute>
           }
+        />
+        <Route 
+          path="/lecturer/alerts" 
+          element={
+            <ProtectedRoute requiredRole="LECTURER">
+              <AlertListPage />
+            </ProtectedRoute>
+          } 
         />
 
         {/* Redirect any unknown routes to login */}

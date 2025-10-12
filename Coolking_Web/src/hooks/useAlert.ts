@@ -141,6 +141,40 @@ export const useAlert = () => {
         }
     }, []);
 
+    // Lấy danh sách sinh viên và phụ huynh theo lớp học phần
+    const getStudentsAndParentsByCourseSection = useCallback(async (course_section_id: string) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await alertService.getStudentsAndParentsByCourseSection(course_section_id);
+            return data;
+        } catch (error: any) {
+            setError(error.message || 'Failed to fetch students and parents');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Tìm kiếm thông báo theo từ khóa
+    const searchAlertsByKeyword = useCallback(async (keyword: string, page: number, pageSize: number) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await alertService.searchAlerts(keyword, page, pageSize);
+            setAlerts(data.alerts || []);
+            setTotal(data.total);
+            setCurrentPage(page);
+            setPageSize(data.pageSize);
+            setLinkPrev(data.linkPrev);
+            setLinkNext(data.linkNext);
+            setPages(data.pages);
+        } catch (error: any) {
+            setError(error.message || 'Failed to search alerts');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     return {
         loading,
         error,
@@ -159,6 +193,8 @@ export const useAlert = () => {
         markSystemAlertAsRead,
         deleteSystemAlert,
         deleteAllReadSystemAlerts,
-        deleteLecturerAlert
+        deleteLecturerAlert,
+        getStudentsAndParentsByCourseSection,
+        searchAlertsByKeyword
     };
 };

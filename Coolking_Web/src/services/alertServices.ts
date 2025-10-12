@@ -109,6 +109,12 @@ class AlertService {
       });
       return response.data;
    }
+
+   // GET /api/coursesections/:course_section_id/students-parents
+   async getStudentsAndParentsByCourseSection(course_section_id: string) {
+      const response = await axiosInstance.get(`/coursesections/${course_section_id}/students-parents`);
+      return response.data;
+   }
 }
 // Export singleton instance
 export const alertService = new AlertService();
