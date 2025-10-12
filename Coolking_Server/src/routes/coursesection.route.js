@@ -11,4 +11,7 @@ router.get('/lecturer/search', courseSectionController.searchCourseSectionsByKey
 // GET /coursesections/lecturer/filter?session=&faculty=&page=&pageSize=
 router.get('/lecturer/filter', courseSectionController.filterCourseSections4Lecturer);
 
+// GET /coursesections/:course_section_id/students-parents
+router.get('/:course_section_id/students-parents', courseSectionController.getStudentsAndParentsByCourseSection);
+
 module.exports = router;

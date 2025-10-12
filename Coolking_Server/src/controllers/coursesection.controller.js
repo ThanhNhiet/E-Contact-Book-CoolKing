@@ -55,3 +55,21 @@ exports.filterCourseSections4Lecturer = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
+// GET /coursesections/:course_section_id/students-parents
+exports.getStudentsAndParentsByCourseSection = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role === 'STUDENT') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { course_section_id } = req.params;
+        const result = await accountRepo.getStudentsAndParentsByCourseSection(course_section_id);
+        res.status(200).json(result);
+    } catch (err) {
+        console.error('Error in getStudentsAndParentsByCourseSection:', err);
+        res.status(500).json({ message: err.message });
+    }
+};
