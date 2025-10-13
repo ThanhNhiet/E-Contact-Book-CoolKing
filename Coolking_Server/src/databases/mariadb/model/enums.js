@@ -12,6 +12,7 @@ module.exports = {
   StatusAttendance: {
     PRESENT: "PRESENT",
     ABSENT: "ABSENT",
+    EXCUSED: "EXCUSED",
     LATE: "LATE"
   },
   SessionName: {

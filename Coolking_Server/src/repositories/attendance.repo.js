@@ -34,7 +34,7 @@ const getStudentsByCourseSectionID = async (course_section_id) => {
             student_id: item.student.student_id,
             name: item.student.name,
             dob: item.student.dob,
-            gender: item.student.gender
+            gender: item.student.gender ? 'Nam' : 'Nữ'
         }));
 
     } catch (error) {
@@ -395,14 +395,14 @@ const createAttendanceRecord = async (lecturer_id, course_section_id, attendance
 
         return {
             success: true,
-            message: `Dữ liệu điểm danh đã được lưu thành công cho ${createdRecords.length} sinh viên`,
-            data: {
-                attendance_id: attendanceRecord.id,
-                date_attendance: date_attendance,
-                start_lesson: start_lesson,
-                end_lesson: end_lesson,
-                total_students: createdRecords.length
-            }
+            message: `Dữ liệu điểm danh đã được lưu thành công cho ${createdRecords.length} sinh viên`
+            // data: {
+            //     attendance_id: attendanceRecord.id,
+            //     date_attendance: date_attendance,
+            //     start_lesson: start_lesson,
+            //     end_lesson: end_lesson,
+            //     total_students: createdRecords.length
+            // }
         };
 
     } catch (error) {
@@ -556,15 +556,15 @@ const updateAttendanceRecord = async (attendance_id, attendanceData) => {
 
         return {
             success: true,
-            message: `Dữ liệu điểm danh đã được cập nhật thành công cho ${updatedRecords.length} sinh viên`,
-            data: {
-                attendance_id: attendance_id,
-                date_attendance: date_attendance,
-                start_lesson: start_lesson,
-                end_lesson: end_lesson,
-                total_students: updatedRecords.length,
-                updated_records: updatedRecords.length
-            }
+            message: `Dữ liệu điểm danh đã được cập nhật thành công cho ${updatedRecords.length} sinh viên`
+            // data: {
+            //     attendance_id: attendance_id,
+            //     date_attendance: date_attendance,
+            //     start_lesson: start_lesson,
+            //     end_lesson: end_lesson,
+            //     total_students: updatedRecords.length,
+            //     updated_records: updatedRecords.length
+            // }
         };
 
     } catch (error) {
