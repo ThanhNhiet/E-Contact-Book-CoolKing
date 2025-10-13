@@ -578,6 +578,44 @@ const updateAttendanceRecord = async (attendance_id, attendanceData) => {
     }
 };
 
+// Xóa attendance record và attendance_student
+const deleteAttendanceRecord = async (attendance_id) => {
+    const transaction = await sequelize.transaction();
+    try {
+        // Validate input
+        if (!attendance_id) {
+            throw new Error('attendance_id is required');
+        }
+        // Kiểm tra attendance record có tồn tại không
+        const existingAttendance = await models.Attendance.findByPk(attendance_id);
+        if (!existingAttendance) {
+            throw new Error(`Attendance record not found with id: ${attendance_id}`);
+        }
+        // Xóa các record AttendanceStudent trước
+        await models.AttendanceStudent.destroy({
+            where: { attendance_id: attendance_id },
+            transaction
+        });
+        // Xóa record Attendance
+        await models.Attendance.destroy({
+            where: { id: attendance_id },
+            transaction
+        });
+        await transaction.commit();
+        return {
+            success: true,
+            message: `Đã xóa thành công bản ghi điểm danh`
+        };
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error in deleteAttendanceRecord:', error);
+        return {
+            success: false,
+            message: `Lỗi khi xóa bản ghi điểm danh: ${error.message}`
+        };
+    }
+};
+
 module.exports = {
     getStudentsByCourseSectionID,
     getAttendanceListByCourseID,
@@ -585,5 +623,6 @@ module.exports = {
     getAttendanceStudentListByAttendanceID,
     getAttendanceDetailsByCourseSectionID,
     createAttendanceRecord,
-    updateAttendanceRecord
+    updateAttendanceRecord,
+    deleteAttendanceRecord
 };

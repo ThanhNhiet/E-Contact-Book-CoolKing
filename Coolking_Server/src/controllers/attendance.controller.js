@@ -115,3 +115,38 @@ exports.updateAttendanceStudents = async (req, res) => {
         });
     }
 };
+
+// DELETE /attendances/students/:attendance_id
+exports.deleteAttendanceStudents = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'LECTURER') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { attendance_id } = req.params;
+        if (!attendance_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mã điểm danh (attendance_id) là bắt buộc'
+            });
+        }
+        const result = await attendanceRepo.deleteAttendanceRecord(attendance_id);
+        if (result.success) {
+            return res.status(200).json(result);
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: result.message
+            });
+        }
+    } catch (error) {
+        console.error('Error in deleteAttendanceStudents:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal Server Error',
+            error: error.message
+        });
+    }
+};
