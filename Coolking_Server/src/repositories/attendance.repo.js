@@ -227,7 +227,7 @@ const getAttendanceDetailsByCourseSectionID = async (course_section_id) => {
                 return {
                     student_id: student.student_id,
                     name: student.name,
-                    dob: student.dob,
+                    dob: datetimeFormatter.formatDateVN(student.dob),
                     gender: student.gender,
                     status: attendanceData ? attendanceData.status : "ABSENT",
                     description: attendanceData ? attendanceData.description : ""
@@ -236,6 +236,7 @@ const getAttendanceDetailsByCourseSectionID = async (course_section_id) => {
 
             attendances.push({
                 date_attendance: datetimeFormatter.formatDateVN(attendance.date_attendance),
+                attendance_id: attendance.attendance_id,
                 start_lesson: attendance.start_lesson,
                 end_lesson: attendance.end_lesson,
                 students: students
