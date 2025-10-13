@@ -15,6 +15,7 @@ import StatisticsMainPage from '../pages/admin/statistics/StatisticsMainPage';
 import ProfileInfoPage from '../pages/lecturer/profile/ProfileInfoPage';
 import StudentListWithScorePage from '../pages/lecturer/studentscrore/StudentListWithScorePage';
 import AlertListPage from '../pages/lecturer/alert/AlertListPage';
+import StudentsAttendancePage from '../pages/lecturer/attendance/StudentsAttendancePage';
 
 const Router: React.FC = () => {
   return (
@@ -109,6 +110,14 @@ const Router: React.FC = () => {
               <AlertListPage />
             </ProtectedRoute>
           } 
+        />
+        <Route 
+          path="/lecturer/clazz/students-attendance/:course_section_id" 
+          element={
+            <ProtectedRoute requiredRole="LECTURER">
+              <StudentsAttendancePage />
+            </ProtectedRoute>
+          }
         />
 
         {/* Redirect any unknown routes to login */}

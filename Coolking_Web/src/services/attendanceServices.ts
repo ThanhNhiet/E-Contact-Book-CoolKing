@@ -19,15 +19,21 @@ class AttendanceService {
         return response.data;
     }
 
-    // PUT /api/attendances/students/:course_section_id
-    async updateAttendance(course_section_id: string, start_lesson: number, end_lesson: number,
+    // PUT /api/attendances/students/:attendance_id
+    async updateAttendance(attendance_id: string, start_lesson: number, end_lesson: number,
         students: { student_id: string, status: string, description?: string }[]) {
         const attendanceData = {
             start_lesson,
             end_lesson,
             students
         };
-        const response = await axiosInstance.put(`/attendances/students/${course_section_id}`, attendanceData);
+        const response = await axiosInstance.put(`/attendances/students/${attendance_id}`, attendanceData);
+        return response.data;
+    }
+
+    // DELETE /api/attendances/students/:attendance_id
+    async deleteAttendance(attendance_id: string) {
+        const response = await axiosInstance.delete(`/attendances/students/${attendance_id}`);
         return response.data;
     }
 }

@@ -13,13 +13,14 @@ import { attendanceService } from '../services/attendanceServices';
 //     "attendances": [
 //         {
 //             "date_attendance": "20-09-2025",
+//             "attendance_id": "505e3df6-93a7-11f0-a902-088fc3521198",
 //             "start_lesson": 4,
 //             "end_lesson": 6,
 //             "students": [
 //                 {
 //                     "student_id": "SV2100101",
 //                     "name": "Sinh Vien 101",
-//                     "dob": "2003-04-12",
+//                     "dob": "12-04-2003",
 //                     "gender": true,
 //                     "status": "PRESENT",
 //                     "description": "Ghi chú cho SV2100101 buổi 1"
@@ -27,7 +28,7 @@ import { attendanceService } from '../services/attendanceServices';
 //                 {
 //                     "student_id": "SV2100102",
 //                     "name": "Sinh Vien 102",
-//                     "dob": "2003-04-13",
+//                     "dob": "13-04-2003",
 //                     "gender": false,
 //                     "status": "PRESENT",
 //                     "description": "Ghi chú cho SV2100102 buổi 1"
@@ -37,13 +38,14 @@ import { attendanceService } from '../services/attendanceServices';
 //         },
 //         {
 //             "date_attendance": "27-09-2025",
+//             "attendance_id": "605e3df6-93a7-11f0-a902-088fc3521198",
 //             "start_lesson": 4,
 //             "end_lesson": 6,
 //             "students": [
 //                 {
 //                     "student_id": "SV2100101",
 //                     "name": "Sinh Vien 101",
-//                     "dob": "2003-04-12",
+//                     "dob": "12-04-2003",
 //                     "gender": true,
 //                     "status": "PRESENT",
 //                     "description": "Ghi chú cho SV2100101 buổi 2"
@@ -51,7 +53,7 @@ import { attendanceService } from '../services/attendanceServices';
 //                 {
 //                     "student_id": "SV2100102",
 //                     "name": "Sinh Vien 102",
-//                     "dob": "2003-04-13",
+//                     "dob": "13-04-2003",
 //                     "gender": false,
 //                     "status": "PRESENT",
 //                     "description": "Ghi chú cho SV2100102 buổi 2"
@@ -74,6 +76,7 @@ export interface AttendanceData {
 
 export interface Attendance {
     date_attendance: string;
+    attendance_id: string;
     start_lesson: number;
     end_lesson: number;
     students: Student[];
@@ -133,15 +136,34 @@ export const useAlert = () => {
     //     "success": true,
     //     "message": "Dữ liệu điểm danh đã được cập nhật thành công cho 3 sinh viên"
     // }
-    const updateAttendance = useCallback(async (course_section_id: string, start_lesson: number, end_lesson: number,
+    const updateAttendance = useCallback(async (attendance_id: string, start_lesson: number, end_lesson: number,
         students: { student_id: string, status: string, description?: string }[]) => {
         setLoading(true);
         setError('');
         try {
-            const response = await attendanceService.updateAttendance(course_section_id, start_lesson, end_lesson, students);
+            const response = await attendanceService.updateAttendance(attendance_id, start_lesson, end_lesson, students);
             return response;
         } catch (error: any) {
             setError(error.message || 'Failed to update attendance');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Xóa buổi điểm danh
+    // Response trả về:
+    // {
+    //     "success": true,
+    //     "message": "Đã xóa thành công bản ghi điểm danh"
+    // }
+    const deleteAttendance = useCallback(async (attendance_id: string) => {
+        setLoading(true);
+        setError('');
+        try {
+            const response = await attendanceService.deleteAttendance(attendance_id);
+            return response;
+        } catch (error: any) {
+            setError(error.message || 'Failed to delete attendance');
         } finally {
             setLoading(false);
         }
@@ -153,6 +175,7 @@ export const useAlert = () => {
         attendanceData,
         getStudentsWithAttendance,
         recordAttendance,
-        updateAttendance
+        updateAttendance,
+        deleteAttendance
     };
 };
