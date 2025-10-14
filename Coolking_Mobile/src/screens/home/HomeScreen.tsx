@@ -33,8 +33,8 @@ type TodayItem = {
 // Danh sách các chức năng để dễ dàng quản lý và render
 const features = [
   { id: "1", title: "Lịch học", icon: "calendar-outline", screen: "CalendarScreen" },
-  { id: "2", title: "Xem điểm", icon: "school-outline", screen: "GradesScreen" },
-  { id: "3", title: "Nhắn tin", icon: "chatbubble-outline", screen: "MessagesScreen" },
+  { id: "2", title: "Xem điểm", icon: "school-outline", screen: "ScoreScreen" },
+  { id: "3", title: "Nhắn tin", icon: "chatbubble-outline", screen: "ChatScreen" },
   { id: "4", title: "Điểm danh", icon: "checkmark-circle-outline", screen: "AttendanceScreen" },
   { id: "5", title: "Mật khẩu", icon: "lock-closed-outline", screen: "ProfileChangePasswordScreen" },
   // Thêm các chức năng khác ở đây

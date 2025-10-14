@@ -1,4 +1,9 @@
-import { getNotifications, markAsRead } from "@/src/services/api/notification/NotificationApi";
+import { getNotifications,
+         markAsRead, 
+         markSystemAsRead, 
+         deleteSystemNotification 
+} from "@/src/services/api/notification/NotificationApi";
+import { set } from "date-fns";
 import { useEffect, useState, useMemo } from "react";
 
 
@@ -46,13 +51,53 @@ export const UseNotification = () => {
             if (data == null) {
                 throw new Error("Mark as read failed");
             }
+            return data;
+        } catch (error) {
+            setError(error as any);
+        } finally {
+            setLoading(false);
+        }
+    };
+    const markSystemNotificationAsRead = async (alertId: string) => {
+        try {
+            setLoading(true);
+            const data = await markSystemAsRead(alertId);
+            if (data == null) {
+                throw new Error("Mark system as read failed");
+            }
+            return data;
+        } catch (error) {
+            setError(error as any);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-            // ⭐️ IMPORTANT: Update the local state to reflect the change in the UI
-            setNotifications(prevNotifications =>
-                prevNotifications.map(item =>
-                    item._id === alertId ? { ...item, isRead: true } : item
-                )
-            );
+    const markAllNotificationsAsRead = async () => {   
+        try {
+            setLoading(true);
+            const promises = notifications.map(notification => {
+                if (notification.targetScope === "all" && notification.receiverID === null && !notification.isRead) {
+                    return markSystemNotificationAsRead(notification._id);
+                } else {
+                    return markNotificationAsRead(notification._id);
+                }
+            });
+            await Promise.all(promises);
+        } catch (error) {
+            setError(error as any);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getDeleteSystemNotification = async (alertId: string) => {
+        try {
+            setLoading(true);
+            const data = await deleteSystemNotification(alertId);
+            if (data == null) {
+                throw new Error("Delete system notification failed");
+            }
             return data;
         } catch (error) {
             setError(error as any);
@@ -63,7 +108,6 @@ export const UseNotification = () => {
 
 
 
-
     return {
         notifications,
         setNotifications,
@@ -71,5 +115,8 @@ export const UseNotification = () => {
         error,
         fetchNotifications,
         markNotificationAsRead,
+        markSystemNotificationAsRead,
+        markAllNotificationsAsRead,
+        getDeleteSystemNotification
     };
 }

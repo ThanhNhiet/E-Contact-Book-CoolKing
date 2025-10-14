@@ -27,6 +27,12 @@ import ProfileScreen from "@/src/screens/profile/ProfileSceen";
 import ProfileDetailScreen from "@/src/screens/profile/ProfileDetailScreen";
 import ProfileChangePasswordScreen from "@/src/screens/profile/ProfileChangePasswordScreen";
 
+//import page chat
+import ChatScreen from "@/src/screens/chat/ChatScreen";
+import MessageScreen from "@/src/screens/chat/MessageScreen";
+
+// import score 
+import ScoreScreen from "../screens/score/ScoreScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -107,6 +113,28 @@ export default function AppRouter() {
             <Stack.Screen
                 name="ProfileChangePasswordScreen"
                 component={ProfileChangePasswordScreen}
+                options={{
+                    headerShown: false,
+                }}
+            />
+            {/*Chat Screen*/}
+            <Stack.Screen
+                name="ChatScreen"
+                component={ChatScreen}
+                options={{
+                    headerShown: false,
+                }}
+            />
+            <Stack.Screen
+                name="MessageScreen"
+                component={MessageScreen}
+                options={{
+                    headerShown: false,
+                }}
+            />
+            <Stack.Screen
+                name="ScoreScreen"
+                component={ScoreScreen}
                 options={{
                     headerShown: false,
                 }}

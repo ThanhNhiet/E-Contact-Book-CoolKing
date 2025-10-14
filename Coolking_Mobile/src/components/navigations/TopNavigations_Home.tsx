@@ -10,7 +10,6 @@ interface Props {
     avatar: string;
     student_id: string;
   };
-  initialNotifications?: NotificationItem[];
 }
 
 export default function TopNavigations_Home({
@@ -24,6 +23,10 @@ export default function TopNavigations_Home({
     loading, 
     error,  
     fetchNotifications,
+    markNotificationAsRead,
+    markSystemNotificationAsRead,
+    markAllNotificationsAsRead,
+    getDeleteSystemNotification
   } = UseNotification();
   const [open, setOpen] = useState(false);
  
@@ -32,7 +35,7 @@ export default function TopNavigations_Home({
 
   const onPressBell = () => setOpen(true);
 
-  const onPressItem =  async (item: NotificationItem) => {
+  const onPressItem =  async () => {
     //setNotifications(cur => cur.map(n => (n._id === item._id ? { ...n, isRead: true } : n)));
     // ví dụ: điều hướng chi tiết nếu cần
      await fetchNotifications();
@@ -40,7 +43,7 @@ export default function TopNavigations_Home({
   };
 
   const onMarkAllRead = () => {
-    setNotifications(cur => cur.map(n => ({ ...n, isRead: true })));
+    markAllNotificationsAsRead();
   };
 
   return (
@@ -74,6 +77,9 @@ export default function TopNavigations_Home({
         onPressItem={onPressItem}
         onMarkAllRead={onMarkAllRead}
         fetchNotifications={fetchNotifications}
+        markNotificationAsRead={markNotificationAsRead}
+        markSystemNotificationAsRead={markSystemNotificationAsRead}
+        getDeleteSystemNotification={getDeleteSystemNotification}
       />
     </>
   );
