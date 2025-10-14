@@ -34,7 +34,7 @@ const getStudentsByCourseSectionID = async (course_section_id) => {
             student_id: item.student.student_id,
             name: item.student.name,
             dob: item.student.dob,
-            gender: item.student.gender
+            gender: item.student.gender ? 'Nam' : 'Nữ'
         }));
 
     } catch (error) {
@@ -227,7 +227,7 @@ const getAttendanceDetailsByCourseSectionID = async (course_section_id) => {
                 return {
                     student_id: student.student_id,
                     name: student.name,
-                    dob: student.dob,
+                    dob: datetimeFormatter.formatDateVN(student.dob),
                     gender: student.gender,
                     status: attendanceData ? attendanceData.status : "ABSENT",
                     description: attendanceData ? attendanceData.description : ""
@@ -236,6 +236,7 @@ const getAttendanceDetailsByCourseSectionID = async (course_section_id) => {
 
             attendances.push({
                 date_attendance: datetimeFormatter.formatDateVN(attendance.date_attendance),
+                attendance_id: attendance.attendance_id,
                 start_lesson: attendance.start_lesson,
                 end_lesson: attendance.end_lesson,
                 students: students
@@ -395,14 +396,14 @@ const createAttendanceRecord = async (lecturer_id, course_section_id, attendance
 
         return {
             success: true,
-            message: `Dữ liệu điểm danh đã được lưu thành công cho ${createdRecords.length} sinh viên`,
-            data: {
-                attendance_id: attendanceRecord.id,
-                date_attendance: date_attendance,
-                start_lesson: start_lesson,
-                end_lesson: end_lesson,
-                total_students: createdRecords.length
-            }
+            message: `Dữ liệu điểm danh đã được lưu thành công cho ${createdRecords.length} sinh viên`
+            // data: {
+            //     attendance_id: attendanceRecord.id,
+            //     date_attendance: date_attendance,
+            //     start_lesson: start_lesson,
+            //     end_lesson: end_lesson,
+            //     total_students: createdRecords.length
+            // }
         };
 
     } catch (error) {
@@ -556,15 +557,15 @@ const updateAttendanceRecord = async (attendance_id, attendanceData) => {
 
         return {
             success: true,
-            message: `Dữ liệu điểm danh đã được cập nhật thành công cho ${updatedRecords.length} sinh viên`,
-            data: {
-                attendance_id: attendance_id,
-                date_attendance: date_attendance,
-                start_lesson: start_lesson,
-                end_lesson: end_lesson,
-                total_students: updatedRecords.length,
-                updated_records: updatedRecords.length
-            }
+            message: `Dữ liệu điểm danh đã được cập nhật thành công cho ${updatedRecords.length} sinh viên`
+            // data: {
+            //     attendance_id: attendance_id,
+            //     date_attendance: date_attendance,
+            //     start_lesson: start_lesson,
+            //     end_lesson: end_lesson,
+            //     total_students: updatedRecords.length,
+            //     updated_records: updatedRecords.length
+            // }
         };
 
     } catch (error) {
@@ -578,6 +579,44 @@ const updateAttendanceRecord = async (attendance_id, attendanceData) => {
     }
 };
 
+// Xóa attendance record và attendance_student
+const deleteAttendanceRecord = async (attendance_id) => {
+    const transaction = await sequelize.transaction();
+    try {
+        // Validate input
+        if (!attendance_id) {
+            throw new Error('attendance_id is required');
+        }
+        // Kiểm tra attendance record có tồn tại không
+        const existingAttendance = await models.Attendance.findByPk(attendance_id);
+        if (!existingAttendance) {
+            throw new Error(`Attendance record not found with id: ${attendance_id}`);
+        }
+        // Xóa các record AttendanceStudent trước
+        await models.AttendanceStudent.destroy({
+            where: { attendance_id: attendance_id },
+            transaction
+        });
+        // Xóa record Attendance
+        await models.Attendance.destroy({
+            where: { id: attendance_id },
+            transaction
+        });
+        await transaction.commit();
+        return {
+            success: true,
+            message: `Đã xóa thành công bản ghi điểm danh`
+        };
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error in deleteAttendanceRecord:', error);
+        return {
+            success: false,
+            message: `Lỗi khi xóa bản ghi điểm danh: ${error.message}`
+        };
+    }
+};
+
 module.exports = {
     getStudentsByCourseSectionID,
     getAttendanceListByCourseID,
@@ -585,5 +624,6 @@ module.exports = {
     getAttendanceStudentListByAttendanceID,
     getAttendanceDetailsByCourseSectionID,
     createAttendanceRecord,
-    updateAttendanceRecord
+    updateAttendanceRecord,
+    deleteAttendanceRecord
 };

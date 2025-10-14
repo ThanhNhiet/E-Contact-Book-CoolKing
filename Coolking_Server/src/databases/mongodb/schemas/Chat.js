@@ -28,6 +28,10 @@ const memberSchema = new Schema({
     enum: Object.values(MemberRole),
     default: MemberRole.MEMBER
   },
+  avatar: {
+    type: String,
+    default: null
+  },
   joinedAt: {
     type: Date,
     default: Date.now

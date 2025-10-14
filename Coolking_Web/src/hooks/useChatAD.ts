@@ -245,6 +245,49 @@ export const useChat = () => {
         }
     }, []);
 
+    // Tạo nhóm chat với giảng viên chủ nhiệm
+    const createGroupChatWithHomeroomLecturer = useCallback(async (lecturer_id: string) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await chatServices.createGroupChatWithHomeroomLecturer(lecturer_id);
+            return data;
+        } catch (error) {
+            setError('Failed to create group chat with homeroom lecturer');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Dọn dẹp các nhóm chat của các lớp học phần đã hoàn thành theo học kỳ
+    const cleanupGroupChatsOfCompletedCourseSections = useCallback(async (session_id: string) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await chatServices.cleanupGroupChatsOfCompletedCourseSections(session_id);
+            return data;
+        } catch (error) {
+            setError('Failed to cleanup group chats of completed course sections');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Lấy thông tin của chat theo chatID
+    const getChatById4AllUser = useCallback(async (chatID: string) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await chatServices.getChatById4AllUser(chatID);
+            if (data.success) setChats([data.chat]);
+        } catch (error) {
+            setError('Failed to get chat by ID');
+        }
+        finally {
+            setLoading(false);
+        }
+    }, []);
+
     return {
         loading,
         error,
@@ -269,6 +312,9 @@ export const useChat = () => {
         cleanupInactiveChats,
         getStudentInfo,
         getLecturerInfo,
-        getGroupChatInfo
+        getGroupChatInfo,
+        createGroupChatWithHomeroomLecturer,
+        cleanupGroupChatsOfCompletedCourseSections,
+        getChatById4AllUser
     };
 };

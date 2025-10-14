@@ -52,7 +52,7 @@ exports.getLecturerById = async (req, res) => {
             return res.status(403).json({ message: 'Forbidden' });
         }
         const lecturer_id = req.params.id;
-        const lecturer = await lecturerRepo.getLecturerById(lecturer_id);
+        const lecturer = await lecturerRepo.getLecturerById4Admin(lecturer_id);
         if (!lecturer) return res.status(404).json({ message: 'Giảng viên không tồn tại' });
         res.status(200).json(lecturer);
     } catch (error) {

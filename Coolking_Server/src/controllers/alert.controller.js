@@ -255,7 +255,7 @@ const searchAlerts = async (req, res) => {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
         const decoded = jwtUtils.verifyAccessToken(token);
-        if (!decoded || decoded.role !== 'ADMIN') {
+        if (!decoded || decoded.role === 'STUDENT') {
             return res.status(403).json({ message: 'Forbidden' });
         }
 
@@ -264,7 +264,7 @@ const searchAlerts = async (req, res) => {
         const pageSize = parseInt(req.query.pageSize) || 10;
 
         // Gọi repository để tìm kiếm thông báo
-        const result = await alertRepo.searchAlertsByKeyword4Admin(keyword, page, pageSize);
+        const result = await alertRepo.searchAlertsByKeyword(keyword, decoded.role, decoded.user_id, page, pageSize);
 
         res.status(200).json(result);
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useAlert } from '../../hooks/useAlert';
 import type { Alert } from '../../hooks/useAlert';
@@ -7,14 +8,34 @@ import logoImg from '../../assets/img/logo.png';
 import noImage from '../../assets/img/no-image.jpg';
 
 const HeaderLECpn: React.FC = () => {
+    const navigate = useNavigate();
     const { logout } = useAuth();
-    const { getMyAlerts, alerts, loading, unreadCount, pages, currentPage } = useAlert();
+    const { 
+        getMyAlerts, 
+        alerts, 
+        loading, 
+        unreadCount, 
+        pages, 
+        currentPage,
+        markSystemAlertAsRead,
+        deleteSystemAlert,
+        deleteAllReadSystemAlerts
+    } = useAlert();
 
     const [showAlertBox, setShowAlertBox] = useState(false);
     const [alertPage, setAlertPage] = useState(1);
     const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [showMobileMenu, setShowMobileMenu] = useState(false);
+    const [toast, setToast] = useState<{
+        show: boolean;
+        message: string;
+        type: 'success' | 'error';
+    }>({
+        show: false,
+        message: '',
+        type: 'success'
+    });
     const alertBoxRef = useRef<HTMLDivElement>(null);
     const mobileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -73,15 +94,58 @@ const HeaderLECpn: React.FC = () => {
         setAlertPage(page);
     };
 
-    const handleAlertClick = (alert: Alert) => {
+    const showToast = (message: string, type: 'success' | 'error') => {
+        setToast({ show: true, message, type });
+        setTimeout(() => {
+            setToast({ show: false, message: '', type: 'success' });
+        }, 3000);
+    };
+
+    const handleAlertClick = async (alert: Alert) => {
         setSelectedAlert(alert);
         setShowDetailModal(true);
         setShowAlertBox(false);
+
+        // Đánh dấu đã đọc nếu là thông báo hệ thống và chưa đọc
+        if (alert.targetScope === 'all' && !alert.isRead) {
+            try {
+                const response = await markSystemAlertAsRead(alert._id);
+                if (response?.success) {
+                    // Reload alerts để cập nhật trạng thái
+                    getMyAlerts(alertPage, 10);
+                }
+            } catch (error) {
+                console.error('Error marking alert as read:', error);
+            }
+        }
     };
 
     const closeDetailModal = () => {
         setShowDetailModal(false);
         setSelectedAlert(null);
+    };
+
+    const handleDeleteAlert = async (alertId: string, e: React.MouseEvent) => {
+        e.stopPropagation(); // Ngăn không cho click event lan truyền đến parent
+        try {
+            const response = await deleteSystemAlert(alertId);
+            if (response?.success) {
+                showToast('Xóa thông báo thành công', 'success');
+                getMyAlerts(alertPage, 10); // Reload alerts
+            }
+        } catch (error) {
+            showToast('Có lỗi xảy ra khi xóa thông báo', 'error');
+        }
+    };
+
+    const handleDeleteAllReadAlerts = async () => {
+        try {
+            await deleteAllReadSystemAlerts();
+            showToast('Xóa tất cả thông báo đã đọc thành công', 'success');
+            getMyAlerts(alertPage, 10); // Reload alerts
+        } catch (error) {
+            showToast('Có lỗi xảy ra khi xóa thông báo', 'error');
+        }
     };
 
     const formatTargetScope = (targetScope: string) => {
@@ -95,6 +159,15 @@ const HeaderLECpn: React.FC = () => {
     const closeMobileMenu = () => {
         setShowMobileMenu(false);
     };
+
+    // Xử lý navigation để tránh reload trang
+    const handleNavigation = (url: string) => {
+        closeMobileMenu();
+        navigate(url);
+    };
+
+    // Kiểm tra xem có thể xóa tất cả thông báo không (tất cả đều đã đọc)
+    const canDeleteAll = alerts.length > 0 && alerts.every(alert => alert.isRead && alert.targetScope === 'all');
 
     return (
         <header className="bg-white shadow-md border-b">
@@ -112,20 +185,128 @@ const HeaderLECpn: React.FC = () => {
                             onClick={handleMobileMenuToggle}
                             className="md:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
                         >
-                            <span className="sr-only">Mở menu</span>
-                            {!showMobileMenu ? (
-                                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                                </svg>
-                            ) : (
-                                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            )}
+                            <span className="sr-only">Menu</span>
+                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
                         </button>
 
+                        {/* Mobile Alert Bell */}
+                        <div className="md:hidden relative" ref={alertBoxRef}>
+                            <button
+                                onClick={handleBellClick}
+                                className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 focus:outline-none relative"
+                            >
+                                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.002 2.002 0 0018 14V10a6 6 0 00-12 0v4a2.002 2.002 0 00-.595 1.595L4 17h5m6 0a3 3 0 01-6 0" />
+                                </svg>
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </span>
+                                )}
+                            </button>
+
+                            {/* Mobile Alert Box */}
+                            {showAlertBox && (
+                                <div className="absolute right-1/2 translate-x-1/3 top-12 w-[90vw] bg-white rounded-lg shadow-xl border z-50">
+                                    <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+                                        <h3 className="font-semibold text-gray-800">Thông báo</h3>
+                                        {canDeleteAll && (
+                                            <button
+                                                onClick={handleDeleteAllReadAlerts}
+                                                className="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors"
+                                                title="Xóa tất cả thông báo đã đọc"
+                                            >
+                                                Xóa tất cả
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="max-h-80 overflow-y-auto">
+                                        {loading ? (
+                                            <div className="p-4 text-center">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                                                <p className="mt-2 text-gray-600">Đang tải...</p>
+                                            </div>
+                                        ) : alerts.length === 0 ? (
+                                            <div className="p-4 text-center text-gray-500">
+                                                Không có thông báo nào
+                                            </div>
+                                        ) : (
+                                            alerts.map((alert) => (
+                                                <div
+                                                    key={alert._id}
+                                                    onClick={() => handleAlertClick(alert)}
+                                                    className="p-4 border-b hover:bg-gray-50 cursor-pointer relative group"
+                                                >
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <h4 className="font-medium text-gray-800 text-sm overflow-hidden pr-8" style={{
+                                                            display: '-webkit-box',
+                                                            WebkitLineClamp: 2,
+                                                            WebkitBoxOrient: 'vertical'
+                                                        }}>
+                                                            {alert.header}
+                                                        </h4>
+                                                        <div className="flex items-center space-x-2">
+                                                            {alert.isRead && alert.targetScope === 'all' && (
+                                                                <button
+                                                                    onClick={(e) => handleDeleteAlert(alert._id, e)}
+                                                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 p-1"
+                                                                    title="Xóa thông báo"
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                </button>
+                                                            )}
+                                                            {!alert.isRead && (
+                                                                <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-gray-600 text-xs mb-2 overflow-hidden" style={{
+                                                        display: '-webkit-box',
+                                                        WebkitLineClamp: 2,
+                                                        WebkitBoxOrient: 'vertical'
+                                                    }}>
+                                                        {alert.body}
+                                                    </p>
+                                                    <div className="flex justify-between text-xs text-gray-500">
+                                                        <span>Từ: {alert.senderID}</span>
+                                                        <span>{formatTargetScope(alert.targetScope)}</span>
+                                                    </div>
+                                                    <div className="text-xs text-gray-400 mt-1">
+                                                        {alert.createdAt}
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    {/* Pagination */}
+                                    <div className="p-3 border-t bg-gray-50 sticky bottom-0">
+                                        <div className="flex justify-center space-x-1">
+                                            {pages.map((page) => (
+                                                <button
+                                                    key={page}
+                                                    onClick={() => handlePageChange(page)}
+                                                    className={`px-3 py-1 text-sm rounded ${currentPage === page
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-white text-gray-600 hover:bg-gray-100'
+                                                        }`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         {/* Desktop Navigation */}
-                        <nav className="hidden md:flex space-x-1">
+                        <nav className="hidden md:flex space-x-4 items-center">
                             <a
                                 href="/lecturer/schedule"
                                 className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 px-3 py-2 rounded-md hover:bg-gray-50"
@@ -139,13 +320,7 @@ const HeaderLECpn: React.FC = () => {
                                 Lớp học phần
                             </a>
                             <a
-                                href="#"
-                                className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 px-3 py-2 rounded-md hover:bg-gray-50"
-                            >
-                                Điểm danh
-                            </a>
-                            <a
-                                href="#"
+                                href="/lecturer/alerts"
                                 className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 px-3 py-2 rounded-md hover:bg-gray-50"
                             >
                                 Gửi thông báo
@@ -156,102 +331,123 @@ const HeaderLECpn: React.FC = () => {
                             >
                                 Nhắn tin
                             </a>
-                        </nav>
-                    </div>
-
-                    {/* Alert bell icon, unread count */}
-                    <div className="relative" ref={alertBoxRef}>
-                        <button
-                            onClick={handleBellClick}
-                            className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 focus:outline-none relative"
-                        >
-                            <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.002 2.002 0 0018 14V10a6 6 0 00-12 0v4a2.002 2.002 0 00-.595 1.595L4 17h5m6 0a3 3 0 01-6 0" />
-                            </svg>
-                            {unreadCount > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                                    {unreadCount > 99 ? '99+' : unreadCount}
-                                </span>
-                            )}
-                        </button>
-
-                        {/* Alert Box */}
-                        {showAlertBox && (
-                            <div
-                                className="absolute right-1/2 translate-x-1/3 sm:right-0 sm:translate-x-0 top-12 w-[90vw] sm:w-96 bg-white rounded-lg shadow-xl border z-50"
-                            >
-                                <div className="p-4 border-b bg-gray-50">
-                                    <h3 className="font-semibold text-gray-800">Thông báo</h3>
-                                </div>
-
-                                <div className="max-h-80 overflow-y-auto">
-                                    {loading ? (
-                                        <div className="p-4 text-center">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                                            <p className="mt-2 text-gray-600">Đang tải...</p>
-                                        </div>
-                                    ) : alerts.length === 0 ? (
-                                        <div className="p-4 text-center text-gray-500">
-                                            Không có thông báo nào
-                                        </div>
-                                    ) : (
-                                        alerts.map((alert) => (
-                                            <div
-                                                key={alert._id}
-                                                onClick={() => handleAlertClick(alert)}
-                                                className="p-4 border-b hover:bg-gray-50 cursor-pointer"
-                                            >
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <h4 className="font-medium text-gray-800 text-sm overflow-hidden" style={{
-                                                        display: '-webkit-box',
-                                                        WebkitLineClamp: 2,
-                                                        WebkitBoxOrient: 'vertical'
-                                                    }}>
-                                                        {alert.header}
-                                                    </h4>
-                                                    {!alert.isRead && (
-                                                        <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2 mt-1"></span>
-                                                    )}
-                                                </div>
-                                                <p className="text-gray-600 text-xs mb-2 overflow-hidden" style={{
-                                                    display: '-webkit-box',
-                                                    WebkitLineClamp: 2,
-                                                    WebkitBoxOrient: 'vertical'
-                                                }}>
-                                                    {alert.body}
-                                                </p>
-                                                <div className="flex justify-between text-xs text-gray-500">
-                                                    <span>Từ: {alert.senderID}</span>
-                                                    <span>{formatTargetScope(alert.targetScope)}</span>
-                                                </div>
-                                                <div className="text-xs text-gray-400 mt-1">
-                                                    {alert.createdAt}
-                                                </div>
-                                            </div>
-                                        ))
+                            
+                            {/* Alert bell icon - Moved here */}
+                            <div className="relative ml-4" ref={alertBoxRef}>
+                                <button
+                                    onClick={handleBellClick}
+                                    className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 focus:outline-none relative"
+                                >
+                                    <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.002 2.002 0 0018 14V10a6 6 0 00-12 0v4a2.002 2.002 0 00-.595 1.595L4 17h5m6 0a3 3 0 01-6 0" />
+                                    </svg>
+                                    {unreadCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                            {unreadCount > 99 ? '99+' : unreadCount}
+                                        </span>
                                     )}
-                                </div>
+                                </button>
 
-                                {/* Pagination */}
-                                <div className="p-3 border-t bg-gray-50 sticky bottom-0">
-                                    <div className="flex justify-center space-x-1">
-                                        {pages.map((page) => (
-                                            <button
-                                                key={page}
-                                                onClick={() => handlePageChange(page)}
-                                                className={`px-3 py-1 text-sm rounded ${currentPage === page
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'bg-white text-gray-600 hover:bg-gray-100'
-                                                    }`}
-                                            >
-                                                {page}
-                                            </button>
-                                        ))}
+                                {/* Alert Box */}
+                                {showAlertBox && (
+                                    <div
+                                        className="absolute left-0 top-12 w-[90vw] sm:w-96 bg-white rounded-lg shadow-xl border z-50"
+                                    >
+                                        <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+                                            <h3 className="font-semibold text-gray-800">Thông báo</h3>
+                                            {canDeleteAll && (
+                                                <button
+                                                    onClick={handleDeleteAllReadAlerts}
+                                                    className="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors"
+                                                    title="Xóa tất cả thông báo đã đọc"
+                                                >
+                                                    Xóa tất cả
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="max-h-80 overflow-y-auto">
+                                            {loading ? (
+                                                <div className="p-4 text-center">
+                                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                                                    <p className="mt-2 text-gray-600">Đang tải...</p>
+                                                </div>
+                                            ) : alerts.length === 0 ? (
+                                                <div className="p-4 text-center text-gray-500">
+                                                    Không có thông báo nào
+                                                </div>
+                                            ) : (
+                                                alerts.map((alert) => (
+                                                    <div
+                                                        key={alert._id}
+                                                        onClick={() => handleAlertClick(alert)}
+                                                        className="p-4 border-b hover:bg-gray-50 cursor-pointer relative group"
+                                                    >
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <h4 className="font-medium text-gray-800 text-sm overflow-hidden pr-8" style={{
+                                                                display: '-webkit-box',
+                                                                WebkitLineClamp: 2,
+                                                                WebkitBoxOrient: 'vertical'
+                                                            }}>
+                                                                {alert.header}
+                                                            </h4>
+                                                            <div className="flex items-center space-x-2">
+                                                                {alert.isRead && alert.targetScope === 'all' && (
+                                                                    <button
+                                                                        onClick={(e) => handleDeleteAlert(alert._id, e)}
+                                                                        className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 p-1"
+                                                                        title="Xóa thông báo"
+                                                                    >
+                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                        </svg>
+                                                                    </button>
+                                                                )}
+                                                                {!alert.isRead && (
+                                                                    <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-gray-600 text-xs mb-2 overflow-hidden" style={{
+                                                            display: '-webkit-box',
+                                                            WebkitLineClamp: 2,
+                                                            WebkitBoxOrient: 'vertical'
+                                                        }}>
+                                                            {alert.body}
+                                                        </p>
+                                                        <div className="flex justify-between text-xs text-gray-500">
+                                                            <span>Từ: {alert.senderID}</span>
+                                                            <span>{formatTargetScope(alert.targetScope)}</span>
+                                                        </div>
+                                                        <div className="text-xs text-gray-400 mt-1">
+                                                            {alert.createdAt}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+
+                                        {/* Pagination */}
+                                        <div className="p-3 border-t bg-gray-50 sticky bottom-0">
+                                            <div className="flex justify-center space-x-1">
+                                                {pages.map((page) => (
+                                                    <button
+                                                        key={page}
+                                                        onClick={() => handlePageChange(page)}
+                                                        className={`px-3 py-1 text-sm rounded ${currentPage === page
+                                                            ? 'bg-blue-600 text-white'
+                                                            : 'bg-white text-gray-600 hover:bg-gray-100'
+                                                            }`}
+                                                    >
+                                                        {page}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-
+                                )}
                             </div>
-                        )}
+                        </nav>
                     </div>
 
                     {/* Right side - User info and logout */}
@@ -292,61 +488,53 @@ const HeaderLECpn: React.FC = () => {
 
                 {/* Mobile Menu Dropdown */}
                 {showMobileMenu && (
-                    <div ref={mobileMenuRef} className="md:hidden border-t border-gray-200 bg-white">
+                    <div ref={mobileMenuRef} className="md:hidden border-t border-gray-200 bg-white relative z-40">
                         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                             {/* User info on mobile */}
-                            <div className="flex items-center space-x-3 px-3 py-2 border-b border-gray-100 mb-2">
+                            <button 
+                                onClick={() => handleNavigation("/lecturer/profile")}
+                                className="flex items-center space-x-3 px-3 py-2 border-b border-gray-100 mb-2 hover:bg-gray-50 rounded-md transition-colors duration-200 w-full"
+                            >
                                 {lecturerAvatar && (
                                     <img
                                         src={lecturerAvatar}
                                         alt="Avatar"
                                         className="w-8 h-8 rounded-full object-cover"
                                         onError={(e) => {
-                                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/32x32?text=U';
+                                            (e.target as HTMLImageElement).src = noImage;
                                         }}
                                     />
                                 )}
-                                <span className="text-gray-700 text-sm font-medium">
+                                <span className="text-gray-700 text-sm font-medium hover:text-blue-600">
                                     {lecturerName || 'Giảng viên'}
                                 </span>
-                            </div>
+                            </button>
 
                             {/* Navigation links */}
-                            <a
-                                href="/lecturer/schedule"
-                                onClick={closeMobileMenu}
-                                className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md font-medium"
+                            <button
+                                onClick={() => handleNavigation("/lecturer/schedule")}
+                                className="block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md font-medium"
                             >
                                 Lịch dạy/gác thi
-                            </a>
-                            <a
-                                href="#"
-                                onClick={closeMobileMenu}
-                                className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md font-medium"
+                            </button>
+                            <button
+                                onClick={() => handleNavigation("/lecturer/clazz")}
+                                className="block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md font-medium"
                             >
                                 Lớp học phần
-                            </a>
-                            <a
-                                href="#"
-                                onClick={closeMobileMenu}
-                                className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md font-medium"
-                            >
-                                Điểm danh
-                            </a>
-                            <a
-                                href="#"
-                                onClick={closeMobileMenu}
-                                className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md font-medium"
+                            </button>
+                            <button
+                                onClick={() => handleNavigation("/lecturer/alerts")}
+                                className="block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md font-medium"
                             >
                                 Gửi thông báo
-                            </a>
-                            <a
-                                href="#"
+                            </button>
+                            <button
                                 onClick={closeMobileMenu}
-                                className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md font-medium"
+                                className="block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md font-medium"
                             >
                                 Nhắn tin
-                            </a>
+                            </button>
                         </div>
                     </div>
                 )}
@@ -358,6 +546,28 @@ const HeaderLECpn: React.FC = () => {
                 isOpen={showDetailModal}
                 onClose={closeDetailModal}
             />
+
+            {/* Toast Notification */}
+            {toast.show && (
+                <div className={`fixed top-4 right-4 z-[60] p-4 rounded-lg shadow-lg transform transition-all duration-300 ${
+                    toast.type === 'success' 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-red-500 text-white'
+                }`}>
+                    <div className="flex items-center">
+                        {toast.type === 'success' ? (
+                            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                        ) : (
+                            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                        )}
+                        <span className="font-medium">{toast.message}</span>
+                    </div>
+                </div>
+            )}
         </header>
     );
 };

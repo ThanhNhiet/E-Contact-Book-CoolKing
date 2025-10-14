@@ -5,8 +5,56 @@ const models = initModels(sequelize);
 
 const { v4: uuidv4 } = require('uuid');
 const { Chat, ChatType, MemberRole } = require('../databases/mongodb/schemas/Chat');
+const { Message, MessageType } = require('../databases/mongodb/schemas/Message');
 const mongoose = require('mongoose');
 const datetimeFormatter = require("../utils/format/datetime-formatter");
+
+/**
+ * Format lastMessage content based on message type
+ * @param {Object} message - Message object
+ * @returns {string} - Formatted content
+ */
+const formatLastMessageContent = (message) => {
+    if (!message) return '';
+
+    switch (message.type) {
+        case MessageType.TEXT:
+        case MessageType.LINK:
+            return message.content || '';
+        case MessageType.IMAGE:
+            return 'Hình ảnh';
+        case MessageType.FILE:
+            return 'File';
+        default:
+            return message.content || '';
+    }
+};
+
+/**
+ * Get last message for a chat
+ * @param {string} chatID - Chat ID
+ * @returns {Promise<Object|null>} - Last message object or null
+ */
+const getLastMessage = async (chatID) => {
+    try {
+        const lastMessage = await Message.findOne({ chatID })
+            .sort({ createdAt: -1 })
+            .select('senderID type content filename createdAt')
+            .lean();
+
+        if (!lastMessage) return null;
+
+        return {
+            senderID: lastMessage.senderID,
+            type: lastMessage.type,
+            content: formatLastMessageContent(lastMessage),
+            createdAt: lastMessage.createdAt
+        };
+    } catch (error) {
+        console.error('Error getting last message:', error);
+        return null;
+    }
+};
 
 /**
  * Tạo group chat cho admin (course section)
@@ -23,7 +71,7 @@ const createGroupChat4Admin = async (admin_id, nameGroup, course_section_id) => 
             include: [{
                 model: models.Lecturer,
                 as: 'lecturer',
-                attributes: ['lecturer_id', 'name']
+                attributes: ['lecturer_id', 'name', 'avatar']
             }]
         });
 
@@ -33,7 +81,7 @@ const createGroupChat4Admin = async (admin_id, nameGroup, course_section_id) => 
             include: [{
                 model: models.Student,
                 as: 'student',
-                attributes: ['student_id', 'name']
+                attributes: ['student_id', 'name', 'avatar']
             }]
         });
 
@@ -47,6 +95,7 @@ const createGroupChat4Admin = async (admin_id, nameGroup, course_section_id) => 
                 members.push({
                     userID: lcs.lecturer.lecturer_id,
                     userName: lcs.lecturer.name,
+                    avatar: lcs.lecturer.avatar,
                     role: MemberRole.ADMIN,
                     joinedAt: now,
                     muted: false
@@ -60,6 +109,7 @@ const createGroupChat4Admin = async (admin_id, nameGroup, course_section_id) => 
                 members.push({
                     userID: scs.student.student_id,
                     userName: scs.student.name,
+                    avatar: scs.student.avatar,
                     role: MemberRole.MEMBER,
                     joinedAt: now,
                     muted: false
@@ -95,6 +145,96 @@ const createGroupChat4Admin = async (admin_id, nameGroup, course_section_id) => 
 };
 
 /**
+ * Tạo nhóm chat cho lớp có giảng viên chủ nhiệm (dành cho admin)
+ * @param {string} admin_id - ID của admin
+ * @param {string} lecturer_id - ID của giảng viên chủ nhiệm
+ */
+const createGroupChatWithHomeroomLecturer = async (admin_id, lecturer_id) => {
+    try {
+        // Lấy thông tin giảng viên chủ nhiệm
+        const lecturer = await models.Lecturer.findOne({
+            where: { lecturer_id },
+            attributes: ['lecturer_id', 'name', 'avatar', 'homeroom_class_id']
+        });
+
+        if (!lecturer) {
+            return {
+                success: false,
+                message: 'Không tìm thấy giảng viên'
+            };
+        }
+
+        if (!lecturer.homeroom_class_id) {
+            return {
+                success: false,
+                message: 'Giảng viên không có lớp chủ nhiệm'
+            };
+        }
+
+        // Lấy danh sách students trong lớp chủ nhiệm
+        const students = await models.Student.findAll({
+            where: { clazz_id: lecturer.homeroom_class_id },
+            attributes: ['student_id', 'name', 'avatar']
+        });
+
+        // Lấy tên lớp từ lecturer.homeroom_class_id
+        const clazz = await models.Clazz.findOne({
+            where: { id: lecturer.homeroom_class_id },
+            attributes: ['name']
+        });
+
+        // Tạo nhóm chat với giảng viên chủ nhiệm
+        const members = [];
+        const now = new Date();
+        // Thêm giảng viên chủ nhiệm với role admin
+        members.push({
+            userID: lecturer.lecturer_id,
+            userName: lecturer.name,
+            avatar: lecturer.avatar,
+            role: MemberRole.ADMIN,
+            joinedAt: now,
+            muted: false
+        });
+
+        // Thêm sinh viên vào nhóm chat
+        students.forEach(student => {
+            members.push({
+                userID: student.student_id,
+                userName: student.name,
+                avatar: student.avatar,
+                role: MemberRole.MEMBER,
+                joinedAt: now,
+                muted: false
+            });
+        });
+
+        // Tạo chat object
+        const chatData = {
+            _id: uuidv4(),
+            type: ChatType.GROUP,
+            name: "Chủ nhiệm " + clazz.name,
+            avatar: "https://res.cloudinary.com/dplg9r6z1/image/upload/v1758809477/groupavatar_driiwd.png",
+            createdBy: admin_id,
+            updatedBy: admin_id,
+            members
+        };
+
+        // Lưu vào MongoDB
+        const newChat = new Chat(chatData);
+        await newChat.save();
+
+        return {
+            success: true,
+            message: 'Nhóm chat được tạo thành công'
+        };
+
+    } catch (error) {
+        console.error('Error creating group chat with homeroom lecturer:', error);
+        throw new Error(`Failed to create group chat with homeroom lecturer: ${error.message}`);
+    }
+};
+
+/**
  * Tạo private chat giữa 2 users
  * @param {string} requestUserID - ID của user tạo chat
  * @param {string} targetUserID - ID của user được chat
@@ -121,44 +261,56 @@ const createPrivateChat4Users = async (requestUserID, targetUserID) => {
 
         // Lấy thông tin của request user
         let requestUser = null;
-        requestUser = await models.Lecturer.findOne({
-            where: { lecturer_id: requestUserID },
-            attributes: ['lecturer_id', 'name']
-        });
-
-        if (!requestUser) {
-            requestUser = await models.Student.findOne({
-                where: { student_id: requestUserID },
-                attributes: ['student_id', 'name']
+        if (requestUserID.startsWith('LE')) {
+            requestUser = await models.Lecturer.findOne({
+                where: { lecturer_id: requestUserID },
+                attributes: ['lecturer_id', 'name', 'avatar']
             });
         }
 
-        if (!requestUser) {
+        if (requestUserID.startsWith('SV')) {
+            requestUser = await models.Student.findOne({
+                where: { student_id: requestUserID },
+                attributes: ['student_id', 'name', 'avatar']
+            });
+        }
+
+        if (requestUserID.startsWith('PA')) {
             requestUser = await models.Parent.findOne({
                 where: { parent_id: requestUserID },
-                attributes: ['parent_id', 'name']
+                attributes: ['parent_id', 'name', 'avatar']
             });
         }
 
         // Lấy thông tin của target user
         let targetUser = null;
-        targetUser = await models.Lecturer.findOne({
-            where: { lecturer_id: targetUserID },
-            attributes: ['lecturer_id', 'name']
-        });
-
-        if (!targetUser) {
-            targetUser = await models.Student.findOne({
-                where: { student_id: targetUserID },
-                attributes: ['student_id', 'name']
+        if (targetUserID.startsWith('LE')) {
+            targetUser = await models.Lecturer.findOne({
+                where: { lecturer_id: targetUserID },
+                attributes: ['lecturer_id', 'name', 'avatar']
             });
         }
 
-        if (!targetUser) {
+        if (targetUserID.startsWith('SV')) {
+            targetUser = await models.Student.findOne({
+                where: { student_id: targetUserID },
+                attributes: ['student_id', 'name', 'avatar']
+            });
+        }
+
+        if (targetUserID.startsWith('PA')) {
             targetUser = await models.Parent.findOne({
                 where: { parent_id: targetUserID },
-                attributes: ['parent_id', 'name']
+                attributes: ['parent_id', 'name', 'avatar']
             });
+        }
+
+        if (targetUserID.startsWith('AD')) {
+            // targetUser = await models.Admin.findOne({
+            //     where: { admin_id: targetUserID },
+            //     attributes: ['admin_id', 'name', 'avatar']
+            // });
+            targetUser = { admin_id: targetUserID, name: 'Admin', avatar: null };
         }
 
         if (!requestUser || !targetUser) {
@@ -171,12 +323,14 @@ const createPrivateChat4Users = async (requestUserID, targetUserID) => {
             {
                 userID: requestUserID,
                 userName: requestUser.name,
+                avatar: requestUser.avatar,
                 joinedAt: now,
                 muted: false
             },
             {
                 userID: targetUserID,
                 userName: targetUser.name,
+                avatar: targetUser.avatar,
                 joinedAt: now,
                 muted: false
             }
@@ -228,7 +382,7 @@ const getGroupChatInfoByCourseSection4Admin = async (course_section_id) => {
 
         // Chuyển thành plain object và format ngày giờ
         const groupChat = groupChatDoc.toObject();
-        
+
         // Format createdAt, updatedAt, members[{..., joinedAt: ...}]
         groupChat.createdAt = datetimeFormatter.formatDateTimeVN(groupChat.createdAt);
         groupChat.updatedAt = datetimeFormatter.formatDateTimeVN(groupChat.updatedAt);
@@ -291,6 +445,12 @@ const getUserChats = async (userID, roleAccount, page = 1, pageSize = 10) => {
                     { type: ChatType.PRIVATE }
                 ]
             };
+        } else if (roleAccount === 'ADMIN') {
+            // Admin chat với phụ huynh
+            chatFilter = {
+                "members.userID": userID,
+                type: ChatType.PRIVATE
+            };
         }
 
         // Đếm tổng số chat
@@ -305,7 +465,7 @@ const getUserChats = async (userID, roleAccount, page = 1, pageSize = 10) => {
             .lean(); // Sử dụng lean() để tăng performance
 
         // Xử lý dữ liệu trả về
-        const processedChats = chats.map(chat => {
+        const processedChats = await Promise.all(chats.map(async (chat) => {
             const result = {
                 _id: chat._id,
                 type: chat.type,
@@ -327,21 +487,11 @@ const getUserChats = async (userID, roleAccount, page = 1, pageSize = 10) => {
             const currentMember = chat.members.find(member => member.userID === userID);
             result.currentMember = currentMember || null;
 
-            return result;
-        });
+            // Lấy tin nhắn cuối cùng (nếu có)
+            result.lastMessage = await getLastMessage(chat._id);
 
-        // Tạo pagination info
-        const linkPrev = page_num > 1 ? page_num - 1 : null;
-        const linkNext = page_num < totalPages ? page_num + 1 : null;
-        
-        // Tạo danh sách pages (hiển thị tối đa 5 trang xung quanh trang hiện tại)
-        const pages = [];
-        const startPage = Math.max(1, page_num - 2);
-        const endPage = Math.min(totalPages, page_num + 2);
-        
-        for (let i = startPage; i <= endPage; i++) {
-            pages.push(i);
-        }
+            return result;
+        }));
 
         return {
             total: total,
@@ -349,9 +499,9 @@ const getUserChats = async (userID, roleAccount, page = 1, pageSize = 10) => {
             pageSize: pageSize_num,
             totalPages,
             chats: processedChats,
-            linkPrev,
-            linkNext,
-            pages
+            linkPrev: page_num > 1 ? `/chats?page=${page_num - 1}&pageSize=${pageSize_num}` : null,
+            linkNext: page_num < totalPages ? `/chats?page=${page_num + 1}&pageSize=${pageSize_num}` : null,
+            pages: Array.from({ length: Math.min(3, totalPages - page_num + 1) }, (_, i) => page_num + i)
         };
 
     } catch (error) {
@@ -415,7 +565,7 @@ const searchChatsByKeyword = async (userID, keyword, roleAccount) => {
 
         // Query group chats và private chats riêng biệt
         const [groupChats, allPrivateChats] = await Promise.all([
-            Object.keys(groupChatFilter).length > 0 ? 
+            Object.keys(groupChatFilter).length > 0 ?
                 Chat.find(groupChatFilter)
                     .populate('course_section_id', 'name code')
                     .sort({ lastMessageAt: -1 })
@@ -445,7 +595,7 @@ const searchChatsByKeyword = async (userID, keyword, roleAccount) => {
 
         for (const chat of allPrivateChats) {
             const otherMember = chat.members.find(member => member.userID !== userID);
-            
+
             if (otherMember) {
                 let userFound = false;
 
@@ -496,7 +646,7 @@ const searchChatsByKeyword = async (userID, keyword, roleAccount) => {
         // Format response giống getUserChats
         const results = await Promise.all(allChats.map(async (chat) => {
             const currentMember = chat.members.find(member => member.userID === userID);
-            
+
             let chatInfo = {
                 _id: chat._id,
                 chatType: chat.type,
@@ -522,6 +672,9 @@ const searchChatsByKeyword = async (userID, keyword, roleAccount) => {
             if (chat.type === ChatType.GROUP && chat.course_section_id) {
                 chatInfo.courseSection = chat.course_section_id;
             }
+
+            // Lấy tin nhắn cuối cùng (nếu có)
+            chatInfo.lastMessage = await getLastMessage(chat._id);
 
             return chatInfo;
         }));
@@ -566,7 +719,7 @@ const updateGroupChat4Admin = async (admin_id, chatID, data) => {
                 where: { lecturer_id: lecturers },
                 attributes: ['lecturer_id', 'name']
             });
-            
+
             // Kiểm tra lecturers không tồn tại trong database
             const foundLecturerIds = lecturerRecords.map(l => l.lecturer_id);
             const notFoundLecturers = lecturers.filter(id => !foundLecturerIds.includes(id));
@@ -576,7 +729,7 @@ const updateGroupChat4Admin = async (admin_id, chatID, data) => {
                     message: `Không tìm thấy giảng viên với ID: ${notFoundLecturers.join(', ')}`
                 };
             }
-            
+
             lectureDetails.push(...lecturerRecords);
         }
 
@@ -587,7 +740,7 @@ const updateGroupChat4Admin = async (admin_id, chatID, data) => {
                 where: { student_id: students },
                 attributes: ['student_id', 'name']
             });
-            
+
             // Kiểm tra students không tồn tại trong database
             const foundStudentIds = studentRecords.map(s => s.student_id);
             const notFoundStudents = students.filter(id => !foundStudentIds.includes(id));
@@ -597,14 +750,14 @@ const updateGroupChat4Admin = async (admin_id, chatID, data) => {
                     message: `Không tìm thấy sinh viên với ID: ${notFoundStudents.join(', ')}`
                 };
             }
-            
+
             studentDetails.push(...studentRecords);
         }
 
         // Lấy danh sách members hiện tại
         const currentMembers = chat.members || [];
         const existingUserIDs = currentMembers.map(member => member.userID);
-        
+
         // Tạo members mới để thêm vào
         const now = new Date();
         const membersToAdd = [];
@@ -806,7 +959,7 @@ const getAllChats = async (page = 1, pageSize = 10) => {
 const searchChatsByKeyword4Admin = async (keyword, page = 1, pageSize = 10) => {
     try {
         if (!keyword || keyword.trim() === '') {
-           return await getAllChats(page, pageSize);
+            return await getAllChats(page, pageSize);
         }
 
         const searchKeyword = keyword.trim();
@@ -818,7 +971,7 @@ const searchChatsByKeyword4Admin = async (keyword, page = 1, pageSize = 10) => {
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(searchKeyword);
 
         let groupChats = [];
-        
+
         if (isUUID) {
             // Nếu là UUID, tái sử dụng getGroupChatInfoByCourseSection4Admin
             try {
@@ -952,11 +1105,11 @@ const getNonChatCourseSections = async (page = 1, pageSize = 10) => {
             { type: ChatType.GROUP, course_section_id: { $exists: true, $ne: null } },
             { course_section_id: 1 }
         ).lean();
-        
+
         const existingCourseSectionIds = existingGroupChats.map(chat => chat.course_section_id);
 
         // Điều kiện WHERE để loại bỏ các course section đã có group chat
-        const whereCondition = existingCourseSectionIds.length > 0 
+        const whereCondition = existingCourseSectionIds.length > 0
             ? { id: { [Op.notIn]: existingCourseSectionIds } }
             : {};
 
@@ -1022,7 +1175,7 @@ const getNonChatCourseSections = async (page = 1, pageSize = 10) => {
         const processedCourseSections = courseSections.map(cs => {
             const lecturer = cs.lecturers_course_sections?.[0]?.lecturer;
             const schedule = cs.schedules?.[0];
-            
+
             return {
                 subjectName: cs.subject?.name || 'N/A',
                 className: cs.clazz?.name || 'N/A',
@@ -1079,7 +1232,7 @@ const searchNonChatCourseSections = async (keyword, page = 1, pageSize = 10) => 
             { type: ChatType.GROUP, course_section_id: { $exists: true, $ne: null } },
             { course_section_id: 1 }
         ).lean();
-        
+
         const existingCourseSectionIds = existingGroupChats.map(chat => chat.course_section_id);
 
         // Kiểm tra xem keyword có phải là UUID (course_section_id) không
@@ -1102,65 +1255,65 @@ const searchNonChatCourseSections = async (keyword, page = 1, pageSize = 10) => 
             }
         } else {
             // Tìm kiếm theo các tiêu chí khác như trước
-            
+
             // 1. Tìm theo subject name
-        const subjectMatches = await models.CourseSection.findAll({
-            include: [{
-                model: models.Subject,
-                as: 'subject',
-                where: {
-                    name: { [Op.like]: `%${searchKeyword}%` }
-                },
-                attributes: []
-            }],
-            attributes: ['id'],
-            raw: true
-        });
-        subjectMatches.forEach(item => matchingCourseIds.add(item.id));
+            const subjectMatches = await models.CourseSection.findAll({
+                include: [{
+                    model: models.Subject,
+                    as: 'subject',
+                    where: {
+                        name: { [Op.like]: `%${searchKeyword}%` }
+                    },
+                    attributes: []
+                }],
+                attributes: ['id'],
+                raw: true
+            });
+            subjectMatches.forEach(item => matchingCourseIds.add(item.id));
 
-        // 2. Tìm theo class name (bắt đầu bằng DH)
-        const classMatches = await models.CourseSection.findAll({
-            include: [{
-                model: models.Clazz,
-                as: 'clazz',
-                where: {
-                    name: {
-                        [Op.and]: [
-                            { [Op.like]: 'DH%' },
-                            { [Op.like]: `%${searchKeyword}%` }
-                        ]
-                    }
-                },
-                attributes: []
-            }],
-            attributes: ['id'],
-            raw: true
-        });
-        classMatches.forEach(item => matchingCourseIds.add(item.id));
+            // 2. Tìm theo class name (bắt đầu bằng DH)
+            const classMatches = await models.CourseSection.findAll({
+                include: [{
+                    model: models.Clazz,
+                    as: 'clazz',
+                    where: {
+                        name: {
+                            [Op.and]: [
+                                { [Op.like]: 'DH%' },
+                                { [Op.like]: `%${searchKeyword}%` }
+                            ]
+                        }
+                    },
+                    attributes: []
+                }],
+                attributes: ['id'],
+                raw: true
+            });
+            classMatches.forEach(item => matchingCourseIds.add(item.id));
 
-        // 3. Tìm theo session name (bắt đầu bằng HK)
-        const sessionMatches = await models.CourseSection.findAll({
-            include: [{
-                model: models.Session,
-                as: 'session',
-                where: {
-                    name: {
-                        [Op.and]: [
-                            { [Op.like]: 'HK%' },
-                            { [Op.like]: `%${searchKeyword}%` }
-                        ]
-                    }
-                },
-                attributes: []
-            }],
-            attributes: ['id'],
-            raw: true
-        });
-        sessionMatches.forEach(item => matchingCourseIds.add(item.id));
+            // 3. Tìm theo session name (bắt đầu bằng HK)
+            const sessionMatches = await models.CourseSection.findAll({
+                include: [{
+                    model: models.Session,
+                    as: 'session',
+                    where: {
+                        name: {
+                            [Op.and]: [
+                                { [Op.like]: 'HK%' },
+                                { [Op.like]: `%${searchKeyword}%` }
+                            ]
+                        }
+                    },
+                    attributes: []
+                }],
+                attributes: ['id'],
+                raw: true
+            });
+            sessionMatches.forEach(item => matchingCourseIds.add(item.id));
         }
 
         // Chuyển Set thành Array và loại bỏ các course section đã có group chat
-        const filteredIds = Array.from(matchingCourseIds).filter(id => 
+        const filteredIds = Array.from(matchingCourseIds).filter(id =>
             !existingCourseSectionIds.includes(id)
         );
 
@@ -1227,7 +1380,7 @@ const searchNonChatCourseSections = async (keyword, page = 1, pageSize = 10) => 
                     where: {
                         isExam: false
                     },
-                    attributes: ['start_date', 'end_date'],
+                    attributes: ['start_lesson', 'end_lesson'],
                     required: false
                 }
             ],
@@ -1241,7 +1394,7 @@ const searchNonChatCourseSections = async (keyword, page = 1, pageSize = 10) => 
         const processedCourseSections = courseSections.map(cs => {
             const lecturer = cs.lecturers_course_sections?.[0]?.lecturer;
             const schedule = cs.schedules?.[0];
-            
+
             return {
                 subjectName: cs.subject?.name || 'N/A',
                 className: cs.clazz?.name || 'N/A',
@@ -1249,8 +1402,8 @@ const searchNonChatCourseSections = async (keyword, page = 1, pageSize = 10) => 
                 facultyName: cs.subject?.faculty?.name || 'N/A',
                 sessionName: cs.session ? `${cs.session.name} ${cs.session.years}` : 'N/A',
                 lecturerName: lecturer?.name || 'N/A',
-                start_lesson: schedule?.start_date ? datetimeFormatter.formatDateVN(schedule.start_date) : 'N/A',
-                end_lesson: schedule?.end_date ? datetimeFormatter.formatDateVN(schedule.end_date) : 'N/A',
+                start_lesson: schedule?.start_lesson || 'N/A',
+                end_lesson: schedule?.end_lesson || 'N/A',
                 updatedAt: datetimeFormatter.formatDateTimeVN(cs.updatedAt)
             };
         });
@@ -1274,6 +1427,411 @@ const searchNonChatCourseSections = async (keyword, page = 1, pageSize = 10) => 
     }
 };
 
+/**
+ * Mute/Unmute member trong group chat (dành cho tất cả thành viên)
+ * @param {string} user_id - ID của user thực hiện
+ * @param {string} chat_id - ID của chat
+ */
+const updateMuteStatus = async (user_id, chat_id) => {
+    try {
+        const chat = await Chat.findOne({ _id: chat_id });
+        if (!chat) {
+            throw new Error('Chat not found or not a group chat');
+        }
+        const memberIndex = chat.members.findIndex(member => member.userID === user_id);
+        if (memberIndex === -1) {
+            throw new Error('User is not a member of this chat');
+        }
+        chat.members[memberIndex].muted = !chat.members[memberIndex].muted;
+        const muteMessage = chat.members[memberIndex].muted ? 'Đã tắt thông báo' : 'Đã bật thông báo';
+        await chat.save();
+        return {
+            success: true,
+            message: muteMessage
+        };
+    } catch (error) {
+        console.error('Error updating mute status:', error);
+        throw new Error(`Failed to update mute status: ${error.message}`);
+    }
+};
+
+/**
+ * Dọn dẹp các group chat theo học kỳ với điều kiện lớp học phần đã hoàn thành
+ * @param {string} session_id - ID của học kỳ
+ * @returns {Promise<Object>} - Kết quả dọn dẹp
+ */
+
+const cleanupCompletedCourseSectionChats = async (session_id) => {
+    try {
+        // Tìm các lớp học phần đã hoàn thành trong học kỳ (sử dụng Sequelize)
+        const completedCourseSections = await models.CourseSection.findAll({
+            where: {
+                session_id: session_id,
+                isCompleted: true
+            },
+            attributes: ['id']
+        });
+
+        if (completedCourseSections.length === 0) {
+            return {
+                success: true,
+                message: 'Không có lớp học phần đã hoàn thành nào trong học kỳ này',
+                deletedCount: 0
+            };
+        }
+
+        // Lấy danh sách course_section_id đã hoàn thành
+        const completedCourseSectionIds = completedCourseSections.map(cs => cs.id);
+
+        // Dọn dẹp các group chat tương ứng (sử dụng MongoDB)
+        const deleteResult = await Chat.deleteMany({
+            type: ChatType.GROUP,
+            course_section_id: { $in: completedCourseSectionIds }
+        });
+
+        return {
+            success: true,
+            message: `Đã dọn dẹp ${deleteResult.deletedCount} group chat cho ${completedCourseSections.length} lớp học phần đã hoàn thành`,
+            deletedCount: deleteResult.deletedCount,
+            courseSectionCount: completedCourseSections.length
+        };
+    } catch (error) {
+        console.error('Error cleaning up completed course section chats:', error);
+        throw new Error(`Failed to clean up completed course section chats: ${error.message}`);
+    }
+};
+
+/**
+ * Tạo hàng loạt group chat cho các lớp học phần chưa có chat theo học kỳ (dành cho admin)
+ * @param {string} admin_id - ID của admin
+ * @param {string} session_id - ID của học kỳ
+ * @param {string} nameTemplate - Template tên nhóm (có thể chứa placeholders như {subjectName}, {className})
+ * @returns {Promise<Object>} - Kết quả tạo hàng loạt chat
+ */
+const createBulkGroupChatsForSession = async (admin_id, session_id, nameTemplate = "{subjectName} - {className}") => {
+    try {
+        // Kiểm tra session_id có tồn tại không
+        const session = await models.Session.findOne({
+            where: { id: session_id },
+            attributes: ['id', 'name', 'years']
+        });
+
+        if (!session) {
+            return {
+                success: false,
+                message: 'Không tìm thấy học kỳ với ID đã cho'
+            };
+        }
+
+        // Lấy danh sách course_section_id đã có group chat
+        const existingGroupChats = await Chat.find(
+            { type: ChatType.GROUP, course_section_id: { $exists: true, $ne: null } },
+            { course_section_id: 1 }
+        ).lean();
+
+        const existingCourseSectionIds = existingGroupChats.map(chat => chat.course_section_id);
+
+        // Tìm các course sections trong session chưa có group chat
+        const whereCondition = {
+            session_id: session_id,
+            ...(existingCourseSectionIds.length > 0 ? { id: { [Op.notIn]: existingCourseSectionIds } } : {})
+        };
+
+        const courseSectionsToCreate = await models.CourseSection.findAll({
+            where: whereCondition,
+            include: [
+                {
+                    model: models.Subject,
+                    as: 'subject',
+                    attributes: ['name', 'subject_id']
+                },
+                {
+                    model: models.Clazz,
+                    as: 'clazz',
+                    attributes: ['name']
+                }
+            ],
+            attributes: ['id'],
+            order: [['createdAt', 'ASC']]
+        });
+
+        if (courseSectionsToCreate.length === 0) {
+            return {
+                success: true,
+                message: `Tất cả lớp học phần trong học kỳ ${session.name} ${session.years} đã có nhóm chat`,
+                createdChats: [],
+                totalProcessed: 0
+            };
+        }
+
+        // Tạo group chat cho từng course section
+        const results = {
+            success: true,
+            createdChats: [],
+            failedChats: [],
+            totalProcessed: courseSectionsToCreate.length
+        };
+
+        for (const courseSection of courseSectionsToCreate) {
+            try {
+                // Tạo tên nhóm chat từ template
+                const chatName = nameTemplate
+                    .replace('{subjectName}', courseSection.subject?.name || 'Unknown Subject')
+                    .replace('{className}', courseSection.clazz?.name || 'Unknown Class')
+                    .replace('{sessionName}', `${session.name} ${session.years}`);
+
+                // Sử dụng lại logic từ createGroupChat4Admin
+                const createResult = await createGroupChat4Admin(admin_id, chatName, courseSection.id);
+
+                if (createResult.success) {
+                    results.createdChats.push({
+                        course_section_id: courseSection.id,
+                        chat_name: chatName,
+                        subject_name: courseSection.subject?.name,
+                        class_name: courseSection.clazz?.name,
+                        status: 'created'
+                    });
+                } else {
+                    results.failedChats.push({
+                        course_section_id: courseSection.id,
+                        chat_name: chatName,
+                        subject_name: courseSection.subject?.name,
+                        class_name: courseSection.clazz?.name,
+                        error: createResult.message || 'Unknown error',
+                        status: 'failed'
+                    });
+                }
+
+                // Thêm delay nhỏ để tránh overload
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+            } catch (error) {
+                console.error(`Error creating chat for course section ${courseSection.id}:`, error);
+                results.failedChats.push({
+                    course_section_id: courseSection.id,
+                    chat_name: nameTemplate,
+                    subject_name: courseSection.subject?.name,
+                    class_name: courseSection.clazz?.name,
+                    error: error.message,
+                    status: 'failed'
+                });
+            }
+        }
+
+        // Tạo message tổng kết
+        const successCount = results.createdChats.length;
+        const failedCount = results.failedChats.length;
+        let message = `Đã xử lý ${results.totalProcessed} lớp học phần trong học kỳ ${session.name} ${session.years}. `;
+        message += `Tạo thành công: ${successCount} nhóm chat`;
+        if (failedCount > 0) {
+            message += `, Thất bại: ${failedCount} nhóm chat`;
+        }
+
+        return {
+            ...results,
+            message: message,
+            sessionInfo: {
+                session_id: session.id,
+                session_name: session.name,
+                session_years: session.years
+            }
+        };
+
+    } catch (error) {
+        console.error('Error creating bulk group chats for session:', error);
+        throw new Error(`Failed to create bulk group chats: ${error.message}`);
+    }
+};
+
+/**
+ * Lấy danh sách các lớp học phần chưa có group chat theo học kỳ
+ * @param {string} session_id - ID của học kỳ
+ * @param {number} page - Trang hiện tại (mặc định 1) 
+ * @param {number} pageSize - Kích thước trang (mặc định 10)
+ * @returns {Promise<Object>} - Danh sách course sections chưa có group chat trong session
+ */
+const getNonChatCourseSectionsBySession = async (session_id, page = 1, pageSize = 10) => {
+    try {
+        // Kiểm tra session có tồn tại không
+        const session = await models.Session.findOne({
+            where: { id: session_id },
+            attributes: ['id', 'name', 'years']
+        });
+
+        if (!session) {
+            return {
+                success: false,
+                message: 'Không tìm thấy học kỳ với ID đã cho'
+            };
+        }
+
+        const page_num = Math.max(1, parseInt(page) || 1);
+        const pageSize_num = Math.max(1, parseInt(pageSize) || 10);
+        const offset = (page_num - 1) * pageSize_num;
+
+        // Lấy danh sách course_section_id đã có group chat
+        const existingGroupChats = await Chat.find(
+            { type: ChatType.GROUP, course_section_id: { $exists: true, $ne: null } },
+            { course_section_id: 1 }
+        ).lean();
+
+        const existingCourseSectionIds = existingGroupChats.map(chat => chat.course_section_id);
+
+        // Điều kiện WHERE để lọc theo session và loại bỏ các course section đã có group chat
+        const whereCondition = {
+            session_id: session_id,
+            ...(existingCourseSectionIds.length > 0 ? { id: { [Op.notIn]: existingCourseSectionIds } } : {})
+        };
+
+        // Đếm tổng số course sections chưa có group chat trong session
+        const total = await models.CourseSection.count({
+            where: whereCondition
+        });
+
+        // Lấy danh sách course sections với phân trang
+        const courseSections = await models.CourseSection.findAll({
+            where: whereCondition,
+            include: [
+                {
+                    model: models.Subject,
+                    as: 'subject',
+                    attributes: ['name'],
+                    include: [
+                        {
+                            model: models.Faculty,
+                            as: 'faculty',
+                            attributes: ['name']
+                        }
+                    ]
+                },
+                {
+                    model: models.Clazz,
+                    as: 'clazz',
+                    attributes: ['name']
+                },
+                {
+                    model: models.Session,
+                    as: 'session',
+                    attributes: ['name', 'years']
+                },
+                {
+                    model: models.LecturerCourseSection,
+                    as: 'lecturers_course_sections',
+                    include: [
+                        {
+                            model: models.Lecturer,
+                            as: 'lecturer',
+                            attributes: ['lecturer_id', 'name']
+                        }
+                    ]
+                },
+                {
+                    model: models.Schedule,
+                    as: 'schedules',
+                    where: {
+                        isExam: false
+                    },
+                    attributes: ['start_lesson', 'end_lesson'],
+                    required: false
+                }
+            ],
+            attributes: ['id', 'createdAt', 'updatedAt'],
+            order: [['updatedAt', 'DESC']],
+            limit: pageSize_num,
+            offset: offset
+        });
+
+        // Format dữ liệu trả về
+        const processedCourseSections = courseSections.map(cs => {
+            const lecturer = cs.lecturers_course_sections?.[0]?.lecturer;
+            const schedule = cs.schedules?.[0];
+
+            return {
+                subjectName: cs.subject?.name || 'N/A',
+                className: cs.clazz?.name || 'N/A',
+                course_section_id: cs.id,
+                facultyName: cs.subject?.faculty?.name || 'N/A',
+                sessionName: cs.session ? `${cs.session.name} ${cs.session.years}` : 'N/A',
+                lecturerName: lecturer?.name || 'N/A',
+                start_lesson: schedule?.start_lesson || 'N/A',
+                end_lesson: schedule?.end_lesson || 'N/A',
+                createdAt: datetimeFormatter.formatDateTimeVN(cs.createdAt),
+                updatedAt: datetimeFormatter.formatDateTimeVN(cs.updatedAt)
+            };
+        });
+
+        const totalPages = Math.ceil(total / pageSize_num);
+
+        return {
+            success: true,
+            total,
+            page: page_num,
+            pageSize: pageSize_num,
+            totalPages,
+            courseSections: processedCourseSections,
+            sessionInfo: {
+                session_id: session.id,
+                session_name: session.name,
+                session_years: session.years
+            },
+            linkPrev: page_num > 1 ? `/course-sections/non-chat/session/${session_id}?page=${page_num - 1}&pageSize=${pageSize_num}` : null,
+            linkNext: page_num < totalPages ? `/course-sections/non-chat/session/${session_id}?page=${page_num + 1}&pageSize=${pageSize_num}` : null,
+            pages: Array.from({ length: Math.min(3, totalPages - page_num + 1) }, (_, i) => page_num + i)
+        };
+
+    } catch (error) {
+        console.error('Error getting non-chat course sections by session:', error);
+        throw new Error(`Failed to get non-chat course sections by session: ${error.message}`);
+    }
+};
+
+/**
+ * Lấy thông tin cuộc trò chuyện theo chatID với format chuẩn
+ * @param {string} chatID - ID của chat
+ * @returns {Promise<Object>} - Thông tin chat đã được format
+ */
+const getChatInfoById = async (chatID) => {
+    try {
+        const chat = await Chat.findOne({ _id: chatID }).lean();
+
+        if (!chat) {
+            return {
+                success: false,
+                message: 'Không tìm thấy cuộc trò chuyện'
+            };
+        }
+
+        // Format thông tin chat
+        const formattedChat = {
+            _id: chat._id,
+            type: chat.type,
+            name: chat.name,
+            avatar: chat.avatar,
+            course_section_id: chat.course_section_id || null,
+            createdBy: chat.createdBy,
+            updatedBy: chat.updatedBy,
+            createdAt: datetimeFormatter.formatDateTimeVN(chat.createdAt),
+            updatedAt: datetimeFormatter.formatDateTimeVN(chat.updatedAt),
+            members: chat.members.map(member => ({
+                userID: member.userID,
+                userName: member.userName,
+                role: member.role || 'member',
+                avatar: member.avatar,
+                joinedAt: datetimeFormatter.formatDateTimeVN(member.joinedAt),
+                muted: member.muted
+            }))
+        };
+
+        return {
+            success: true,
+            chat: formattedChat
+        };
+    } catch (error) {
+        console.error('Error getting chat info by ID:', error);
+        throw new Error(`Failed to get chat info by ID: ${error.message}`);
+    }
+};
+
 module.exports = {
     createGroupChat4Admin,
     createPrivateChat4Users,
@@ -1286,5 +1844,11 @@ module.exports = {
     getAllChats,
     searchChatsByKeyword4Admin,
     getNonChatCourseSections,
-    searchNonChatCourseSections
+    searchNonChatCourseSections,
+    createGroupChatWithHomeroomLecturer,
+    updateMuteStatus,
+    cleanupCompletedCourseSectionChats,
+    createBulkGroupChatsForSession,
+    getNonChatCourseSectionsBySession,
+    getChatInfoById
 };

@@ -337,23 +337,39 @@ const deleteAlert4Admin = async (alertId, senderID, createdAt) => {
             };
         }
 
-        // Tìm danh sách thông báo person bằng senderID và createdAt
-        const alerts = await Alert.find({
+        const parsedDate = datetimeFormatter.parseDDMMYYYY2UTC(createdAt);
+        // Tạo khoảng thời gian trong giây đó (±999ms)
+        const startOfSecond = new Date(parsedDate);
+        startOfSecond.setUTCMilliseconds(0);
+        const endOfSecond = new Date(parsedDate);
+        endOfSecond.setUTCMilliseconds(999);
+
+        // Tạo thêm khoảng thời gian offset để xử lý múi giờ
+        // Chuyển về utc chuẩn (+0) rồi mới tính offset
+        const startWithOffset = new Date(startOfSecond.getTime() - 7 * 60 * 60 * 1000); // -7h
+        const endWithOffset = new Date(endOfSecond.getTime() + 7 * 60 * 60 * 1000);   // +7h
+        // Tạo khoảng thời gian chênh lệch 2 giây
+        const diffWithOffset = new Date(endWithOffset.getTime() - startWithOffset.getTime() + 2 * 1000);
+        endWithOffset.setTime(startWithOffset.getTime() + diffWithOffset.getTime());
+
+        // Tìm thông báo trong khoảng thời gian có tính đến múi giờ
+        const query = {
             senderID: senderID,
             targetScope: 'person',
-            createdAt: { $lt: datetimeFormatter.parseDDMMYYYY2UTC(createdAt) }
-        });
+            createdAt: { $gte: startWithOffset, $lte: endWithOffset }
+        };
+
+        // Tìm thông báo
+        const alerts = await Alert.find(query);
         if (alerts.length === 0) {
-            throw new Error('Không tìm thấy thông báo nào để xóa');
+            throw new Error('Không tìm thấy thông báo');
         }
-        await Alert.deleteMany({
-            senderID: senderID,
-            targetScope: 'person',
-            createdAt: { $lt: datetimeFormatter.parseDDMMYYYY2UTC(createdAt) }
-        });
+
+        // Xóa thông báo với createdAt chính xác
+        const deleteResult = await Alert.deleteMany(query);
         return {
             success: true,
-            message: 'Xóa thông báo thành công'
+            message: `Xóa thành công ${deleteResult.deletedCount} thông báo`
         };
 
     } catch (error) {
@@ -368,26 +384,55 @@ const deleteAlert4Lecturer = async (senderID, createdAt) => {
         if (!senderID) {
             throw new Error('SenderID là bắt buộc');
         }
-        // Tìm thông báo
-        const alerts = await Alert.find({
+        // console.log('Input createdAt:', createdAt);
+
+        // Parse date từ string
+        const parsedDate = datetimeFormatter.parseDDMMYYYY2UTC(createdAt);
+        // console.log('Parsed date:', parsedDate);
+        // console.log('senderID:', senderID);
+
+        // Vì có vấn đề múi giờ, tạo khoảng thời gian 1 giây để tìm kiếm
+        const startOfSecond = new Date(parsedDate);
+        startOfSecond.setUTCMilliseconds(0);
+        const endOfSecond = new Date(parsedDate);
+        endOfSecond.setUTCMilliseconds(999);
+
+        // Tạo thêm khoảng thời gian offset để xử lý múi giờ
+        // Chuyển về utc chuẩn (+0) rồi mới tính offset
+        const startWithOffset = new Date(startOfSecond.getTime() - 7 * 60 * 60 * 1000); // -7h
+        const endWithOffset = new Date(endOfSecond.getTime() + 7 * 60 * 60 * 1000);   // +7h
+        // Tạo khoảng thời gian chênh lệch 2 giây
+        const diffWithOffset = new Date(endWithOffset.getTime() - startWithOffset.getTime() + 2 * 1000);
+        endWithOffset.setTime(startWithOffset.getTime() + diffWithOffset.getTime());
+
+        // console.log('Search with timezone offset:');
+        // console.log('- startWithOffset:', startWithOffset);
+        // console.log('- endWithOffset:', endWithOffset);
+
+        // Tìm thông báo trong khoảng thời gian có tính đến múi giờ
+        const query = {
             senderID: senderID,
             targetScope: 'person',
-            createdAt: { $lt: datetimeFormatter.parseDDMMYYYY2UTC(createdAt) }
-        });
+            createdAt: { $gte: startWithOffset, $lte: endWithOffset }
+        };
+
+        // console.log('Exact query:', query);
+
+        // Tìm thông báo
+        const alerts = await Alert.find(query);
+        // console.log('Found alerts with exact match:', alerts.length);
+
         if (alerts.length === 0) {
             throw new Error('Không tìm thấy thông báo');
         }
 
-        // Xóa thông báo
-        await Alert.deleteMany({
-            senderID: senderID,
-            targetScope: 'person',
-            createdAt: { $lt: datetimeFormatter.parseDDMMYYYY2UTC(createdAt) }
-        });
+        // Xóa thông báo với createdAt chính xác
+        const deleteResult = await Alert.deleteMany(query);
+        // console.log('Deleted count:', deleteResult.deletedCount);
 
         return {
             success: true,
-            message: 'Xóa thông báo thành công'
+            message: `Xóa thành công ${deleteResult.deletedCount} thông báo`
         };
 
     } catch (error) {
@@ -533,13 +578,15 @@ const getAllAlerts4Admin = async (page = 1, pageSize = 10) => {
 };
 
 /**
- * Tìm kiếm thông báo theo keyword (dành cho admin)
+ * Tìm kiếm thông báo theo keyword (dành cho admin và giảng viên)
  * @param {String} keyword - Từ khóa (tìm theo header, senderID, createdAt)
+ * @param {String} role - Vai trò người dùng ('ADMIN' hoặc 'LECTURER')
+ * @param {String} user_id - ID người dùng (để lọc nếu là giảng viên)
  * @param {Number} page - Trang hiện tại
  * @param {Number} pageSize - Số lượng alert mỗi trang
  * @returns {Object} - Danh sách thông báo
  */
-const searchAlertsByKeyword4Admin = async (keyword, page = 1, pageSize = 10) => {
+const searchAlertsByKeyword = async (keyword, role, user_id, page = 1, pageSize = 10) => {
     try {
         if (!keyword || keyword.trim() === '') {
             return await getAllAlerts4Admin(page, pageSize);
@@ -570,6 +617,11 @@ const searchAlertsByKeyword4Admin = async (keyword, page = 1, pageSize = 10) => 
             query.$or.push({ createdAt: { $gte: parsedDate } });
         }
 
+        // Nếu là giảng viên, chỉ được xem thông báo do mình gửi
+        if (role === 'LECTURER') {
+            query.senderID = user_id;
+        }
+        // Admin thì không cần thêm điều kiện
         const alerts = await Alert.find(query)
             .sort({ createdAt: -1 })
             .skip(skip)
@@ -683,7 +735,7 @@ const getAlertsBySender = async (senderID, page = 1, pageSize = 10) => {
         const linkNext = (page - 1) * pageSize + processedAlerts.length < total
             ? `/api/alerts/sender/${senderID}?page=${page + 1}&pageSize=${pageSize}`
             : null;
-        
+
         const totalPages = Math.ceil(total / pageSize);
         const pages = [];
         for (let i = 1; i <= totalPages; i++) {
@@ -718,7 +770,7 @@ module.exports = {
     deleteAlert4Lecturer,
     deleteAlert4Receiver,
     getAllAlerts4Admin,
-    searchAlertsByKeyword4Admin,
+    searchAlertsByKeyword,
     getAlertsBySender,
     markSystemAlertAsRead,
     deleteAlertSystem4Receiver

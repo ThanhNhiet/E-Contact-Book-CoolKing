@@ -36,6 +36,7 @@ const ClazzListPage: React.FC = () => {
     const [facultySearch, setFacultySearch] = useState('');
     const [showSessionDropdown, setShowSessionDropdown] = useState(false);
     const [showFacultyDropdown, setShowFacultyDropdown] = useState(false);
+    const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
 
     // Filtered options for dropdowns
     const filteredSessions = sessions.filter(session =>
@@ -53,7 +54,7 @@ const ClazzListPage: React.FC = () => {
         fetchAllFaculties();
     }, [fetchCourseSectionsByLecturer, fetchAllSessions, fetchAllFaculties]);
 
-    // Handle click outside to close dropdowns
+        // Handle click outside to close dropdowns
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as HTMLElement;
@@ -71,9 +72,7 @@ const ClazzListPage: React.FC = () => {
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, []);
-
-    const handleSearch = async () => {
+    }, []);    const handleSearch = async () => {
         if (searchKeyword.trim()) {
             await searchCourseSectionsByKeyword(searchKeyword, 1, pageSize);
         } else {
@@ -108,8 +107,19 @@ const ClazzListPage: React.FC = () => {
         }
     };
 
-    const handleRowClick = (courseSectionId: string) => {
+    const handleActionClick = (courseSectionId: string) => {
+        setShowActionMenu(showActionMenu === courseSectionId ? null : courseSectionId);
+    };
+
+    const handleViewStudents = (courseSectionId: string) => {
         navigate(`/lecturer/clazz/students/${courseSectionId}`);
+        setShowActionMenu(null);
+    };
+
+    const handleViewAttendance = (courseSectionId: string) => {
+        console.log('Navigating to attendance for course section:', courseSectionId);
+        navigate(`/lecturer/clazz/students-attendance/${courseSectionId}`);
+        setShowActionMenu(null);
     };
 
     const getSessionName = (sessionId: string) => {
@@ -264,7 +274,7 @@ const ClazzListPage: React.FC = () => {
                     </div>
 
                     {/* Table */}
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto relative">
                         <table className="w-full">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
@@ -273,7 +283,7 @@ const ClazzListPage: React.FC = () => {
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lớp</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Khoa</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Học kỳ</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày tạo</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -305,8 +315,7 @@ const ClazzListPage: React.FC = () => {
                                     courseSections.map((courseSection) => (
                                         <tr
                                             key={courseSection.course_section_id}
-                                            onClick={() => handleRowClick(courseSection.course_section_id)}
-                                            className="hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+                                            className="hover:bg-gray-50 transition-colors duration-150"
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                                                 {courseSection.course_section_id}
@@ -323,8 +332,50 @@ const ClazzListPage: React.FC = () => {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                 {courseSection.sessionName}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {courseSection.createdAt}
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 relative">
+                                                <button
+                                                    data-course-id={courseSection.course_section_id}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleActionClick(courseSection.course_section_id);
+                                                    }}
+                                                    className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                                                >
+                                                    <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                                    </svg>
+                                                </button>
+                                                
+                                                {showActionMenu === courseSection.course_section_id && (
+                                                    <div className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[60] w-72" 
+                                                         style={{
+                                                           top: `${(document.querySelector(`[data-course-id="${courseSection.course_section_id}"]`) as HTMLElement)?.getBoundingClientRect()?.bottom + 5 || 0}px`,
+                                                           right: `${window.innerWidth - (document.querySelector(`[data-course-id="${courseSection.course_section_id}"]`) as HTMLElement)?.getBoundingClientRect()?.right || 0}px`
+                                                         }}>
+                                                        <div className="py-1">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleViewStudents(courseSection.course_section_id);
+                                                                }}
+                                                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
+                                                            >
+                                                                <span className="text-blue-500">👥</span>
+                                                                <span>Xem điểm và thông tin sinh viên</span>
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleViewAttendance(courseSection.course_section_id);
+                                                                }}
+                                                                className="w-full text-left px-4 py-2 hover:bg-green-50 text-sm text-gray-700 transition-colors duration-200 flex items-center gap-2"
+                                                            >
+                                                                <span className="text-green-500">📋</span>
+                                                                <span>Xem buổi điểm danh</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
                                     ))
@@ -377,6 +428,14 @@ const ClazzListPage: React.FC = () => {
             </main>
 
             <FooterLeCpn />
+
+            {/* Click outside to close action menu */}
+            {showActionMenu && (
+                <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowActionMenu(null)}
+                />
+            )}
         </div>
     );
 };

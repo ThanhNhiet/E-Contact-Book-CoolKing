@@ -238,7 +238,11 @@ const AccountsDashboardPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 relative">
                         <button
-                          onClick={() => handleActionClick(account.user_id)}
+                          data-account-id={account.user_id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleActionClick(account.user_id);
+                          }}
                           className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
                         >
                           <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
@@ -247,24 +251,37 @@ const AccountsDashboardPage: React.FC = () => {
                         </button>
                         
                         {showActionMenu === account.user_id && (
-                          <div className="absolute right-0 top-12 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                          <div className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[60] w-48" 
+                               style={{
+                                 top: `${(document.querySelector(`[data-account-id="${account.user_id}"]`) as HTMLElement)?.getBoundingClientRect()?.bottom + 5 || 0}px`,
+                                 right: `${window.innerWidth - (document.querySelector(`[data-account-id="${account.user_id}"]`) as HTMLElement)?.getBoundingClientRect()?.right || 0}px`
+                               }}>
                             <div className="py-1">
                               <button
-                                onClick={() => handleEditAccount(account.user_id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditAccount(account.user_id);
+                                }}
                                 className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
                               >
                                 <span className="text-blue-500">✏️</span>
                                 <span>Chỉnh sửa</span>
                               </button>
                               <button
-                                onClick={() => handleDisableAccount(account.user_id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDisableAccount(account.user_id);
+                                }}
                                 className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
                               >
                                 <span className="text-red-500">🚫</span>
                                 <span>Vô hiệu hóa</span>
                               </button>
                               <button
-                                onClick={() => handleResetPassword(account.user_id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleResetPassword(account.user_id);
+                                }}
                                 className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 transition-colors duration-200 flex items-center gap-2"
                               >
                                 <span className="text-blue-500">🔐</span>
@@ -374,7 +391,7 @@ const AccountsDashboardPage: React.FC = () => {
       {/* Click outside to close action menu */}
       {showActionMenu && (
         <div 
-          className="fixed inset-0 z-0" 
+          className="fixed inset-0 z-40" 
           onClick={() => setShowActionMenu(null)}
         />
       )}

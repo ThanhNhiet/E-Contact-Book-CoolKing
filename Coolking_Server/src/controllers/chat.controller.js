@@ -297,3 +297,171 @@ exports.searchNonChatCourseSections = async (req, res) => {
         });
     }
 };
+
+// POST /api/chats/homeroom/:lecturer_id
+exports.createGroupChatWithHomeroomLecturer = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { lecturer_id } = req.params;
+        if (!lecturer_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'lecturer_id là bắt buộc'
+            });
+        }
+        const chat = await chatRepo.createGroupChatWithHomeroomLecturer(decoded.user_id, lecturer_id);
+        res.status(201).json(chat);
+    } catch (error) {
+        console.error('Error in createGroupChatWithHomeroomLecturer controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi tạo nhóm chat với giảng viên chủ nhiệm'
+        });
+    }
+};
+
+// GET /api/chats/nonchat-course-sections/session/:session_id?page=1&pageSize=10
+// exports.getNonChatCourseSectionsBySession = async (req, res) => {
+//     try {
+//         const authHeader = req.headers['authorization'];
+//         const token = authHeader && authHeader.split(' ')[1];
+//         const decoded = jwtUtils.verifyAccessToken(token);
+//         if (!decoded || decoded.role !== 'ADMIN') {
+//             return res.status(403).json({ message: 'Forbidden' });
+//         }
+//         const { session_id } = req.params;
+//         const { page, pageSize } = req.query;
+        
+//         if (!session_id) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'session_id là bắt buộc'
+//             });
+//         }
+        
+//         const courseSections = await chatRepo.getNonChatCourseSectionsBySession(session_id, page, pageSize);
+//         res.status(200).json(courseSections);
+//     } catch (error) {
+//         console.error('Error in getNonChatCourseSectionsBySession controller:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: error.message || 'Lỗi server khi lấy danh sách course section chưa có nhóm chat theo học kỳ'
+//         });
+//     }
+// };
+
+// POST /api/chats/bulk-create-session/:session_id?namegroup=
+// exports.createBulkGroupChatsForSession = async (req, res) => {
+//     try {
+//         const authHeader = req.headers['authorization'];
+//         const token = authHeader && authHeader.split(' ')[1];
+//         const decoded = jwtUtils.verifyAccessToken(token);
+//         if (!decoded || decoded.role !== 'ADMIN') {
+//             return res.status(403).json({ message: 'Forbidden' });
+//         }
+//         const { session_id } = req.params;
+//         const { namegroup } = req.query; // Get namegroup from query params
+        
+//         if (!session_id) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'session_id là bắt buộc'
+//             });
+//         }
+
+//         const result = await chatRepo.createBulkGroupChatsForSession(
+//             decoded.user_id,
+//             session_id,
+//             namegroup
+//         );
+//         res.status(201).json(result);
+//     } catch (error) {
+//         console.error('Error in createBulkGroupChatsForSession controller:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: error.message || 'Lỗi server khi tạo hàng loạt nhóm chat cho học kỳ'
+//         });
+//     }
+// };
+
+// DELETE /api/chats/cleanup-gr-completed/:session_id
+exports.cleanupCompletedCourseSectionChats = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        
+        const { session_id } = req.params;
+        if (!session_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'session_id là bắt buộc'
+            });
+        }
+
+        const result = await chatRepo.cleanupCompletedCourseSectionChats(session_id);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in cleanupCompletedCourseSectionChats controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi dọn dẹp nhóm chat của các course section đã hoàn thành'
+        });
+    }
+};
+
+// PUT /api/chats/mute/:chatID
+exports.updateMuteStatus = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { chatID } = req.params;
+        const result = await chatRepo.updateMuteStatus(decoded.user_id, chatID);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in updateMuteStatus controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi cập nhật trạng thái tắt thông báo của cuộc trò chuyện'
+        });
+    }
+};
+
+// GET /api/chats/info/:chatID
+exports.getChatInfoByID = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { chatID } = req.params;
+        if (!chatID) {
+            return res.status(400).json({
+                success: false,
+                message: 'chatID là bắt buộc'
+            });
+        }
+        const chat = await chatRepo.getChatInfoById(chatID);
+        res.status(200).json(chat);
+    } catch (error) {
+        console.error('Error in getChatInfoByID controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi lấy thông tin cuộc trò chuyện'
+        });
+    }
+};

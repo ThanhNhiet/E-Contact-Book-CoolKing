@@ -11,4 +11,7 @@ router.post('/students/:course_section_id', attendanceController.createAttendanc
 // PUT /attendances/students/:attendance_id
 router.put('/students/:attendance_id', attendanceController.updateAttendanceStudents);
 
+// DELETE /attendances/students/:attendance_id
+router.delete('/students/:attendance_id', attendanceController.deleteAttendanceStudents);
+
 module.exports = router;

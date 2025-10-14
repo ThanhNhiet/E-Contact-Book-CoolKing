@@ -100,6 +100,59 @@ class ChatServices {
         const response = await axiosInstance.get(`/chats/group-info/${course_section_id}`);
         return response.data;
     }
+
+    // DELETE /api/chats/cleanup-gr-completed/{session_id}
+    async cleanupGroupChatsOfCompletedCourseSections(session_id: string) {
+        const response = await axiosInstance.delete(`/chats/cleanup-gr-completed/${session_id}`);
+        return response.data;
+    }
+
+    // POST /api/chats/homeroom/{lecturer_id}
+    async createGroupChatWithHomeroomLecturer(lecturer_id: string) {
+        const response = await axiosInstance.post(`/chats/homeroom/${lecturer_id}`);
+        return response.data;
+    }
+
+    // GET /api/chats?page=1&pageSize=10 (dành cho giảng viên)
+    async getChats4AllUser(page: number, pageSize: number) {
+        const response = await axiosInstance.get(`/chats`, {
+            params: {
+                page,
+                pageSize
+            }
+        });
+        return response.data;
+    }
+
+    //GET /api/chats/search?keyword= (dành cho giảng viên)
+    async searchChats4AllUser(keyword: string, page: number, pageSize: number) {
+        const response = await axiosInstance.get(`/chats/search`, {
+            params: {
+                keyword,
+                page,
+                pageSize
+            }
+        });
+        return response.data;
+    }
+
+    // GET /api/chats/:chatID (lấy chat theo chatID)
+    async getChatById4AllUser(chatID: string) {
+        const response = await axiosInstance.get(`/chats/${chatID}`);
+        return response.data;
+    }
+
+    // POST /api/chats/mute/:chatID (dành cho giảng viên)
+    async muteChat4AllUser(chatID: string) {
+        const response = await axiosInstance.post(`/chats/mute/${chatID}`);
+        return response.data;
+    }
+
+    // POST /api/chats/private/:target_id (tạo chat riêng với ai đó) - dành cho giảng viên
+    async createPrivateChat4AllUser(target_id: string) {
+        const response = await axiosInstance.post(`/chats/private/${target_id}`);
+        return response.data;
+    }
 }
 
 export const chatServices = new ChatServices();

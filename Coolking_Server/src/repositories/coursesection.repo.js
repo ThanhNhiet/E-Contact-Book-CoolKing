@@ -326,8 +326,53 @@ const filterCourseSections4Lecturer = async (lecturer_id, sessionId, facultyId, 
     }
 };
 
+/**
+ *  Lấy danh sách student_id + parent_id (nếu có) của một lớp học phần, phục vụ chức năng gửi thông báo
+ * @param {string} course_section_id - Mã lớp học phần
+ * @returns {Array} success + message + data: [ { student_id, parent_id (nếu có) } ] 
+ */
+const getStudentsAndParentsByCourseSection = async (course_section_id) => {
+    try {
+        if (!course_section_id) {
+            throw new Error('course_section_id is required');
+        }
+
+        const students = await models.StudentCourseSection.findAll({
+            attributes: ['student_id'],
+            where: { course_section_id: course_section_id }
+        });
+
+        if (students.length === 0) {
+            return {
+                success: false,
+                message: 'Không có học sinh nào trong lớp học phần này',
+                data: []
+            };
+        }
+
+        let finalData = [];
+        for (const student of students) {
+            const parent = await models.Parent.findOne({
+                attributes: ['parent_id'],
+                where: { student_id: student.student_id }
+            });
+            finalData.push({ student_id: student.student_id, parent_id: parent ? parent.parent_id : null });
+        }
+        
+        return {
+            success: true,
+            message: 'Lấy danh sách học sinh và phụ huynh thành công',
+            data: finalData
+        };
+    } catch (error) {
+        console.error('Error in getStudentsAndParentsByCourseSection:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     getCourseSectionsByLecturer,
     searchCourseSectionsByKeyword4Lecturer,
-    filterCourseSections4Lecturer
+    filterCourseSections4Lecturer,
+    getStudentsAndParentsByCourseSection
 };

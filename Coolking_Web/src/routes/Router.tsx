@@ -13,7 +13,9 @@ import ChatDbPage from '../pages/admin/chat/ChatDashboardPage';
 import CourseSectionSLPage from '../pages/admin/chat/CourseSectionSLPage';
 import StatisticsMainPage from '../pages/admin/statistics/StatisticsMainPage';
 import ProfileInfoPage from '../pages/lecturer/profile/ProfileInfoPage';
-import StudentListWithScorePage from '../pages/lecturer/clazz/StudentListWithScorePage';
+import StudentListWithScorePage from '../pages/lecturer/studentscrore/StudentListWithScorePage';
+import AlertListPage from '../pages/lecturer/alert/AlertListPage';
+import StudentsAttendancePage from '../pages/lecturer/attendance/StudentsAttendancePage';
 
 const Router: React.FC = () => {
   return (
@@ -98,6 +100,22 @@ const Router: React.FC = () => {
           element={
             <ProtectedRoute requiredRole="LECTURER">
               <StudentListWithScorePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/lecturer/alerts" 
+          element={
+            <ProtectedRoute requiredRole="LECTURER">
+              <AlertListPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/lecturer/clazz/students-attendance/:course_section_id" 
+          element={
+            <ProtectedRoute requiredRole="LECTURER">
+              <StudentsAttendancePage />
             </ProtectedRoute>
           }
         />
