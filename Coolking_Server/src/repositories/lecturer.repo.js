@@ -121,11 +121,19 @@ const uploadAvatar = async (lecturer_id, file) => {
   }
 };
 
-const getLecturerById = async (lecturer_id) => {
+const getLecturerById4Admin = async (lecturer_id) => {
   try {
     const lecturer = await models.Lecturer.findOne({ where: { lecturer_id } });
     if (!lecturer) throw new Error("Lecturer not found");
-    return lecturer;
+    const homeroom = await models.Clazz.findOne({ where: { id: lecturer.homeroom_class_id } });
+    return {
+      lecturer_id: lecturer.lecturer_id,
+      name: lecturer.name,
+      phone: lecturer.phone,
+      email: lecturer.email,
+      faculty_id: lecturer.faculty_id,
+      homeroom_name: homeroom ? homeroom.name : null
+    };
   } catch (error) {
     throw error;
   }
@@ -137,6 +145,6 @@ module.exports = {
   updateLecturer,
   deleteLecturer,
   uploadAvatar,
-  getLecturerById
+  getLecturerById4Admin
 };
 
