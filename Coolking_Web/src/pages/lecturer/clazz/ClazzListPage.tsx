@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createPortal } from 'react-dom';
 import { useCourseSection } from '../../../hooks/useCourseSection';
 import { useStatistics } from '../../../hooks/useStatistics';
 import HeaderLeCpn from '../../../components/lecturer/HeaderLeCpn';
@@ -38,8 +37,6 @@ const ClazzListPage: React.FC = () => {
     const [showSessionDropdown, setShowSessionDropdown] = useState(false);
     const [showFacultyDropdown, setShowFacultyDropdown] = useState(false);
     const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
-    const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
-    const buttonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
 
     // Filtered options for dropdowns
     const filteredSessions = sessions.filter(session =>
@@ -68,11 +65,6 @@ const ClazzListPage: React.FC = () => {
 
             if (!target.closest('.faculty-dropdown')) {
                 setShowFacultyDropdown(false);
-            }
-
-            if (!target.closest('.action-dropdown') && !target.closest('[data-dropdown-menu]')) {
-                setShowActionMenu(null);
-                setMenuPosition(null);
             }
         };
 
@@ -115,20 +107,8 @@ const ClazzListPage: React.FC = () => {
         }
     };
 
-    const handleActionClick = (courseSectionId: string, event: React.MouseEvent<HTMLButtonElement>) => {
-        if (showActionMenu === courseSectionId) {
-            setShowActionMenu(null);
-            setMenuPosition(null);
-        } else {
-            const button = event.currentTarget;
-            const rect = button.getBoundingClientRect();
-            
-            setMenuPosition({
-                top: rect.bottom + window.scrollY + 5,
-                right: window.innerWidth - rect.right + window.scrollX
-            });
-            setShowActionMenu(courseSectionId);
-        }
+    const handleActionClick = (courseSectionId: string) => {
+        setShowActionMenu(showActionMenu === courseSectionId ? null : courseSectionId);
     };
 
     const handleViewStudents = (courseSectionId: string) => {
@@ -352,16 +332,12 @@ const ClazzListPage: React.FC = () => {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                 {courseSection.sessionName}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 relative action-dropdown">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 relative">
                                                 <button
-                                                    ref={(el) => {
-                                                        if (buttonRefs.current) {
-                                                            buttonRefs.current[courseSection.course_section_id] = el;
-                                                        }
-                                                    }}
+                                                    data-course-id={courseSection.course_section_id}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        handleActionClick(courseSection.course_section_id, e);
+                                                        handleActionClick(courseSection.course_section_id);
                                                     }}
                                                     className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
                                                 >
@@ -369,7 +345,37 @@ const ClazzListPage: React.FC = () => {
                                                         <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                                                     </svg>
                                                 </button>
-
+                                                
+                                                {showActionMenu === courseSection.course_section_id && (
+                                                    <div className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[60] w-72" 
+                                                         style={{
+                                                           top: `${(document.querySelector(`[data-course-id="${courseSection.course_section_id}"]`) as HTMLElement)?.getBoundingClientRect()?.bottom + 5 || 0}px`,
+                                                           right: `${window.innerWidth - (document.querySelector(`[data-course-id="${courseSection.course_section_id}"]`) as HTMLElement)?.getBoundingClientRect()?.right || 0}px`
+                                                         }}>
+                                                        <div className="py-1">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleViewStudents(courseSection.course_section_id);
+                                                                }}
+                                                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
+                                                            >
+                                                                <span className="text-blue-500">👥</span>
+                                                                <span>Xem điểm và thông tin sinh viên</span>
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleViewAttendance(courseSection.course_section_id);
+                                                                }}
+                                                                className="w-full text-left px-4 py-2 hover:bg-green-50 text-sm text-gray-700 transition-colors duration-200 flex items-center gap-2"
+                                                            >
+                                                                <span className="text-green-500">📋</span>
+                                                                <span>Xem buổi điểm danh</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
                                     ))
@@ -423,40 +429,12 @@ const ClazzListPage: React.FC = () => {
 
             <FooterLeCpn />
 
-            {/* Dropdown Menu Portal - Rendered outside table */}
-            {showActionMenu && menuPosition && createPortal(
+            {/* Click outside to close action menu */}
+            {showActionMenu && (
                 <div 
-                    data-dropdown-menu
-                    className="fixed w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-[9999]"
-                    style={{
-                        top: menuPosition.top,
-                        right: menuPosition.right
-                    }}
-                >
-                    <div className="py-1">
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewStudents(showActionMenu);
-                            }}
-                            className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
-                        >
-                            <span className="text-blue-500">👥</span>
-                            <span>Xem điểm và thông tin sinh viên</span>
-                        </button>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewAttendance(showActionMenu);
-                            }}
-                            className="w-full text-left px-4 py-2 hover:bg-green-50 text-sm text-gray-700 transition-colors duration-200 flex items-center gap-2"
-                        >
-                            <span className="text-green-500">📋</span>
-                            <span>Xem buổi điểm danh</span>
-                        </button>
-                    </div>
-                </div>,
-                document.body
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowActionMenu(null)}
+                />
             )}
         </div>
     );
