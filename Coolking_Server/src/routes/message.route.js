@@ -31,4 +31,8 @@ router.get('/:chatID', messageController.getMessagesByChatID);
 // PUT /api/messages/:messageID/status
 router.put('/:messageID/status', messageController.updateMessageStatus);
 
+
+// GET /api/messages/last/:chatID
+router.get('/last/:chatID', messageController.getLastMessageByChatID);
+
 module.exports = router;

@@ -327,3 +327,31 @@ exports.updateMessageStatus = async (req, res) => {
         });
     }   
 };
+
+// GET /api/messages/last/:chatID
+exports.getLastMessageByChatID = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { chatID } = req.params;
+        if (!chatID) {
+            return res.status(400).json({
+                success: false,
+                message: 'chatID là bắt buộc'
+            });
+        }
+
+        const lastMessage = await messageRepo.getLastMessageByChatID(chatID);
+        return res.status(200).json(lastMessage);
+    } catch (error) {
+        console.error('Error in getLastMessageByChatID controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi lấy tin nhắn cuối cùng'
+        });
+    }
+}

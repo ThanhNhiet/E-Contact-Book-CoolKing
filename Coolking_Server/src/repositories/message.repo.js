@@ -463,6 +463,35 @@ const updateMessageStatus = async (messageID, status) => {
     }
 }
 
+const getLastMessageByChatID = async (chatID) => {
+    try {
+        const lastMessage = await Message.findOne({ chatID }).sort({ createdAt: -1 });
+        if (!lastMessage) {
+            throw new Error("No messages found for the given chatID");
+            return;
+        }
+        return {
+            _id: lastMessage._id,
+            messageID: lastMessage.messageID,
+            chatID: lastMessage.chatID,
+            senderID: lastMessage.senderID,
+            content: lastMessage.content,
+            type: lastMessage.type,
+            status: lastMessage.status,
+            filename: lastMessage.filename,
+            replyTo: lastMessage.replyTo,
+            pinnedInfo: lastMessage.pinnedInfo,
+            createdAt: lastMessage.createdAt,
+            updatedAt: lastMessage.updatedAt
+        };
+
+
+    } catch (error) {
+        console.error("Error retrieving last message by chatID:", error);
+        throw error;
+    }
+}
+
 
 
 
@@ -475,5 +504,6 @@ module.exports = {
     createMessageTextReply,
     createMessageFileReply,
     createMessageImageReply,
-    createdMessagePinned
+    createdMessagePinned,
+    getLastMessageByChatID
 }
