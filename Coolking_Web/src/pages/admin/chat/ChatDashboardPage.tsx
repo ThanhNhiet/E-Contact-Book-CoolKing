@@ -6,6 +6,8 @@ import FooterAdCpn from '../../../components/admin/FooterAdCpn';
 import CleanUpChatModal from './CleanUpChatModal';
 import UpdateGrchatModal from './UpdateGrchatModal';
 import ChatDetailInfoModal from './ChatDetailInfoModal';
+import CreateHomeroomGrModal from './CreateHomeroomGrModal';
+import CleanUpGrchatOfCSCompleteModal from './CleanUpGrchatOfCSCompleteModal';
 
 const ChatDashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -21,6 +23,8 @@ const ChatDashboardPage: React.FC = () => {
   const [updatingChat, setUpdatingChat] = useState<Chat | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
+  const [showCreateHomeroomModal, setShowCreateHomeroomModal] = useState(false);
+  const [showCleanUpCompleteModal, setShowCleanUpCompleteModal] = useState(false);
 
   useEffect(() => {
     getChats(1, 10);
@@ -130,12 +134,7 @@ const ChatDashboardPage: React.FC = () => {
     }, 3000);
   };
 
-  const handleRowClick = (chat: Chat, event: React.MouseEvent) => {
-    // Prevent row click when action menu button is clicked
-    if ((event.target as HTMLElement).closest('button')) {
-      return;
-    }
-    
+  const handleRowClick = (chat: Chat) => {
     setSelectedChat(chat);
     setShowDetailModal(true);
   };
@@ -182,7 +181,7 @@ const ChatDashboardPage: React.FC = () => {
                 </button>
               </div>
               
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-wrap">
                 <button 
                   onClick={() => navigate('/admin/chat/course-sections')}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-200 font-medium"
@@ -191,6 +190,16 @@ const ChatDashboardPage: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                   <span>Lớp học phần chưa có chat</span>
+                </button>
+
+                <button 
+                  onClick={() => setShowCreateHomeroomModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 font-medium"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <span>Tạo nhóm chat chủ nhiệm</span>
                 </button>
                 
                 <button 
@@ -201,6 +210,16 @@ const ChatDashboardPage: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                   <span>Xóa chat đơn không hoạt động</span>
+                </button>
+
+                <button 
+                  onClick={() => setShowCleanUpCompleteModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors duration-200 font-medium"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" />
+                  </svg>
+                  <span>Dọn dẹp nhóm chat đã hoàn thành</span>
                 </button>
               </div>
             </div>
@@ -249,8 +268,14 @@ const ChatDashboardPage: React.FC = () => {
                   chats.map((chat, index) => (
                     <tr 
                       key={chat._id} 
-                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer transition-colors duration-200`}
-                      onClick={(e) => handleRowClick(chat, e)}
+                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer transition-colors duration-200 select-none`}
+                      onClick={(e) => {
+                        // Only trigger detail if not clicking on action buttons and no text is selected
+                        const selection = window.getSelection();
+                        if (!e.defaultPrevented && (!selection || selection.toString().length === 0)) {
+                          handleRowClick(chat);
+                        }
+                      }}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={getChatTypeBadge(chat.type)}>
@@ -272,42 +297,50 @@ const ChatDashboardPage: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {chat.memberCount || 0}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div className="relative">
-                          <button
-                            onClick={() => handleActionClick(chat._id)}
-                            className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
-                          >
-                            <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                            </svg>
-                          </button>
-                          
-                          {showActionMenu === chat._id && (
-                            <div className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] w-48" 
-                                 style={{
-                                   top: `${(index + 2) * 60 + 180}px`, // Điều chỉnh vị trí dựa vào index của row
-                                   right: '24px' // Cách mép phải 24px
-                                 }}>
-                              <div className="py-1">
-                                <button
-                                  onClick={() => handleUpdateChat(chat._id)}
-                                  className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
-                                >
-                                  <span className="text-blue-500">✏️</span>
-                                  <span>Cập nhật</span>
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteChat(chat._id)}
-                                  className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-gray-700 transition-colors duration-200 flex items-center gap-2"
-                                >
-                                  <span className="text-red-500">🗑️</span>
-                                  <span>Xóa</span>
-                                </button>
-                              </div>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 relative">
+                        <button
+                          data-chat-id={chat._id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleActionClick(chat._id);
+                          }}
+                          className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                        >
+                          <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                          </svg>
+                        </button>
+                        
+                        {showActionMenu === chat._id && (
+                          <div className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-[60] w-48" 
+                               style={{
+                                 top: `${(document.querySelector(`[data-chat-id="${chat._id}"]`) as HTMLElement)?.getBoundingClientRect()?.bottom + 5 || 0}px`,
+                                 right: `${window.innerWidth - (document.querySelector(`[data-chat-id="${chat._id}"]`) as HTMLElement)?.getBoundingClientRect()?.right || 0}px`
+                               }}>
+                            <div className="py-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUpdateChat(chat._id);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 border-b border-gray-100 transition-colors duration-200 flex items-center gap-2"
+                              >
+                                <span className="text-blue-500">✏️</span>
+                                <span>Cập nhật</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteChat(chat._id);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-gray-700 transition-colors duration-200 flex items-center gap-2"
+                              >
+                                <span className="text-red-500">🗑️</span>
+                                <span>Xóa</span>
+                              </button>
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -408,7 +441,7 @@ const ChatDashboardPage: React.FC = () => {
       {/* Click outside to close action menu */}
       {showActionMenu && (
         <div 
-          className="fixed inset-0 z-0" 
+          className="fixed inset-0 z-40" 
           onClick={() => setShowActionMenu(null)}
         />
       )}
@@ -433,6 +466,20 @@ const ChatDashboardPage: React.FC = () => {
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         chat={selectedChat}
+      />
+
+      {/* Create Homeroom Group Chat Modal */}
+      <CreateHomeroomGrModal
+        isOpen={showCreateHomeroomModal}
+        onClose={() => setShowCreateHomeroomModal(false)}
+        onSuccess={handleCleanUpSuccess}
+      />
+
+      {/* Clean Up Group Chats of Completed Course Sections Modal */}
+      <CleanUpGrchatOfCSCompleteModal
+        isOpen={showCleanUpCompleteModal}
+        onClose={() => setShowCleanUpCompleteModal(false)}
+        onSuccess={handleCleanUpSuccess}
       />
     </div>
   );

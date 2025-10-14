@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import chatServices from '../../../services/chatServices';
+import { chatServices } from '../../../services/chatServices';
 
 interface Member {
   userID: string;
@@ -7,19 +7,6 @@ interface Member {
   role: string;
   joinedAt: string;
   muted: boolean;
-}
-
-interface ChatDetail {
-  _id: string;
-  course_section_id?: string;
-  type: string;
-  name: string;
-  avatar: string;
-  createdBy: string;
-  updatedBy: string;
-  members: Member[];
-  createdAt: string;
-  updatedAt: string;
 }
 
 interface ChatDetailInfoModalProps {
@@ -38,7 +25,18 @@ const ChatDetailInfoModal: React.FC<ChatDetailInfoModalProps> = ({
   onClose,
   chat
 }) => {
-  const [chatDetail, setChatDetail] = useState<ChatDetail | null>(null);
+  interface ChatDetailType {
+    _id: string;
+    name?: string;
+    type: 'group' | 'private';
+    course_section_id?: string;
+    createdAt: string;
+    updatedAt: string;
+    createdBy: string;
+    members: Member[];
+  }
+
+  const [chatDetail, setChatDetail] = useState<ChatDetailType | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchMember, setSearchMember] = useState('');
@@ -46,20 +44,21 @@ const ChatDetailInfoModal: React.FC<ChatDetailInfoModalProps> = ({
   const membersPerPage = 10;
 
   useEffect(() => {
-    if (isOpen && chat?.course_section_id && chat.type === 'group') {
+    if (isOpen && chat?._id) {
       fetchChatDetail();
     }
   }, [isOpen, chat]);
 
   const fetchChatDetail = async () => {
-    if (!chat?.course_section_id) return;
+    if (!chat?._id) return;
     
     setLoading(true);
     setError(null);
     try {
-      const response = await chatServices.getGroupChatInfo(chat.course_section_id);
-      if (response.success && response.data) {
-        setChatDetail(response.data);
+      const response = await chatServices.getChatById4AllUser(chat._id);
+      
+      if (response.success && response.chat) {
+        setChatDetail(response.chat);
       } else {
         setError(response.message || 'Không thể lấy thông tin chi tiết chat');
       }
@@ -164,15 +163,6 @@ const ChatDetailInfoModal: React.FC<ChatDetailInfoModalProps> = ({
                 <p className="text-red-600 font-medium">{error}</p>
               </div>
             </div>
-          ) : chat?.type !== 'group' ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-gray-600">Chi tiết chỉ khả dụng cho nhóm chat</p>
-              </div>
-            </div>
           ) : chatDetail ? (
             <div className="p-6">
               {/* Chat Info */}
@@ -181,12 +171,24 @@ const ChatDetailInfoModal: React.FC<ChatDetailInfoModalProps> = ({
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Tên nhóm</label>
-                      <p className="text-gray-900 font-medium">{chatDetail.name}</p>
+                      <label className="text-sm font-medium text-gray-600">
+                        {chatDetail.type === 'group' ? 'Tên nhóm' : 'Tên chat'}
+                      </label>
+                      <p className="text-gray-900 font-medium">
+                        {chatDetail.name || (chatDetail.type === 'private' ? 'Chat riêng tư' : 'Không có tên')}
+                      </p>
                     </div>
+                    {chatDetail.course_section_id && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Mã lớp học phần</label>
+                        <p className="text-gray-900 font-mono text-sm">{chatDetail.course_section_id}</p>
+                      </div>
+                    )}
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Mã lớp học phần</label>
-                      <p className="text-gray-900 font-mono text-sm">{chatDetail.course_section_id}</p>
+                      <label className="text-sm font-medium text-gray-600">Loại chat</label>
+                      <p className="text-gray-900">
+                        {chatDetail.type === 'group' ? 'Nhóm chat' : 'Chat riêng tư'}
+                      </p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Ngày tạo</label>
