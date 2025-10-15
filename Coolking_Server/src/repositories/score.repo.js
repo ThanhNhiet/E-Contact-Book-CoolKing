@@ -40,7 +40,7 @@ const  getScoreStudentBySession = async (studentId) =>{
         FROM scores g
         INNER JOIN students s ON g.student_id = s.student_id AND s.isDeleted = false
         INNER JOIN clazz c ON s.clazz_id = c.id 
-        INNER JOIN course_sections cs ON g.course_section_id = cs.id AND cs.isDeleted = false
+        INNER JOIN course_sections cs ON g.course_section_id = cs.id AND cs.isCompleted = false
         INNER JOIN subjects sub ON cs.subject_id = sub.subject_id AND sub.isDeleted = false
         INNER JOIN sessions sem ON cs.session_id = sem.id
         WHERE s.student_id = :studentId
@@ -139,7 +139,7 @@ const  getScoreParentStudentBySession = async (ParentId) =>{
         FROM scores g
         INNER JOIN students s ON g.student_id = s.student_id AND s.isDeleted = false
         INNER JOIN clazz c ON s.clazz_id = c.id 
-        INNER JOIN course_sections cs ON g.course_section_id = cs.id AND cs.isDeleted = false
+        INNER JOIN course_sections cs ON g.course_section_id = cs.id AND cs.isCompleted = false
         INNER JOIN subjects sub ON cs.subject_id = sub.subject_id AND sub.isDeleted = false
         INNER JOIN sessions sem ON cs.session_id = sem.id
         INNER JOIN parents ps ON s.student_id = ps.student_id

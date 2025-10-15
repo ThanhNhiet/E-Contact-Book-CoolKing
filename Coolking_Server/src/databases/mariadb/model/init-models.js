@@ -91,7 +91,7 @@ function initModels(sequelize) {
   // CourseSection - StudentCourseSection
   StudentCourseSection.belongsTo(CourseSection, { as: "course_section", foreignKey: "course_section_id" });
   CourseSection.hasMany(StudentCourseSection, { as: "students_course_sections", foreignKey: "course_section_id" });
-
+  
   // Faculty - Lecturer
   Lecturer.belongsTo(Faculty, { as: "faculty", foreignKey: "faculty_id", targetKey: "faculty_id" });
   Faculty.hasMany(Lecturer, { as: "lecturers", foreignKey: "faculty_id", sourceKey: "faculty_id" });

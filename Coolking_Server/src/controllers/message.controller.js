@@ -277,19 +277,14 @@ exports.getMessagesByChatID = async (req, res) => {
             return res.status(403).json({ message: 'Forbidden' });
         }
         const { chatID } = req.params;
+         const { page, pageSize } = req.query;
         if (!chatID) {
             return res.status(400).json({
                 success: false,
                 message: 'chatID là bắt buộc'
             });
         }   
-        const paginationOptions = {
-            page: req.query.page,
-            limit: req.query.limit,
-            sortBy: req.query.sortBy,
-            sortOrder: req.query.sortOrder
-        };
-        const messages = await messageRepo.getMessagesByChatID(chatID, paginationOptions);
+        const messages = await messageRepo.getMessagesByChatID(chatID, page, pageSize);
         return res.status(200).json(messages);
 
     } catch (error) {

@@ -370,9 +370,125 @@ const getStudentsAndParentsByCourseSection = async (course_section_id) => {
     }
 };
 
+
+/**
+ * Lấy danh sách các lớp học phần của học sinh, phân trang, sắp xếp theo ngày tạo giảm dần
+ * @param {string} studentId - Mã học sinh 
+ * @param {number} page - Trang hiện tại
+ * @param {number} pageSize - Số lượng bản ghi trên một trang
+ * @returns {Object} success + message + data: { total, page, pageSize, courseSections, linkPrev, linkNext, pages }
+ */
+const getCourseSectionsByStudent = async (studentId, page, pageSize = 10) => {
+    try {
+        // Validate input
+        if (!studentId) {
+            throw new Error('studentId is required');
+        }
+
+        const page_num = parseInt(page) || 1;
+        const pageSize_num = parseInt(pageSize) || 10;
+        const offset = (page_num - 1) * pageSize_num;
+
+        const { count, rows } = await models.StudentCourseSection.findAndCountAll({
+            where: {
+                student_id: studentId
+            },
+            include: [
+                {
+                    model: models.CourseSection,
+                    as: 'course_section',
+                    attributes: ['id', 'createdAt'],
+                    include: [
+                        {
+                            model: models.Subject,
+                            as: 'subject',
+                            attributes: ['name'],
+                            include: [
+                                {
+                                    model: models.Faculty,
+                                    as: 'faculty',
+                                    attributes: ['name']
+                                }
+                            ]
+                        },
+                        {
+                            model: models.Clazz,
+                            as: 'clazz',
+                            attributes: ['name']
+                        },
+                        {
+                            model: models.Session,
+                            as: 'session',
+                            attributes: ['name', 'years']
+                        },
+                        {
+                            model: models.LecturerCourseSection,
+                            as: 'lecturers_course_sections',
+                            include: [
+                                {
+                                    model: models.Lecturer,
+                                    as: 'lecturer',
+                                    attributes: ['name']
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            order: [
+                [{ model: models.CourseSection, as: 'course_section' }, 'createdAt', 'DESC']
+            ],
+            offset: offset,
+            limit: pageSize_num,
+            distinct: true
+        });
+
+        const courseSections = rows.map(item => ({
+            course_section_id: item.course_section.id,
+            subjectName: item.course_section.subject?.name || 'N/A',
+            className: item.course_section.clazz?.name || 'N/A',
+            facultyName: item.course_section.subject?.faculty?.name || 'N/A',
+            sessionName: item.course_section.session ? 
+                `${item.course_section.session.name} ${item.course_section.session.years}` : 'N/A',
+            lecturerName: item.course_section.lecturers_course_sections?.[0]?.lecturer?.name || 'N/A',
+            createdAt: datetimeFormatter.formatDateVN(item.course_section.createdAt)
+        }));
+
+        const linkPrev = page_num > 1 ? 
+            `/api/coursesections/student/${studentId}?page=${page_num - 1}&pagesize=${pageSize_num}` : null;
+        const linkNext = (page_num - 1) * pageSize_num + rows.length < count ? 
+            `/api/coursesections/student/${studentId}?page=${page_num + 1}&pagesize=${pageSize_num}` : null;
+
+        const totalPages = Math.ceil(count / pageSize_num);
+        const pages = [];
+        for (let i = 1; i <= totalPages; i++) {
+            if (i >= page_num && i < page_num + 3) {
+                pages.push(i);
+            }
+        }
+
+        return {
+            total: count,
+            page: page_num,
+            pageSize: pageSize_num,
+            courseSections: courseSections,
+            linkPrev,
+            linkNext,
+            pages
+        };
+
+    } catch (error) {
+        console.error('Error in getCourseSectionsByStudent:', error);
+        throw error;
+    }
+};
+
+
+
 module.exports = {
     getCourseSectionsByLecturer,
     searchCourseSectionsByKeyword4Lecturer,
     filterCourseSections4Lecturer,
-    getStudentsAndParentsByCourseSection
+    getStudentsAndParentsByCourseSection,
+    getCourseSectionsByStudent
 };

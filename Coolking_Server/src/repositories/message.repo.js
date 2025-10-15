@@ -416,7 +416,7 @@ const createdMessagePinned = async ({ chatID,messageID, pinnedBy }) => {
         message.pinnedInfo = {
             messageID,
             pinnedBy,
-            pinnedDate: datetimeFormatter.formatDateVN(new Date())
+            pinnedDate: new Date()
         };
         await message.save();
         return message;
@@ -426,27 +426,68 @@ const createdMessagePinned = async ({ chatID,messageID, pinnedBy }) => {
     }
 }
 
-const getMessagesByChatID = async (chatID, paginationOptions) => {
+const getMessagesByChatID = async (chatID, page = 1, pageSize = 10) => {
     try {
-        const { page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc' } = paginationOptions;
-        const skip = (page - 1) * limit;
-        const sortCriteria = {};
-        sortCriteria[sortBy] = sortOrder === 'asc' ? 1 : -1;
+        if (!chatID) {
+            throw new Error('chatID is required');
+        }
 
+        const page_num = parseInt(page) || 1;
+        const pageSize_num = parseInt(pageSize) || 10;
+
+        // Get total count of messages
+        const count = await Message.countDocuments({ chatID });
+
+        // Calculate skip from newest messages
+        const skip = (page_num - 1) * pageSize_num;
+        
+        // Get messages with pagination
         const messages = await Message.find({ chatID })
+            .sort({ createdAt: -1 }) // Sort by newest first
             .skip(skip)
-            .limit(limit)
-            .sort(sortCriteria);
-            messages.forEach(msg => {
-                msg.createdAt = datetimeFormatter.formatDateVN(msg.createdAt);
-                msg.updatedAt = datetimeFormatter.formatDateVN(msg.updatedAt);
-            });
-        return messages;
+            .limit(pageSize_num)
+            .sort({ createdAt: 1 }); // Re-sort to display in chronological order
+
+        // Format messages
+        const formattedMessages = messages.map(msg => ({
+            ...msg.toObject(),
+            createdAt: msg.createdAt,
+            updatedAt: msg.updatedAt
+        }));
+
+        // Calculate pagination links
+        const hasMore = count > (skip + pageSize_num);
+        const hasNewer = page_num > 1;
+
+        const linkPrev = hasMore ? 
+            `/api/messages/${chatID}?page=${page_num + 1}&pagesize=${pageSize_num}` : null;
+        const linkNext = hasNewer ? 
+            `/api/messages/${chatID}?page=${page_num - 1}&pagesize=${pageSize_num}` : null;
+
+        // Calculate pages array
+        const totalPages = Math.ceil(count / pageSize_num);
+        const pages = [];
+        for (let i = 1; i <= totalPages; i++) {
+            if (i >= page_num && i < page_num + 3) {
+                pages.push(i);
+            }
+        }
+
+        return {
+            total: count,
+            page: page_num,
+            pageSize: pageSize_num,
+            messages: formattedMessages,
+            linkPrev,
+            linkNext,
+            pages
+        };
+
     } catch (error) {
         console.error("Error retrieving messages by chatID:", error);
         throw error;
     }
-}
+};
 
 const updateMessageStatus = async (messageID, status) => {
     try {
