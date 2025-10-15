@@ -471,7 +471,6 @@ const getUserChats = async (userID, roleAccount, page = 1, pageSize = 10) => {
                 type: chat.type,
                 name: chat.name,
                 avatar: chat.avatar,
-                course_section_id: chat.course_section_id,
             };
 
             // Nếu là private chat, tạo tên chat từ tên của người kia
@@ -662,15 +661,9 @@ const searchChatsByKeyword = async (userID, keyword, roleAccount) => {
 
             let chatInfo = {
                 _id: chat._id,
-                chatType: chat.type,
+                type: chat.type,
                 name: chat.name,
                 avatar: chat.avatar,
-                createdAt: chat.createdAt,
-                currentMember: {
-                    userID: currentMember.userID,
-                    role: currentMember.role,
-                    joinedAt: currentMember.joinedAt
-                }
             };
 
             // Nếu là private chat, tên chat chính là tên của đối phương (đã có sẵn trong members.userName)
@@ -681,13 +674,24 @@ const searchChatsByKeyword = async (userID, keyword, roleAccount) => {
                 }
             }
 
-            // Thêm thông tin course section cho group chat
-            if (chat.type === ChatType.GROUP && chat.course_section_id) {
-                chatInfo.courseSection = chat.course_section_id;
-            }
-
             // Lấy tin nhắn cuối cùng (nếu có)
             chatInfo.lastMessage = await getLastMessage(chat._id);
+
+            // so sánh lastMessage.createdAt với currentMember.lastReadAt để đánh dấu tin nhắn đã đọc
+            chatInfo.unread = false;
+            if (chatInfo.lastMessage && currentMember && currentMember.lastReadAt) {
+                const lastMessageTime = new Date(chatInfo.lastMessage.createdAt);
+                const lastReadTime = new Date(currentMember.lastReadAt);
+                if (lastMessageTime >= lastReadTime) {
+                    chatInfo.unread = true;
+                }
+            }
+
+            if (chatInfo.lastMessage) {
+                chatInfo.lastMessage.createdAt = chatInfo.lastMessage.createdAt
+                    ? datetimeFormatter.formatDateTimeVN(chatInfo.lastMessage.createdAt)
+                    : null;
+            }
 
             return chatInfo;
         }));
