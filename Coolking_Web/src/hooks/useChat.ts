@@ -288,6 +288,60 @@ export const useChat = () => {
         }
     }, []);
 
+    // Lấy danh sách chat của tất cả người dùng
+    const getChats4AllUser = useCallback(async (page: number, pageSize: number) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await chatServices.getChats4AllUser(page, pageSize);
+            setTotal(data.total);
+            setCurrentPage(page);
+            setPageSize(pageSize);
+            setLinkPrev(data.linkPrev);
+            setLinkNext(data.linkNext);
+            setPages(data.pages);
+            return data;
+        } catch (error) {
+            setError('Failed to fetch chats for all users');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Tìm kiếm chats của tất cả người dùng theo từ khóa
+    const searchChats4AllUser = useCallback(async (keyword: string, page: number, pageSize: number) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await chatServices.searchChats4AllUser(keyword, page, pageSize);
+            setTotal(data.total);
+            setCurrentPage(page);
+            setPageSize(pageSize);
+            setLinkPrev(data.linkPrev);
+            setLinkNext(data.linkNext);
+            setPages(data.pages);
+            return data;
+        } catch (error) {
+            setError('Failed to search chats for all users');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Bật tắt thông báo chat
+    const muteChat4AllUser = useCallback(async (chatID: string) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await chatServices.muteChat4AllUser(chatID);
+            return data;
+        } catch (error) {
+            setError('Failed to mute chat for all users');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     return {
         loading,
         error,
@@ -315,6 +369,9 @@ export const useChat = () => {
         getGroupChatInfo,
         createGroupChatWithHomeroomLecturer,
         cleanupGroupChatsOfCompletedCourseSections,
-        getChatById4AllUser
+        getChatById4AllUser,
+        getChats4AllUser,
+        searchChats4AllUser,
+        muteChat4AllUser
     };
 };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useChat, type Chat, type Student, type Lecturer } from '../../../hooks/useChatAD';
+import { useChat, type Chat, type Student, type Lecturer } from '../../../hooks/useChat';
 
 interface UpdateGrchatModalProps {
   isOpen: boolean;
