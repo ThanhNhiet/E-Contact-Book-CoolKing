@@ -39,6 +39,10 @@ const memberSchema = new Schema({
   muted: {
     type: Boolean,
     default: false
+  },
+  lastReadAt: {
+    type: Date,
+    default: Date.now
   }
 }, { _id: false });
 

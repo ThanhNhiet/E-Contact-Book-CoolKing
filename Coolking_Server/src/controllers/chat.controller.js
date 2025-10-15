@@ -455,7 +455,7 @@ exports.getChatInfoByID = async (req, res) => {
                 message: 'chatID là bắt buộc'
             });
         }
-        const chat = await chatRepo.getChatInfoById(chatID);
+        const chat = await chatRepo.getChatInfoById(decoded.user_id, chatID);
         res.status(200).json(chat);
     } catch (error) {
         console.error('Error in getChatInfoByID controller:', error);
