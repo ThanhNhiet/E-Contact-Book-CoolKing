@@ -471,9 +471,6 @@ const getUserChats = async (userID, roleAccount, page = 1, pageSize = 10) => {
                 type: chat.type,
                 name: chat.name,
                 avatar: chat.avatar,
-                course_section_id: chat.course_section_id,
-                createdAt: chat.createdAt,
-                updatedAt: chat.updatedAt
             };
 
             // Nếu là private chat, tạo tên chat từ tên của người kia
@@ -485,10 +482,25 @@ const getUserChats = async (userID, roleAccount, page = 1, pageSize = 10) => {
 
             // Thêm thông tin về member hiện tại
             const currentMember = chat.members.find(member => member.userID === userID);
-            result.currentMember = currentMember || null;
 
             // Lấy tin nhắn cuối cùng (nếu có)
             result.lastMessage = await getLastMessage(chat._id);
+
+            // so sánh lastMessage.createdAt với currentMember.lastReadAt để đánh dấu tin nhắn đã đọc
+            result.unread = false;
+            if (result.lastMessage && currentMember && currentMember.lastReadAt) {
+                const lastMessageTime = new Date(result.lastMessage.createdAt);
+                const lastReadTime = new Date(currentMember.lastReadAt);
+                if (lastMessageTime >= lastReadTime) {
+                    result.unread = true;
+                }
+            }
+
+            if (result.lastMessage) {
+                result.lastMessage.createdAt = result.lastMessage.createdAt
+                    ? datetimeFormatter.formatDateTimeVN(result.lastMessage.createdAt)
+                    : null;
+            }
 
             return result;
         }));
@@ -649,15 +661,9 @@ const searchChatsByKeyword = async (userID, keyword, roleAccount) => {
 
             let chatInfo = {
                 _id: chat._id,
-                chatType: chat.type,
+                type: chat.type,
                 name: chat.name,
                 avatar: chat.avatar,
-                createdAt: chat.createdAt,
-                currentMember: {
-                    userID: currentMember.userID,
-                    role: currentMember.role,
-                    joinedAt: currentMember.joinedAt
-                }
             };
 
             // Nếu là private chat, tên chat chính là tên của đối phương (đã có sẵn trong members.userName)
@@ -668,13 +674,24 @@ const searchChatsByKeyword = async (userID, keyword, roleAccount) => {
                 }
             }
 
-            // Thêm thông tin course section cho group chat
-            if (chat.type === ChatType.GROUP && chat.course_section_id) {
-                chatInfo.courseSection = chat.course_section_id;
-            }
-
             // Lấy tin nhắn cuối cùng (nếu có)
             chatInfo.lastMessage = await getLastMessage(chat._id);
+
+            // so sánh lastMessage.createdAt với currentMember.lastReadAt để đánh dấu tin nhắn đã đọc
+            chatInfo.unread = false;
+            if (chatInfo.lastMessage && currentMember && currentMember.lastReadAt) {
+                const lastMessageTime = new Date(chatInfo.lastMessage.createdAt);
+                const lastReadTime = new Date(currentMember.lastReadAt);
+                if (lastMessageTime >= lastReadTime) {
+                    chatInfo.unread = true;
+                }
+            }
+
+            if (chatInfo.lastMessage) {
+                chatInfo.lastMessage.createdAt = chatInfo.lastMessage.createdAt
+                    ? datetimeFormatter.formatDateTimeVN(chatInfo.lastMessage.createdAt)
+                    : null;
+            }
 
             return chatInfo;
         }));
@@ -1790,14 +1807,19 @@ const getNonChatCourseSectionsBySession = async (session_id, page = 1, pageSize 
  * @param {string} chatID - ID của chat
  * @returns {Promise<Object>} - Thông tin chat đã được format
  */
-const getChatInfoById = async (chatID) => {
+const getChatInfoById = async (userID, chatID) => {
     try {
-        const chat = await Chat.findOne({ _id: chatID }).lean();
+        // Sử dụng findOneAndUpdate để tìm và cập nhật trong một thao tác
+        const chat = await Chat.findOneAndUpdate(
+            { _id: chatID, "members.userID": userID },
+            { $set: { "members.$.lastReadAt": new Date() } },
+            { new: true }
+        ).lean();
 
         if (!chat) {
             return {
                 success: false,
-                message: 'Không tìm thấy cuộc trò chuyện'
+                message: 'Không tìm thấy cuộc trò chuyện hoặc bạn không phải là thành viên'
             };
         }
 
@@ -1818,7 +1840,8 @@ const getChatInfoById = async (chatID) => {
                 role: member.role || 'member',
                 avatar: member.avatar,
                 joinedAt: datetimeFormatter.formatDateTimeVN(member.joinedAt),
-                muted: member.muted
+                muted: member.muted,
+                lastReadAt: member.lastReadAt ? datetimeFormatter.formatDateTimeVN(member.lastReadAt) : null
             }))
         };
 
