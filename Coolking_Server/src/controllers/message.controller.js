@@ -350,3 +350,112 @@ exports.getLastMessageByChatID = async (req, res) => {
         });
     }
 }
+
+// GET /api/messages/images/:chatID
+exports.getAllImageMessagesByChatID = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { chatID } = req.params;
+        if (!chatID) {
+            return res.status(400).json({
+                success: false,
+                message: 'chatID là bắt buộc'
+            });
+        }
+        const imageMessages = await messageRepo.getAllImageMessagesByChatID(chatID);
+        return res.status(200).json(imageMessages);
+    } catch (error) {
+        console.error('Error in getAllImageMessagesByChatID controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi lấy tất cả tin nhắn hình ảnh'
+        });
+    }
+};
+
+// GET /api/messages/files/:chatID
+exports.getAllFileMessagesByChatID = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { chatID } = req.params;
+        if (!chatID) {
+            return res.status(400).json({
+                success: false,
+                message: 'chatID là bắt buộc'
+            });
+        }
+        const fileMessages = await messageRepo.getAllFileMessagesByChatID(chatID);
+        return res.status(200).json(fileMessages);
+    } catch (error) {
+        console.error('Error in getAllFileMessagesByChatID controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi lấy tất cả tin nhắn file'
+        });
+    }
+};
+
+// GET /api/messages/links/:chatID
+exports.getAllLinkMessagesByChatID = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { chatID } = req.params;
+        if (!chatID) {
+            return res.status(400).json({
+                success: false,
+                message: 'chatID là bắt buộc'
+            });
+        }
+        const linkMessages = await messageRepo.getAllLinkMessagesByChatID(chatID);
+        return res.status(200).json(linkMessages);
+    } catch (error) {
+        console.error('Error in getAllLinkMessagesByChatID controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi lấy tất cả tin nhắn link'
+        });
+    }
+};
+
+// GET /api/messages/search/:chatID?keyword=...
+exports.searchMessagesInChat = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { chatID } = req.params;
+        const { keyword} = req.query;
+        if (!chatID || !keyword) {
+            return res.status(400).json({
+                success: false,
+                message: 'chatID và keyword là bắt buộc'
+            });
+        }
+        const searchResults = await messageRepo.searchMessagesInChat(chatID, keyword);
+        return res.status(200).json(searchResults);
+    } catch (error) {
+        console.error('Error in searchMessagesInChat controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi tìm kiếm tin nhắn'
+        });
+    }
+};

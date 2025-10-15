@@ -31,8 +31,19 @@ router.get('/:chatID', messageController.getMessagesByChatID);
 // PUT /api/messages/:messageID/status
 router.put('/:messageID/status', messageController.updateMessageStatus);
 
-
 // GET /api/messages/last/:chatID
 router.get('/last/:chatID', messageController.getLastMessageByChatID);
+
+// GET /api/messages/images/:chatID
+router.get('/images/:chatID', messageController.getAllImageMessagesByChatID);
+
+// GET /api/messages/files/:chatID
+router.get('/files/:chatID', messageController.getAllFileMessagesByChatID);
+
+// GET /api/messages/links/:chatID
+router.get('/links/:chatID', messageController.getAllLinkMessagesByChatID);
+
+// GET /api/messages/search/:chatID?keyword=...
+router.get('/search/:chatID', messageController.searchMessagesInChat);
 
 module.exports = router;
