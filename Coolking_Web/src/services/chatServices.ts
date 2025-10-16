@@ -142,9 +142,9 @@ class ChatServices {
         return response.data;
     }
 
-    // POST /api/chats/mute/:chatID (dành cho giảng viên)
+    // PUT /api/chats/mute/:chatID (dành cho giảng viên)
     async muteChat4AllUser(chatID: string) {
-        const response = await axiosInstance.post(`/chats/mute/${chatID}`);
+        const response = await axiosInstance.put(`/chats/mute/${chatID}`);
         return response.data;
     }
 

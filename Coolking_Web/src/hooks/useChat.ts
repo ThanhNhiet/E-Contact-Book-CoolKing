@@ -54,6 +54,41 @@ export interface Lecturer {
     updatedAt: string;
 }
 
+export interface ChatItem {
+    _id: string;
+    type: 'group' | 'private';
+    name: string;
+    avatar: string;
+    lastMessage: {
+        senderID: string;
+        type: string;
+        content: string;
+        createdAt: string;
+    } | null;
+    unread: boolean;
+}
+
+export interface ChatMember {
+    userID: string;
+    userName: string;
+    role: string;
+    avatar: string;
+    joinedAt: string;
+    muted: boolean;
+    lastReadAt: string;
+}
+
+export interface ChatDetail {
+    _id: string;
+    type: string;
+    name: string;
+    avatar: string;
+    course_section_id?: string;
+    createdAt: string;
+    updatedAt: string;
+    members: ChatMember[];
+}
+
 export const useChat = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string>('');
@@ -61,6 +96,7 @@ export const useChat = () => {
     const [courseSections, setCourseSections] = useState<CourseSection[]>([]);
     const [student, setStudent] = useState<Student | null>(null);
     const [lecturer, setLecturer] = useState<Lecturer | null>(null);
+    const [chatItems, setChatItems] = useState<ChatItem | null>(null);
     const [total, setTotal] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
@@ -280,10 +316,9 @@ export const useChat = () => {
             setError('');
             const data = await chatServices.getChatById4AllUser(chatID);
             if (data.success) setChats([data.chat]);
-        } catch (error) {
-            setError('Failed to get chat by ID');
-        }
-        finally {
+        } catch (error: any) {
+            setError(error.message || 'Failed to get chat by ID');
+        } finally {
             setLoading(false);
         }
     }, []);
@@ -294,15 +329,15 @@ export const useChat = () => {
             setLoading(true);
             setError('');
             const data = await chatServices.getChats4AllUser(page, pageSize);
+            setChatItems(data.chats || null);
             setTotal(data.total);
             setCurrentPage(page);
             setPageSize(pageSize);
             setLinkPrev(data.linkPrev);
             setLinkNext(data.linkNext);
             setPages(data.pages);
-            return data;
-        } catch (error) {
-            setError('Failed to fetch chats for all users');
+        } catch (error: any) {
+            setError(error.message || 'Failed to fetch chats for all users');
         } finally {
             setLoading(false);
         }
@@ -314,15 +349,15 @@ export const useChat = () => {
             setLoading(true);
             setError('');
             const data = await chatServices.searchChats4AllUser(keyword, page, pageSize);
+            setChatItems(data.chats || null);
             setTotal(data.total);
             setCurrentPage(page);
             setPageSize(pageSize);
             setLinkPrev(data.linkPrev);
             setLinkNext(data.linkNext);
             setPages(data.pages);
-            return data;
-        } catch (error) {
-            setError('Failed to search chats for all users');
+        } catch (error: any) {
+            setError(error.message || 'Failed to search chats for all users');
         } finally {
             setLoading(false);
         }
@@ -335,7 +370,7 @@ export const useChat = () => {
             setError('');
             const data = await chatServices.muteChat4AllUser(chatID);
             return data;
-        } catch (error) {
+        } catch (error: any) {
             setError('Failed to mute chat for all users');
         } finally {
             setLoading(false);
@@ -355,6 +390,7 @@ export const useChat = () => {
         pages,
         student,
         lecturer,
+        chatItems,
 
         getChats,
         getNonChatCourseSections,

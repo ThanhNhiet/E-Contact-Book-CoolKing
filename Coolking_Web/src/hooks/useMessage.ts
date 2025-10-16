@@ -1,9 +1,38 @@
 import { useState, useCallback } from 'react';
 import { messageServices } from '../services/messageServices';
 
+export interface Message {
+    _id: string;
+    messageID: string;
+    chatID: string;
+    senderID: string;
+    type: string;
+    content: string;
+    filename: string | null;
+    replyTo: Reply | null;
+    pinnedInfo: PinnedInfo | null;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+interface Reply {
+    messageID: string;
+    senderID: string;
+    type: string;
+    content: string;
+}
+
+interface PinnedInfo {
+    messageID: string;
+    pinnedBy: string;
+    pinnedDate: string;
+}
+
 export const useMessage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string>('');
+    const [messages, setMessages] = useState<Message[]>([]);
 
     // Tìm kiếm tin nhắn trong một cuộc trò chuyện
     const searchMessagesInChat = useCallback(async (chatID: string, keyword: string) => {
@@ -12,7 +41,7 @@ export const useMessage = () => {
         try {
             const response = await messageServices.searchMessages(chatID, keyword);
             setLoading(false);
-            return response;
+            setMessages(response);
         } catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi tìm kiếm tin nhắn.');
             setLoading(false);
@@ -27,7 +56,7 @@ export const useMessage = () => {
         try {
             const response = await messageServices.getAllImagesInChat(chatID);
             setLoading(false);
-            return response;
+            setMessages(response);
         } catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi lấy hình ảnh.');
             setLoading(false);
@@ -42,7 +71,7 @@ export const useMessage = () => {
         try {
             const response = await messageServices.getAllFilesInChat(chatID);
             setLoading(false);
-            return response;
+            setMessages(response);
         } catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi lấy files.');
             setLoading(false);
@@ -57,7 +86,7 @@ export const useMessage = () => {
         try {
             const response = await messageServices.getAllLinksInChat(chatID);
             setLoading(false);
-            return response;
+            setMessages(response);
         } catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi lấy links.');
             setLoading(false);
@@ -67,7 +96,8 @@ export const useMessage = () => {
 
     return { 
         loading, 
-        error, 
+        error,
+        messages,
         searchMessagesInChat, 
         getAllImagesInChat, 
         getAllFilesInChat, 
