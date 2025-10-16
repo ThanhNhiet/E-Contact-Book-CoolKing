@@ -125,7 +125,7 @@ const ChatListCpn: React.FC<ChatListCpnProps> = ({ onChatSelect, selectedChatId 
                                         <span className="text-white text-xs">👥</span>
                                     )}
                                     {chat.type === 'private' && (
-                                        <span className="text-white text-xs">🔒</span>
+                                        <span className="text-white text-xs">👤</span>
                                     )}
                                 </div>
                             </div>

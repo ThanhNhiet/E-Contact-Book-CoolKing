@@ -8,7 +8,7 @@ interface LinksCollectionModalProps {
 }
 
 const LinksCollectionModal: React.FC<LinksCollectionModalProps> = ({ isOpen, onClose, chatId }) => {
-    const { getAllLinksInChat, loading, error, messages } = useMessage();
+    const { getAllLinksInChat, loading, error, collectionMessages } = useMessage();
 
     useEffect(() => {
         if (isOpen && chatId) {
@@ -26,7 +26,7 @@ const LinksCollectionModal: React.FC<LinksCollectionModalProps> = ({ isOpen, onC
     };
 
     // Sử dụng messages từ hook thay vì state local
-    const links = messages || [];
+    const links = collectionMessages || [];
 
     const handleLinkClick = (linkUrl: string) => {
         // Mở link trong tab mới

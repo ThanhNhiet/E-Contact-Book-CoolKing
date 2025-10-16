@@ -8,7 +8,7 @@ interface FilesCollectionModalProps {
 }
 
 const FilesCollectionModal: React.FC<FilesCollectionModalProps> = ({ isOpen, onClose, chatId }) => {
-    const { getAllFilesInChat, loading, error, messages } = useMessage();
+    const { getAllFilesInChat, loading, error, collectionMessages } = useMessage();
 
     useEffect(() => {
         if (isOpen && chatId) {
@@ -26,7 +26,7 @@ const FilesCollectionModal: React.FC<FilesCollectionModalProps> = ({ isOpen, onC
     };
 
     // Sử dụng messages từ hook thay vì state local
-    const files = messages || [];
+    const files = collectionMessages || [];
 
     const handleFileClick = (fileUrl: string, filename: string | null) => {
         // Mở file trong tab mới

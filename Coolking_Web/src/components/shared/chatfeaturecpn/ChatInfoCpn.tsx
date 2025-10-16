@@ -7,13 +7,15 @@ interface ChatInfoCpnProps {
     onShowImages: () => void;
     onShowFiles: () => void;
     onShowLinks: () => void;
+    onMembersUpdate?: (members: ChatMember[]) => void;
 }
 
 const ChatInfoCpn: React.FC<ChatInfoCpnProps> = ({
     selectedChatId,
     onShowImages,
     onShowFiles,
-    onShowLinks
+    onShowLinks,
+    onMembersUpdate
 }) => {
     const [isNotificationMuted, setIsNotificationMuted] = useState(false);
     const [showMembers, setShowMembers] = useState(false);
@@ -86,8 +88,13 @@ const ChatInfoCpn: React.FC<ChatInfoCpnProps> = ({
                 member.userID === 'CURRENT_USER_ID' // TODO: Thay thế bằng ID user từ auth context
             );
             setIsNotificationMuted(currentUser?.muted || false);
+            
+            // Truyền members về parent component
+            if (onMembersUpdate) {
+                onMembersUpdate(chatDetail.members);
+            }
         }
-    }, [chatDetail]);
+    }, [chatDetail, onMembersUpdate]);
 
     const handleMuteToggle = async () => {
         if (!selectedChatId) return;
@@ -182,7 +189,7 @@ const ChatInfoCpn: React.FC<ChatInfoCpnProps> = ({
             {/* Nội dung cuộn riêng */}
             <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 {/* Notification Toggle */}
-                <div className="p-6 border-b border-gray-100">
+                <div className="p-4 border-b border-gray-100">
                     <button
                         onClick={handleMuteToggle}
                         className="flex items-center justify-between w-full rounded-lg"

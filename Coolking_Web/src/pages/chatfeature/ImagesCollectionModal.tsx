@@ -9,7 +9,7 @@ interface ImagesCollectionModalProps {
 
 const ImagesCollectionModal: React.FC<ImagesCollectionModalProps> = ({ isOpen, onClose, chatId }) => {
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
-    const { getAllImagesInChat, loading, error, messages } = useMessage();
+    const { getAllImagesInChat, loading, error, collectionMessages } = useMessage();
 
     useEffect(() => {
         if (isOpen && chatId) {
@@ -27,7 +27,7 @@ const ImagesCollectionModal: React.FC<ImagesCollectionModalProps> = ({ isOpen, o
     };
 
     // Sử dụng messages từ hook thay vì state local
-    const images = messages || [];
+    const images = collectionMessages || [];
 
     const handleImageClick = (imageUrl: string) => {
         setSelectedImage(imageUrl);

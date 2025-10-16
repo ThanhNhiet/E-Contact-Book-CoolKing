@@ -33,6 +33,8 @@ export const useMessage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string>('');
     const [messages, setMessages] = useState<Message[]>([]);
+    const [searchResults, setSearchResults] = useState<Message[]>([]);
+    const [collectionMessages, setCollectionMessages] = useState<Message[]>([]);
 
     // Tìm kiếm tin nhắn trong một cuộc trò chuyện
     const searchMessagesInChat = useCallback(async (chatID: string, keyword: string) => {
@@ -41,7 +43,7 @@ export const useMessage = () => {
         try {
             const response = await messageServices.searchMessages(chatID, keyword);
             setLoading(false);
-            setMessages(response);
+            setSearchResults(response);
         } catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi tìm kiếm tin nhắn.');
             setLoading(false);
@@ -56,7 +58,7 @@ export const useMessage = () => {
         try {
             const response = await messageServices.getAllImagesInChat(chatID);
             setLoading(false);
-            setMessages(response);
+            setCollectionMessages(response);
         } catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi lấy hình ảnh.');
             setLoading(false);
@@ -71,7 +73,7 @@ export const useMessage = () => {
         try {
             const response = await messageServices.getAllFilesInChat(chatID);
             setLoading(false);
-            setMessages(response);
+            setCollectionMessages(response);
         } catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi lấy files.');
             setLoading(false);
@@ -86,7 +88,7 @@ export const useMessage = () => {
         try {
             const response = await messageServices.getAllLinksInChat(chatID);
             setLoading(false);
-            setMessages(response);
+            setCollectionMessages(response);
         } catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi lấy links.');
             setLoading(false);
@@ -98,6 +100,8 @@ export const useMessage = () => {
         loading, 
         error,
         messages,
+        searchResults,
+        collectionMessages,
         searchMessagesInChat, 
         getAllImagesInChat, 
         getAllFilesInChat, 

@@ -7,6 +7,7 @@ import ImagesCollectionModal from './ImagesCollectionModal';
 import FilesCollectionModal from './FilesCollectionModal';
 import LinksCollectionModal from './LinksCollectionModal';
 import SearchResultModal from './SearchResultModal';
+import type { ChatMember } from '../../hooks/useChat';
 
 const ChatMainPage: React.FC = () => {
     const [selectedChatId, setSelectedChatId] = useState<string | undefined>();
@@ -16,6 +17,8 @@ const ChatMainPage: React.FC = () => {
     const [showSearchModal, setShowSearchModal] = useState(false);
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [searchKeyword, setSearchKeyword] = useState('');
+    const [chatMembers, setChatMembers] = useState<ChatMember[]>([]);
+    const [searchMembers, setSearchMembers] = useState<ChatMember[]>([]);
 
     const handleChatSelect = (chatId: string) => {
         setSelectedChatId(chatId);
@@ -33,14 +36,19 @@ const ChatMainPage: React.FC = () => {
         setShowLinksModal(true);
     };
 
-    const handleShowSearchResults = (results: any[], keyword: string = '') => {
+    const handleShowSearchResults = (results: any[], members: ChatMember[], keyword: string = '') => {
         setSearchResults(results);
+        setSearchMembers(members);
         setSearchKeyword(keyword);
         setShowSearchModal(true);
     };
 
+    const handleChatMembersUpdate = (members: ChatMember[]) => {
+        setChatMembers(members);
+    };
+
     return (
-        <div className="max-h-screen bg-gray-50 flex flex-col">
+        <div className="h-screen bg-gray-50 flex flex-col">
             <HeaderLeCpn />
             
             {/* Main Chat Interface */}
@@ -57,7 +65,8 @@ const ChatMainPage: React.FC = () => {
                 <div className="flex-1 flex flex-col">
                     <MessageConversationCpn
                         selectedChatId={selectedChatId}
-                        onShowSearchResults={(results) => handleShowSearchResults(results, 'search')}
+                        onShowSearchResults={(results, members) => handleShowSearchResults(results, members, 'search')}
+                        members={chatMembers}
                     />
                 </div>
 
@@ -68,6 +77,7 @@ const ChatMainPage: React.FC = () => {
                         onShowImages={handleShowImages}
                         onShowFiles={handleShowFiles}
                         onShowLinks={handleShowLinks}
+                        onMembersUpdate={handleChatMembersUpdate}
                     />
                 </div>
             </div>
@@ -100,6 +110,7 @@ const ChatMainPage: React.FC = () => {
                 onClose={() => setShowSearchModal(false)}
                 searchResults={searchResults}
                 searchKeyword={searchKeyword}
+                members={searchMembers}
             />
 
             {/* <FooterLeCpn /> */}

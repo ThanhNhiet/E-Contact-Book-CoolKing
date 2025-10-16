@@ -1,4 +1,5 @@
 import React from 'react';
+import type { ChatMember } from '../../hooks/useChat';
 
 interface SearchMessage {
     _id: string;
@@ -17,23 +18,26 @@ interface SearchResultModalProps {
     onClose: () => void;
     searchResults: SearchMessage[];
     searchKeyword: string;
+    members?: ChatMember[];
 }
 
 const SearchResultModal: React.FC<SearchResultModalProps> = ({ 
     isOpen, 
     onClose, 
     searchResults, 
-    searchKeyword 
+    searchKeyword,
+    members = []
 }) => {
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString.split(' ').reverse().join('T'));
-        return date.toLocaleDateString('vi-VN', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+    // Hàm tìm tên người gửi từ userID
+    const getSenderName = (senderID: string) => {
+        const member = members.find(m => m.userID === senderID);
+        return member ? member.userName : senderID; // Fallback về senderID nếu không tìm thấy
+    };
+
+    // Hàm lấy thông tin đầy đủ người gửi
+    const getSenderInfo = (senderID: string) => {
+        const member = members.find(m => m.userID === senderID);
+        return member;
     };
 
     const getMessageTypeIcon = (type: string) => {
@@ -132,12 +136,17 @@ const SearchResultModal: React.FC<SearchResultModalProps> = ({
                                                         <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full uppercase font-mono">
                                                             {message.type}
                                                         </span>
-                                                        <span className="text-xs text-gray-500">
-                                                            ID: {message.senderID}
-                                                        </span>
+                                                        <div className="flex items-center space-x-1 text-xs text-gray-500">
+                                                            <span>Người gửi: {getSenderName(message.senderID)}</span>
+                                                            {getSenderInfo(message.senderID)?.role === 'admin' && (
+                                                                <span className="text-xs bg-yellow-100 text-yellow-800 px-1 py-0.5 rounded">
+                                                                    Giảng viên
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                     <span className="text-xs text-gray-500 flex-shrink-0">
-                                                        {formatDate(message.createdAt)}
+                                                        {message.createdAt}
                                                     </span>
                                                 </div>
                                                 
@@ -161,10 +170,6 @@ const SearchResultModal: React.FC<SearchResultModalProps> = ({
                                                 )}
 
                                                 <div className="flex items-center justify-between mt-2">
-                                                    <span className="text-xs text-gray-500">
-                                                        Message ID: {message.messageID}
-                                                    </span>
-                                                    
                                                     {(message.type.toLowerCase() === 'link' || message.type.toLowerCase() === 'file') && (
                                                         <button
                                                             onClick={() => window.open(message.content, '_blank')}
