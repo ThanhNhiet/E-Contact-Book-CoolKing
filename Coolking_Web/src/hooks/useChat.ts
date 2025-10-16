@@ -54,6 +54,41 @@ export interface Lecturer {
     updatedAt: string;
 }
 
+export interface ChatItem {
+    _id: string;
+    type: 'group' | 'private';
+    name: string;
+    avatar: string;
+    lastMessage: {
+        senderID: string;
+        type: string;
+        content: string;
+        createdAt: string;
+    } | null;
+    unread: boolean;
+}
+
+export interface ChatMember {
+    userID: string;
+    userName: string;
+    role: string;
+    avatar: string;
+    joinedAt: string;
+    muted: boolean;
+    lastReadAt: string;
+}
+
+export interface ChatDetail {
+    _id: string;
+    type: string;
+    name: string;
+    avatar: string;
+    course_section_id?: string;
+    createdAt: string;
+    updatedAt: string;
+    members: ChatMember[];
+}
+
 export const useChat = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string>('');
@@ -61,6 +96,7 @@ export const useChat = () => {
     const [courseSections, setCourseSections] = useState<CourseSection[]>([]);
     const [student, setStudent] = useState<Student | null>(null);
     const [lecturer, setLecturer] = useState<Lecturer | null>(null);
+    const [chatItems, setChatItems] = useState<ChatItem | null>(null);
     const [total, setTotal] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
@@ -280,10 +316,63 @@ export const useChat = () => {
             setError('');
             const data = await chatServices.getChatById4AllUser(chatID);
             if (data.success) setChats([data.chat]);
-        } catch (error) {
-            setError('Failed to get chat by ID');
+        } catch (error: any) {
+            setError(error.message || 'Failed to get chat by ID');
+        } finally {
+            setLoading(false);
         }
-        finally {
+    }, []);
+
+    // Lấy danh sách chat của tất cả người dùng
+    const getChats4AllUser = useCallback(async (page: number, pageSize: number) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await chatServices.getChats4AllUser(page, pageSize);
+            setChatItems(data.chats || null);
+            setTotal(data.total);
+            setCurrentPage(page);
+            setPageSize(pageSize);
+            setLinkPrev(data.linkPrev);
+            setLinkNext(data.linkNext);
+            setPages(data.pages);
+        } catch (error: any) {
+            setError(error.message || 'Failed to fetch chats for all users');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Tìm kiếm chats của tất cả người dùng theo từ khóa
+    const searchChats4AllUser = useCallback(async (keyword: string, page: number, pageSize: number) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await chatServices.searchChats4AllUser(keyword, page, pageSize);
+            setChatItems(data.chats || null);
+            setTotal(data.total);
+            setCurrentPage(page);
+            setPageSize(pageSize);
+            setLinkPrev(data.linkPrev);
+            setLinkNext(data.linkNext);
+            setPages(data.pages);
+        } catch (error: any) {
+            setError(error.message || 'Failed to search chats for all users');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Bật tắt thông báo chat
+    const muteChat4AllUser = useCallback(async (chatID: string) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await chatServices.muteChat4AllUser(chatID);
+            return data;
+        } catch (error: any) {
+            setError('Failed to mute chat for all users');
+        } finally {
             setLoading(false);
         }
     }, []);
@@ -301,6 +390,7 @@ export const useChat = () => {
         pages,
         student,
         lecturer,
+        chatItems,
 
         getChats,
         getNonChatCourseSections,
@@ -315,6 +405,9 @@ export const useChat = () => {
         getGroupChatInfo,
         createGroupChatWithHomeroomLecturer,
         cleanupGroupChatsOfCompletedCourseSections,
-        getChatById4AllUser
+        getChatById4AllUser,
+        getChats4AllUser,
+        searchChats4AllUser,
+        muteChat4AllUser
     };
 };

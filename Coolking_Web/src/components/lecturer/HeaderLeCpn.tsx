@@ -326,7 +326,7 @@ const HeaderLECpn: React.FC = () => {
                                 Gửi thông báo
                             </a>
                             <a
-                                href="#"
+                                href="/lecturer/chat"
                                 className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 px-3 py-2 rounded-md hover:bg-gray-50"
                             >
                                 Nhắn tin

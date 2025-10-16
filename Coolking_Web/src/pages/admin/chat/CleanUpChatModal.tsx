@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useChat } from '../../../hooks/useChatAD';
+import { useChat } from '../../../hooks/useChat';
 
 interface CleanUpChatModalProps {
   isOpen: boolean;

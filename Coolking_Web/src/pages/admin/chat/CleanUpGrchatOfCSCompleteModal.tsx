@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useChat } from '../../../hooks/useChatAD';
+import { useChat } from '../../../hooks/useChat';
 import { useStatistics } from '../../../hooks/useStatistics';
 
 interface CleanUpGrchatOfCSCompleteModalProps {

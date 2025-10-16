@@ -95,7 +95,7 @@ const createGroupChat4Admin = async (admin_id, nameGroup, course_section_id) => 
                 members.push({
                     userID: lcs.lecturer.lecturer_id,
                     userName: lcs.lecturer.name,
-                    avatar: lcs.lecturer.avatar,
+                    avatar: lcs.lecturer?.avatar || 'https://res.cloudinary.com/dplg9r6z1/image/upload/v1758809711/privateavatar_hagxki.png',
                     role: MemberRole.ADMIN,
                     joinedAt: now,
                     muted: false
@@ -109,7 +109,7 @@ const createGroupChat4Admin = async (admin_id, nameGroup, course_section_id) => 
                 members.push({
                     userID: scs.student.student_id,
                     userName: scs.student.name,
-                    avatar: scs.student.avatar,
+                    avatar: scs.student?.avatar || 'https://res.cloudinary.com/dplg9r6z1/image/upload/v1758809711/privateavatar_hagxki.png',
                     role: MemberRole.MEMBER,
                     joinedAt: now,
                     muted: false
@@ -190,7 +190,7 @@ const createGroupChatWithHomeroomLecturer = async (admin_id, lecturer_id) => {
         members.push({
             userID: lecturer.lecturer_id,
             userName: lecturer.name,
-            avatar: lecturer.avatar,
+            avatar: lecturer?.avatar || 'https://res.cloudinary.com/dplg9r6z1/image/upload/v1758809711/privateavatar_hagxki.png',
             role: MemberRole.ADMIN,
             joinedAt: now,
             muted: false
@@ -201,7 +201,7 @@ const createGroupChatWithHomeroomLecturer = async (admin_id, lecturer_id) => {
             members.push({
                 userID: student.student_id,
                 userName: student.name,
-                avatar: student.avatar,
+                avatar: student?.avatar || 'https://res.cloudinary.com/dplg9r6z1/image/upload/v1758809711/privateavatar_hagxki.png',
                 role: MemberRole.MEMBER,
                 joinedAt: now,
                 muted: false
@@ -323,14 +323,14 @@ const createPrivateChat4Users = async (requestUserID, targetUserID) => {
             {
                 userID: requestUserID,
                 userName: requestUser.name,
-                avatar: requestUser.avatar,
+                avatar: requestUser?.avatar || 'https://res.cloudinary.com/dplg9r6z1/image/upload/v1758809711/privateavatar_hagxki.png',
                 joinedAt: now,
                 muted: false
             },
             {
                 userID: targetUserID,
                 userName: targetUser.name,
-                avatar: targetUser.avatar,
+                avatar: targetUser?.avatar || 'https://res.cloudinary.com/dplg9r6z1/image/upload/v1758809711/privateavatar_hagxki.png',
                 joinedAt: now,
                 muted: false
             }
@@ -671,6 +671,7 @@ const searchChatsByKeyword = async (userID, keyword, roleAccount) => {
                 const otherMember = chat.members.find(member => member.userID !== userID);
                 if (otherMember) {
                     chatInfo.name = otherMember.userName;
+                    chatInfo.avatar = otherMember.avatar || chatInfo.avatar;
                 }
             }
 
@@ -1824,6 +1825,12 @@ const getChatInfoById = async (userID, chatID) => {
         }
 
         // Format thông tin chat
+        if (chat.type === ChatType.PRIVATE && chat.members.length === 2) {
+            const otherMember = chat.members.find(member => member.userID !== userID);
+            chat.name = otherMember ? otherMember.userName : 'Private Chat';
+            chat.avatar = otherMember ? otherMember.avatar : null;
+        }
+        
         const formattedChat = {
             _id: chat._id,
             type: chat.type,

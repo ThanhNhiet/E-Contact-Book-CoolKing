@@ -16,6 +16,7 @@ import ProfileInfoPage from '../pages/lecturer/profile/ProfileInfoPage';
 import StudentListWithScorePage from '../pages/lecturer/studentscrore/StudentListWithScorePage';
 import AlertListPage from '../pages/lecturer/alert/AlertListPage';
 import StudentsAttendancePage from '../pages/lecturer/attendance/StudentsAttendancePage';
+import ChatMainPage from '../pages/chatfeature/ChatMainPage';
 
 const Router: React.FC = () => {
   return (
@@ -118,6 +119,16 @@ const Router: React.FC = () => {
               <StudentsAttendancePage />
             </ProtectedRoute>
           }
+        />
+
+        {/* Chat feature route - cần bearer token và role lecturer */}
+        <Route 
+          path="/lecturer/chat" 
+          element={
+            <ProtectedRoute requiredRole="LECTURER">
+              <ChatMainPage />
+            </ProtectedRoute>
+          } 
         />
 
         {/* Redirect any unknown routes to login */}

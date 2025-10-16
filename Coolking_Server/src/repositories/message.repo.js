@@ -30,14 +30,18 @@ const createMessageText = async ({ chatID, senderID, content }) => {
             const newMessageID = parseInt(lastMessageID.replace('MSG', '')) + 1;
             messageID = 'MSG' + String(newMessageID).padStart(5, '0');
         }
-        
+
+        // Kiểm tra xem nội dung có phải là link hay không
+        const isLink = content.startsWith('http://') || content.startsWith('https://');
+        const messageType = isLink ? MessageType.LINK : MessageType.TEXT;
+
         const newMessage = new Message({
             _id: uuidv4(),
             messageID,
             chatID,
             senderID,
             content,
-            type: MessageType.TEXT,
+            type: messageType,
             status: MessageStatus.SENDING,
             filename: null,
             replyTo: null,
@@ -522,8 +526,8 @@ const getLastMessageByChatID = async (chatID) => {
             filename: lastMessage.filename,
             replyTo: lastMessage.replyTo,
             pinnedInfo: lastMessage.pinnedInfo,
-            createdAt: lastMessage.createdAt,
-            updatedAt: lastMessage.updatedAt
+            createdAt: lastMessage?.createdAt ? datetimeFormatter.formatDateTimeVN(lastMessage?.createdAt) : null,
+            updatedAt: lastMessage?.updatedAt ? datetimeFormatter.formatDateTimeVN(lastMessage?.updatedAt) : null
         };
 
 
@@ -533,8 +537,76 @@ const getLastMessageByChatID = async (chatID) => {
     }
 }
 
+// Lấy tất cả các tin nhắn có type là image
+const getAllImageMessagesByChatID = async (chatID) => {
+    try {
+        const messages = await Message.find({ chatID, type: 'image' }).lean();
+        // Format createdAt and updatedAt fields
+        messages.forEach(msg => {
+            msg.createdAt = datetimeFormatter.formatDateTimeVN(msg.createdAt);
+            msg.updatedAt = datetimeFormatter.formatDateTimeVN(msg.updatedAt);
+        });
+        return messages;
+    } catch (error) {
+        console.error("Error retrieving image messages by chatID:", error);
+        throw error;
+    }
+};
 
+// Lấy tất cả các tin nhắn có type là file
+const getAllFileMessagesByChatID = async (chatID) => {
+    try {
+        const messages = await Message.find({ chatID, type: 'file' }).lean();
+        // Format createdAt and updatedAt fields
+        messages.forEach(msg => {
+            msg.createdAt = datetimeFormatter.formatDateTimeVN(msg.createdAt);
+            msg.updatedAt = datetimeFormatter.formatDateTimeVN(msg.updatedAt);
+        });
+        return messages;
+    } catch (error) {
+        console.error("Error retrieving file messages by chatID:", error);
+        throw error;
+    }
+};
 
+// Lấy tất cả các tin nhắn có type là links
+const getAllLinkMessagesByChatID = async (chatID) => {
+    try {
+        const messages = await Message.find({ chatID, type: 'link' }).lean();
+        // Format createdAt and updatedAt fields
+        messages.forEach(msg => {
+            msg.createdAt = datetimeFormatter.formatDateTimeVN(msg.createdAt);
+            msg.updatedAt = datetimeFormatter.formatDateTimeVN(msg.updatedAt);
+        });
+        return messages;
+    } catch (error) {
+        console.error("Error retrieving link messages by chatID:", error);
+        throw error;
+    }
+};
+
+// Tìm kiếm tin nhắn trong chat theo từ khóa chỉ với tin nhắn text, tìm kiếm không phân biệt hoa thường, tìm kiếm tương đối
+const searchMessagesInChat = async (chatID, keyword) => {
+    try {
+        const messages = await Message.find({ 
+            chatID, 
+            type: MessageType.TEXT,
+            content: { $regex: keyword, $options: 'i' }
+        }).sort({ createdAt: -1 }).lean();
+
+        // Format createdAt and updatedAt fields
+        messages.forEach(msg => {
+            msg.createdAt = datetimeFormatter.formatDateTimeVN(msg.createdAt);
+            msg.updatedAt = datetimeFormatter.formatDateTimeVN(msg.updatedAt);
+        });
+
+        return messages;
+    }
+    catch (error) {
+        console.error("Error searching messages in chat:", error);
+        throw error;
+    }
+};
 
 module.exports = {
     createMessageText,
@@ -546,5 +618,9 @@ module.exports = {
     createMessageFileReply,
     createMessageImageReply,
     createdMessagePinned,
-    getLastMessageByChatID
+    getLastMessageByChatID,
+    getAllImageMessagesByChatID,
+    getAllFileMessagesByChatID,
+    getAllLinkMessagesByChatID,
+    searchMessagesInChat
 }
