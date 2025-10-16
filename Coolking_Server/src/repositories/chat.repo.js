@@ -1825,6 +1825,12 @@ const getChatInfoById = async (userID, chatID) => {
         }
 
         // Format thông tin chat
+        if (chat.type === ChatType.PRIVATE && chat.members.length === 2) {
+            const otherMember = chat.members.find(member => member.userID !== userID);
+            chat.name = otherMember ? otherMember.userName : 'Private Chat';
+            chat.avatar = otherMember ? otherMember.avatar : null;
+        }
+        
         const formattedChat = {
             _id: chat._id,
             type: chat.type,
