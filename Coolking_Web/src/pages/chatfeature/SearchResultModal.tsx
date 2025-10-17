@@ -3,7 +3,6 @@ import type { ChatMember } from '../../hooks/useChat';
 
 interface SearchMessage {
     _id: string;
-    messageID: string;
     chatID: string;
     senderID: string;
     type: string;
