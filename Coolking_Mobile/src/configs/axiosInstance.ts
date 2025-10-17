@@ -1,12 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
-import {deleteRefreshToken, getRefreshToken,saveRefreshToken} from "@/src/utils/TokenManager";
-//import NavigationService from '../services/NavigationService';
+import { deleteRefreshToken, getRefreshToken, saveRefreshToken } from '@/src/utils/TokenManager';
 
-// Axios instance config
-const axiosInstance = axios.create({
-  timeout: 30000, // 30s
-});
+const axiosInstance = axios.create({ timeout: 30000 });
 
 // ====== CONFIG ======
 const AUTH_ENDPOINT = '/api/public/login';
@@ -18,9 +14,9 @@ let isRefreshing = false;
 let failedQueue: Array<{ resolve: (v?: unknown) => void; reject: (e: any) => void }> = [];
 
 const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach(prom => {
-    if (error) prom.reject(error);
-    else prom.resolve(token as unknown);
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) reject(error);
+    else resolve(token as unknown);
   });
   failedQueue = [];
 };
@@ -30,8 +26,11 @@ const isAbsoluteUrl = (url?: string) => !!url && (/^https?:\/\//i.test(url) || u
 
 const shouldSkipAuthHeader = (url?: string) => {
   if (!url) return false;
-  // chỉ cần "includes" vì axios có thể set đường dẫn tương đối
-  return url.includes(AUTH_ENDPOINT) || url.includes(REFRESH_ENDPOINT);
+  return (
+    url.includes(AUTH_ENDPOINT) ||
+    url.includes(REFRESH_ENDPOINT) ||
+    url.includes(LOGOUT_ENDPOINT)
+  );
 };
 
 const setAuthHeader = (config: AxiosRequestConfig, token: string) => {
@@ -41,21 +40,22 @@ const setAuthHeader = (config: AxiosRequestConfig, token: string) => {
   };
 };
 
+const getBase = async () => {
+  const base = await AsyncStorage.getItem('url');
+  return base || '';
+};
+
 // ====== Request Interceptor ======
 axiosInstance.interceptors.request.use(
   async (config) => {
-    // baseURL động (nếu url chưa phải absolute)
-    const base = await AsyncStorage.getItem('url');
+    const base = await getBase();
     if (base && !isAbsoluteUrl(config.url)) {
       config.baseURL = base;
     }
-
-    // đừng gắn Bearer cho endpoint login & refresh
     if (!shouldSkipAuthHeader(config.url)) {
       const token = await AsyncStorage.getItem('token');
       if (token) setAuthHeader(config, token);
     }
-
     return config;
   },
   (error) => Promise.reject(error)
@@ -65,7 +65,7 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest: any = error.config || {}; // any để chứa _retry
+    const originalRequest: any = error.config || {};
 
     // Timeout
     if ((error as any).code === 'ECONNABORTED' && (error.message || '').includes('timeout')) {
@@ -76,37 +76,52 @@ axiosInstance.interceptors.response.use(
       });
     }
 
-    // Không retry login/refresh (tránh vòng lặp)
     const isAuthReq = originalRequest?.url?.includes(AUTH_ENDPOINT);
     const isRefreshReq = originalRequest?.url?.includes(REFRESH_ENDPOINT);
     const isLogoutReq = originalRequest?.url?.includes(LOGOUT_ENDPOINT);
-
     if (isAuthReq || isRefreshReq || isLogoutReq) {
       return Promise.reject(error);
     }
 
-    // 401: tiến hành refresh-token (nếu chưa retry)
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      // Nếu đã có refresh đang chạy -> xếp hàng đợi
+    const status = error.response?.status;
+
+    // Một số API trả 401 hoặc 403 khi access token hết hạn
+    const shouldAttemptRefresh =
+      (status === 401 || status === 403) && !originalRequest._retry;
+
+    if (shouldAttemptRefresh) {
+      // Nếu đang refresh: xếp vào hàng đợi, CHÚ Ý dùng token trả về
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        })
-          .then(() => axiosInstance(originalRequest))
-          .catch((err) => Promise.reject(err));
+        }).then((newToken: any) => {
+          // set lại baseURL & header trước khi retry
+          return (async () => {
+            const base = await getBase();
+            if (base && !isAbsoluteUrl(originalRequest.url)) {
+              originalRequest.baseURL = base;
+            }
+            if (newToken) {
+              setAuthHeader(originalRequest, String(newToken));
+            }
+            return axiosInstance(originalRequest);
+          })();
+        });
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
       try {
-        const refreshToken = await getRefreshToken();
-        const base = await AsyncStorage.getItem('url');
+        const [refreshToken, base] = await Promise.all([
+          getRefreshToken(),
+          getBase(),
+        ]);
 
         if (!refreshToken) throw new Error('No refresh token available');
         if (!base) throw new Error('No base URL configured');
 
-        // GỌI REFRESH (không dùng axiosInstance để tránh interceptor auth)
+        // DÙNG axios gốc để tránh interceptor
         const tokenResponse = await axios.post(`${base}${REFRESH_ENDPOINT}`, {
           refresh_token: refreshToken,
         });
@@ -116,27 +131,27 @@ axiosInstance.interceptors.response.use(
 
         if (!newAccessToken) throw new Error('No access token received');
 
-        // Lưu token mới
+        // Lưu token mới trước khi đánh thức queue
         await AsyncStorage.setItem('token', newAccessToken);
         if (newRefreshToken) await saveRefreshToken(newRefreshToken);
 
-        // Thông báo queue
+        // Đánh thức queue -> truyền token mới
         processQueue(null, newAccessToken);
 
-        // Gắn token mới cho request cũ rồi retry
+        // Set lại header + baseURL cho request gốc rồi retry
+        if (base && !isAbsoluteUrl(originalRequest.url)) {
+          originalRequest.baseURL = base;
+        }
         setAuthHeader(originalRequest, newAccessToken);
+
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         console.warn('Refresh token failed:', refreshError);
 
-        // Xoá token, thông báo queue lỗi
         await AsyncStorage.removeItem('token');
         await deleteRefreshToken();
+
         processQueue(refreshError, null);
-
-        // Tuỳ bạn: có thể điều hướng về màn Login ở đây
-        //NavigationService.navigate('LoginScreen');
-
         return Promise.reject(error);
       } finally {
         isRefreshing = false;

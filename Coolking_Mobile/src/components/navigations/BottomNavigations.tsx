@@ -3,10 +3,18 @@ import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
 interface Props {
   navigation: any;
+}
+enum TabName {
+  HomeScreen = "HomeScreen",
+  AttendanceScreen = "AttendanceScreen",
+  CalendarScreen = "CalendarScreen",
+  AttendanceScreen_Parent = "AttendanceScreen_Parent",
+  ProfileScreen = "ProfileScreen",
 }
 
 export default function BottomNavigations({ navigation }: Props) {
@@ -25,15 +33,31 @@ export default function BottomNavigations({ navigation }: Props) {
     setActiveTab(route.name);
   }, [route.name]);
 
-  const handleNavigate = (screen: string) => {
-    navigation.navigate(screen);
+  const handleNavigate = async (screen: string) => {
+    if (screen === "AttendanceScreen") {
+      const role = await AsyncStorage.getItem("role");
+      if (!role) {
+        console.warn("Role not found in AsyncStorage");
+        return;
+      }
+      if (role === "STUDENT") {
+        navigation.navigate("AttendanceScreen");
+      } else if (role === "PARENT") {
+        navigation.navigate("AttendanceScreen_Parent");
+      }
+    } else {
+      navigation.navigate(screen);
+    }
   };
 
   return (
      <SafeAreaView edges={["bottom"]} style={{ backgroundColor: "#e6f4fa" }}>
     <View style={styles.container}>
       {tabs.map((tab) => {
-        const isActive = activeTab === tab.name;
+        let isActive = activeTab === tab.name;
+        if (tab.name === TabName.AttendanceScreen ) {
+          isActive = activeTab === TabName.AttendanceScreen_Parent;
+        }
         return (
           <TouchableOpacity
             key={tab.name}

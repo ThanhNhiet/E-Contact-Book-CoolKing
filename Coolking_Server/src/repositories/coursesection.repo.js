@@ -402,7 +402,7 @@ const getCourseSectionsByStudent = async (studentId, page, pageSize = 10) => {
                         {
                             model: models.Subject,
                             as: 'subject',
-                            attributes: ['name'],
+                            attributes: ['name','subject_id'],
                             include: [
                                 {
                                     model: models.Faculty,
@@ -445,6 +445,7 @@ const getCourseSectionsByStudent = async (studentId, page, pageSize = 10) => {
 
         const courseSections = rows.map(item => ({
             course_section_id: item.course_section.id,
+            subject_id: item.course_section.subject?.subject_id || 'N/A',
             subjectName: item.course_section.subject?.name || 'N/A',
             className: item.course_section.clazz?.name || 'N/A',
             facultyName: item.course_section.subject?.faculty?.name || 'N/A',

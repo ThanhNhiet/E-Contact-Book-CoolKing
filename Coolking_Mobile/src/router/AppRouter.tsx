@@ -18,6 +18,8 @@ import OtpVerifyScreen from "@/src/screens/otpverify/OtpVerifyScreen";
 
 //import page attendance
 import AttendanceScreen from "@/src/screens/attendance/AttendanceScreen";
+import AttendanceDetailScreen from "@/src/screens/attendance/AttendanceDetailScreen";
+import AttendanceScreen_Parent from "@/src/screens/attendance/AttendanceScreen_Parent";
 
 //import page calendar
 import CalendarScreen from "@/src/screens/calendar/CalendarScreen";
@@ -87,6 +89,21 @@ export default function AppRouter() {
                     headerShown: false,
                 }}
             />
+            <Stack.Screen
+                name="AttendanceDetailScreen"
+                component={AttendanceDetailScreen}
+                options={{
+                    headerShown: false,
+                }}
+            />
+            <Stack.Screen
+                name="AttendanceScreen_Parent"
+                component={AttendanceScreen_Parent}
+                options={{
+                    headerShown: false,
+                }}
+            />
+
             {/*Calendar Screen*/}
             <Stack.Screen
                 name="CalendarScreen"

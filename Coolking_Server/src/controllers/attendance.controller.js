@@ -150,3 +150,58 @@ exports.deleteAttendanceStudents = async (req, res) => {
         });
     }
 };
+
+
+// GET /attendances/student/:course_section_id
+exports.getAttendanceByStudentByCourseID = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'STUDENT') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const studentId = decoded.user_id;
+        const {subject_id, course_section_id } = req.query;
+        if (!course_section_id || !subject_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mã học phần (subject_id) và mã lớp học phần (course_section_id) là bắt buộc'
+            });
+        }
+        const attendanceRecords = await attendanceRepo.getAttendanceByStudentBySubject(studentId, subject_id, course_section_id);
+        return res.status(200).json(attendanceRecords);
+
+    } catch (error) {
+        console.error('Error in getAttendanceByStudentBySubject:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal Server Error',
+            error: error.message
+        });
+    }
+};
+
+// GET /attendances/parent
+exports.getAttendanceByStudentByCourseIDByParent = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || decoded.role !== 'PARENT') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const parentId = decoded.user_id;
+        const { page , pageSize} = req.query;
+        const attendanceRecords = await attendanceRepo.getAttendanceByStudentBySubjectByParent(parentId,page, pageSize);
+        return res.status(200).json(attendanceRecords);
+
+    } catch (error) {
+        console.error('Error in getAttendanceByStudentBySubjectByParent:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal Server Error',
+            error: error.message
+        });
+    }
+}

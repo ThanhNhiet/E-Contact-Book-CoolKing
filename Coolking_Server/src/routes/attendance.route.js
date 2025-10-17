@@ -5,6 +5,12 @@ const router = express.Router();
 // GET /attendances/students/:course_section_id
 router.get('/students/:course_section_id', attendanceController.getAttendanceDetailsByCourseSectionAndAttendanceID);
 
+// GET /attendances/student/:course_section_id
+router.get('/student', attendanceController.getAttendanceByStudentByCourseID);
+
+// GET /attendances/parent
+router.get('/parent', attendanceController.getAttendanceByStudentByCourseIDByParent);
+
 // POST /attendances/students/:course_section_id
 router.post('/students/:course_section_id', attendanceController.createAttendanceStudents);
 

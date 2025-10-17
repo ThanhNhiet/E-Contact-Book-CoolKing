@@ -617,6 +617,295 @@ const deleteAttendanceRecord = async (attendance_id) => {
     }
 };
 
+/**
+ * Lấy thông tin điểm danh của sinh viên theo môn học và lớp học phần
+ * @param {string} student_id - Mã sinh viên
+ * @param {string} subject_id - Mã môn học
+ * @param {string} course_section_id - Mã lớp học phần (optional)
+ * @returns {Object} Thông tin điểm danh của sinh viên
+ */
+const getAttendanceByStudentBySubject = async (student_id, subject_id, course_section_id) => {
+    try {
+        // Validate input
+        if (!student_id) {
+            throw new Error('student_id is required');
+        }
+        if (!subject_id) {
+            throw new Error('subject_id is required');
+        }
+
+        // Lấy thông tin môn học
+        const subject = await models.Subject.findOne({
+            where: { subject_id },
+            attributes: ['name'],
+            include: [
+                {
+                    model: models.Faculty,
+                    as: 'faculty',
+                    attributes: ['name']
+                }
+            ]
+        });
+
+        if (!subject) {
+            throw new Error('Subject not found');
+        }
+
+        // Build query conditions for CourseSection
+        const courseSectionWhere = { subject_id };
+        if (course_section_id) {
+            courseSectionWhere.id = course_section_id;
+        }
+
+        // Lấy các lớp học phần của môn học mà sinh viên đã học
+        const courseSections = await models.StudentCourseSection.findAll({
+            where: { student_id },
+            include: [
+                {
+                    model: models.CourseSection,
+                    as: 'course_section',
+                    where: courseSectionWhere,
+                    include: [
+                        {
+                            model: models.Session,
+                            as: 'session',
+                            attributes: ['name', 'years']
+                        }
+                    ]
+                }
+            ]
+        });
+
+        const allAttendanceDetails = [];
+
+        // Lấy điểm danh cho từng lớp học phần
+        for (const cs of courseSections) {
+            const attendances = await models.Attendance.findAll({
+                where: {
+                    course_section_id: cs.course_section.id
+                },
+                attributes: ['id', 'date_attendance', 'start_lesson', 'end_lesson'],
+                order: [['date_attendance', 'ASC'], ['start_lesson', 'ASC']]
+            });
+
+            // Lấy chi tiết điểm danh của sinh viên
+            for (const attendance of attendances) {
+                const studentAttendance = await models.AttendanceStudent.findOne({
+                    where: {
+                        attendance_id: attendance.id,
+                        student_id
+                    },
+                    attributes: ['status', 'description']
+                });
+
+                allAttendanceDetails.push({
+                    course_section_id: cs.course_section.id,
+                    session: `${cs.course_section.session.name} ${cs.course_section.session.years}`,
+                    date: datetimeFormatter.formatDateVN(attendance.date_attendance),
+                    start_lesson: attendance.start_lesson,
+                    end_lesson: attendance.end_lesson,
+                    status: studentAttendance?.status || 'ABSENT',
+                    description: studentAttendance?.description || ''
+                });
+            }
+        }
+
+        // Tính thống kê tổng hợp
+        const stats = allAttendanceDetails.reduce((acc, curr) => {
+            acc.total++;
+            if (curr.status === 'PRESENT') acc.present++;
+            if (curr.status === 'ABSENT') acc.absent++;
+            if (curr.status === 'LATE') acc.late++;
+            return acc;
+        }, { total: 0, present: 0, absent: 0, late: 0 });
+
+        return {
+            subject_info: {
+                subject_name: subject.name,
+                faculty_name: subject.faculty?.name || 'N/A',
+                total_sections: courseSections.length
+            },
+            statistics: {
+                total_sessions: stats.total,
+                present: stats.present,
+                absent: stats.absent,
+                late: stats.late,
+                attendance_rate: stats.total ? 
+                    ((stats.present + stats.late) / stats.total * 100).toFixed(1) + '%' : '0%'
+            },
+            attendance_details: allAttendanceDetails
+        };
+
+    } catch (error) {
+        console.error('Error in getAttendanceByStudentBySubject:', error);
+        throw error;
+    }
+};
+
+/**
+ * Lấy thông tin điểm danh của con em theo parent_id có phân trang
+ * @param {string} parent_id - Mã phụ huynh
+ * @param {number} page - Số trang
+ * @param {number} pageSize - Số lượng bản ghi trên một trang
+ * @returns {Object} Thông tin điểm danh của các con em có phân trang
+ */
+const getAttendanceByStudentBySubjectByParent = async (parent_id, page, pageSize) => {
+    try {
+        if (!parent_id) {
+            throw new Error('parent_id is required');
+        }
+
+        const page_num = parseInt(page) || 1;
+        const pageSize_num = parseInt(pageSize) || 10;
+        const offset = (page_num - 1) * pageSize_num;
+
+        // Lấy tổng số con em của phụ huynh
+        const totalChildren = await models.Parent.count({
+            where: { parent_id }
+        });
+
+        // Lấy danh sách con em của phụ huynh có phân trang
+        const children = await models.Parent.findAll({
+            where: { parent_id },
+            include: [
+                {
+                    model: models.Student,
+                    as: 'student',
+                    attributes: ['student_id', 'name'],
+                    where: { isDeleted: false }
+                }
+            ],
+            offset: offset,
+            limit: pageSize_num
+        });
+
+        if (!children || children.length === 0) {
+            return {
+                success: false,
+                message: 'Không tìm thấy thông tin con em của phụ huynh này'
+            };
+        }
+
+        const attendanceResults = [];
+
+        // Lấy thông tin điểm danh cho từng con
+        for (const child of children) {
+            // Lấy các lớp học phần của học sinh
+            const courseSections = await models.StudentCourseSection.findAll({
+                where: { student_id: child.student.student_id },
+                include: [
+                    {
+                        model: models.CourseSection,
+                        as: 'course_section',
+                        include: [
+                            {
+                                model: models.Subject,
+                                as: 'subject',
+                                attributes: ['name'],
+                                include: [
+                                    {
+                                        model: models.Faculty,
+                                        as: 'faculty',
+                                        attributes: ['name']
+                                    }
+                                ]
+                            },
+                            {
+                                model: models.Session,
+                                as: 'session',
+                                attributes: ['name', 'years']
+                            }
+                        ]
+                    }
+                ]
+            });
+
+            const courseAttendances = [];
+
+            for (const cs of courseSections) {
+                const attendances = await models.Attendance.findAll({
+                    where: { course_section_id: cs.course_section.id },
+                    attributes: ['id', 'date_attendance', 'start_lesson', 'end_lesson'],
+                    order: [['date_attendance', 'ASC'], ['start_lesson', 'ASC']]
+                });
+
+                const attendanceDetails = [];
+                let stats = { total: 0, present: 0, absent: 0, late: 0 };
+
+                for (const attendance of attendances) {
+                    const studentAttendance = await models.AttendanceStudent.findOne({
+                        where: {
+                            attendance_id: attendance.id,
+                            student_id: child.student.student_id
+                        },
+                        attributes: ['status', 'description']
+                    });
+
+                    stats.total++;
+                    if (studentAttendance?.status === 'PRESENT') stats.present++;
+                    if (studentAttendance?.status === 'ABSENT') stats.absent++;
+                    if (studentAttendance?.status === 'LATE') stats.late++;
+
+                    attendanceDetails.push({
+                        date: datetimeFormatter.formatDateVN(attendance.date_attendance),
+                        start_lesson: attendance.start_lesson,
+                        end_lesson: attendance.end_lesson,
+                        status: studentAttendance?.status || 'ABSENT',
+                        description: studentAttendance?.description || ''
+                    });
+                }
+
+                courseAttendances.push({
+                    subject_info:{
+                        course_section_id: cs.course_section.id,
+                        subject_name: cs.course_section.subject?.name || 'N/A',
+                        faculty_name: cs.course_section.subject?.faculty?.name || 'N/A',
+                        session: `${cs.course_section.session.name} ${cs.course_section.session.years}`,
+                    },
+                    statistics: {
+                        total_sessions: stats.total,
+                        present: stats.present,
+                        absent: stats.absent,
+                        late: stats.late,
+                        attendance_rate: stats.total ? 
+                            ((stats.present + stats.late) / stats.total * 100).toFixed(1) + '%' : '0%'
+                    },
+                    attendance_details: attendanceDetails
+                });
+            }
+
+            attendanceResults.push({
+                student_id: child.student.student_id,
+                student_name: child.student.name,
+                course_sections: courseAttendances
+            });
+        }
+
+        // Tính toán thông tin phân trang
+        const totalPages = Math.ceil(totalChildren / pageSize_num);
+        const hasNext = page_num < totalPages;
+        const hasPrev = page_num > 1;
+
+        return {
+                pagination: {
+                    total: totalChildren,
+                    page: page_num,
+                    pageSize: pageSize_num,
+                    totalPages: totalPages,
+                    hasNext: hasNext,
+                    hasPrev: hasPrev
+                },
+                children: attendanceResults
+        };
+
+    } catch (error) {
+        console.error('Error in getAttendanceByStudentBySubjectByParent:', error);
+        throw error;
+    }
+};
+
+
+
 module.exports = {
     getStudentsByCourseSectionID,
     getAttendanceListByCourseID,
@@ -625,5 +914,7 @@ module.exports = {
     getAttendanceDetailsByCourseSectionID,
     createAttendanceRecord,
     updateAttendanceRecord,
-    deleteAttendanceRecord
+    deleteAttendanceRecord,
+    getAttendanceByStudentBySubject,
+    getAttendanceByStudentBySubjectByParent
 };
