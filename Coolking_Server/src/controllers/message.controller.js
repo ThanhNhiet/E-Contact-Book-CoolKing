@@ -250,14 +250,21 @@ exports.createdMessagePinned = async (req, res) => {
         if (!decoded) {
             return res.status(403).json({ message: 'Forbidden' });
         }
-        const { chatID, messageID, pinnedBy } = req.body;
-        if (!chatID || !messageID || !pinnedBy) {
+        // const { chatID, messageID, pinnedBy } = req.body;
+        // if (!chatID || !messageID || !pinnedBy) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: 'chatID, messageID và pinnedBy là bắt buộc'
+        //     });
+        // }
+        const { messageID, pinnedBy } = req.body;
+        if (!messageID || !pinnedBy) {
             return res.status(400).json({
                 success: false,
-                message: 'chatID, messageID và pinnedBy là bắt buộc'
+                message: 'messageID và pinnedBy là bắt buộc'
             });
         }
-        const newMessage = await messageRepo.createdMessagePinned({ chatID, messageID, pinnedBy });
+        const newMessage = await messageRepo.createdMessagePinned({ messageID, pinnedBy });
         return res.status(200).json(newMessage);
     } catch (error) {
         console.error('Error in createdMessagePinned controller:', error);
@@ -267,6 +274,34 @@ exports.createdMessagePinned = async (req, res) => {
         });
     }
 };
+
+// POST /api/messages/unpin/:messageID
+exports.unPinMessage = async (req, res) => {
+    try {   
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { messageID } = req.params;
+        if (!messageID) {
+            return res.status(400).json({
+                success: false,
+                message: 'messageID là bắt buộc'
+            });
+        }
+        const unpinnedMessage = await messageRepo.unPinMessage( messageID);
+        return res.status(200).json(unpinnedMessage);
+    } catch (error) {
+        console.error('Error in unPinMessage controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi bỏ ghim tin nhắn'
+        });
+    }
+};
+
 // GET /api/messages/:chatID
 exports.getMessagesByChatID = async (req, res) => {
     try {
@@ -456,6 +491,60 @@ exports.searchMessagesInChat = async (req, res) => {
         res.status(500).json({
             success: false,
             message: error.message || 'Lỗi server khi tìm kiếm tin nhắn'
+        });
+    }
+};
+
+// DELETE /api/messages/:messageID
+exports.deleteMessageByID = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { messageID } = req.params;
+        if (!messageID) {
+            return res.status(400).json({
+                success: false,
+                message: 'messageID là bắt buộc'
+            });
+        }
+        const deletedMessage = await messageRepo.deleteMessageByID(messageID, decoded.user_id);
+        return res.status(200).json(deletedMessage);
+    } catch (error) {
+        console.error('Error in deleteMessageByID controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi xóa tin nhắn'
+        });
+    }
+};
+
+// GET /api/messages/pinned/:chatID
+exports.getPinnedMessagesInChat = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { chatID } = req.params;
+        if (!chatID) {
+            return res.status(400).json({
+                success: false,
+                message: 'chatID là bắt buộc'
+            });
+        }
+        const pinnedMessages = await messageRepo.getPinnedMessagesInChat(chatID);
+        return res.status(200).json(pinnedMessages);
+    } catch (error) {
+        console.error('Error in getPinnedMessagesInChat controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi lấy tin nhắn đã ghim'
         });
     }
 };

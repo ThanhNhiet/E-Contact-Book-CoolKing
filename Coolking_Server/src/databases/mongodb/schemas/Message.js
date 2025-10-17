@@ -93,6 +93,10 @@ const messageSchema = new Schema({
     type: String,
     enum: Object.values(MessageStatus),
     default: MessageStatus.SENT
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

@@ -3,7 +3,7 @@ const initModels = require("../databases/mariadb/model/init-models");
 const models = initModels(sequelize);
 
 const { v4: uuidv4 } = require('uuid');
-const { Message,MessageStatus,MessageType } = require('../databases/mongodb/schemas/Message');
+const { Message, MessageStatus, MessageType } = require('../databases/mongodb/schemas/Message');
 const mongoose = require('mongoose');
 const datetimeFormatter = require("../utils/format/datetime-formatter");
 const cloudinaryService = require('../services/cloudinary.service');
@@ -18,7 +18,7 @@ const createMessageText = async ({ chatID, senderID, content }) => {
             throw new Error('Content cannot be empty');
             return;
         }
-        
+
         // Generate unique messageID using timestamp and random string
         const countMessages = await Message.countDocuments();
         let messageID = '';
@@ -49,13 +49,13 @@ const createMessageText = async ({ chatID, senderID, content }) => {
         });
         await newMessage.save();
 
-         const lastMessage = await Message.findOne({ chatID }).sort({ createdAt: -1 });
+        const lastMessage = await Message.findOne({ chatID }).sort({ createdAt: -1 });
 
         if (!lastMessage) {
             throw new Error("No messages found for the given chatID");
             return;
         }
-    
+
         return {
             _id: lastMessage._id,
             messageID: lastMessage.messageID,
@@ -95,7 +95,7 @@ const createMessageFile = async ({ chatID, senderID, files }) => {
             throw new Error('File upload failed');
         }
         const links = uploadResults.map(result => result.url);
-        
+
         // Generate unique messageID
         const countMessages = await Message.countDocuments();
         let messageID = '';
@@ -107,14 +107,14 @@ const createMessageFile = async ({ chatID, senderID, files }) => {
             const newMessageID = parseInt(lastMessageID.replace('MSG', '')) + 1;
             messageID = 'MSG' + String(newMessageID).padStart(5, '0');
         }
-        
+
         const newMessage = new Message({
             _id: uuidv4(),
             messageID,
             chatID,
             senderID,
             content: links.join(','), // Join multiple links with a comma
-            type: MessageType.FILE, 
+            type: MessageType.FILE,
             status: MessageStatus.SENDING,
             filename,
             replyTo: null,
@@ -197,7 +197,7 @@ const createMessageImage = async ({ chatID, senderID, images }) => {
             throw new Error("No messages found for the given chatID");
             return;
         }
-        
+
         return {
             _id: lastMessage._id,
             messageID: lastMessage.messageID,
@@ -237,7 +237,7 @@ const createMessageTextReply = async ({ chatID, senderID, content, replyTo }) =>
         }
         const newMessage = new Message({
             _id: uuidv4(),
-            messageID,  
+            messageID,
             chatID,
             senderID,
             content,
@@ -389,7 +389,7 @@ const createMessageImageReply = async ({ chatID, senderID, replyTo, images }) =>
             throw new Error("No messages found for the given chatID");
             return;
         }
-        
+
         return {
             _id: lastMessage._id,
             messageID: lastMessage.messageID,
@@ -404,16 +404,16 @@ const createMessageImageReply = async ({ chatID, senderID, replyTo, images }) =>
             createdAt: datetimeFormatter.formatDateVN(lastMessage.createdAt),
             updatedAt: datetimeFormatter.formatDateVN(lastMessage.updatedAt)
         };
-        
+
     } catch (error) {
         console.error("Error creating image reply message:", error);
         throw error;
     }
 }
 
-const createdMessagePinned = async ({ chatID,messageID, pinnedBy }) => {
+const createdMessagePinned = async ({ messageID, pinnedBy }) => {
     try {
-        const message = await Message.findOne({ chatID, messageID });
+        const message = await Message.findById({ _id: messageID });
         if (!message) {
             throw new Error("Message not found");
         }
@@ -430,6 +430,26 @@ const createdMessagePinned = async ({ chatID,messageID, pinnedBy }) => {
     }
 }
 
+const unPinMessage = async (messageID) => {
+    try {
+        // const message = await Message.findOne({ chatID, messageID });
+        const message = await Message.findById({_id: messageID });
+        if (!message) {
+            throw new Error("Message not found");
+        }
+        //Kiểm tra message có được ghim không
+        if (!message.pinnedInfo || !message.pinnedInfo.messageID) {
+            throw new Error("Message is not pinned");
+        }
+        message.pinnedInfo = null;
+        await message.save();
+        return message;
+    } catch (error) {
+        console.error("Error unpinning message:", error);
+        throw error;
+    }
+};
+
 const getMessagesByChatID = async (chatID, page = 1, pageSize = 10) => {
     try {
         if (!chatID) {
@@ -444,28 +464,32 @@ const getMessagesByChatID = async (chatID, page = 1, pageSize = 10) => {
 
         // Calculate skip from newest messages
         const skip = (page_num - 1) * pageSize_num;
-        
+
         // Get messages with pagination
         const messages = await Message.find({ chatID })
             .sort({ createdAt: -1 }) // Sort by newest first
             .skip(skip)
-            .limit(pageSize_num)
-            .sort({ createdAt: 1 }); // Re-sort to display in chronological order
+            .limit(pageSize_num).lean();
+        // .sort({ createdAt: 1 }); // Re-sort to display in chronological order
 
         // Format messages
         const formattedMessages = messages.map(msg => ({
-            ...msg.toObject(),
-            createdAt: msg.createdAt,
-            updatedAt: msg.updatedAt
+            ...msg,
+            pinnedInfo: {
+                ...msg.pinnedInfo,
+                pinnedDate: msg.pinnedInfo?.pinnedDate ? datetimeFormatter.formatDateTimeVN(msg.pinnedInfo?.pinnedDate) : null
+            },
+            createdAt: msg?.createdAt ? datetimeFormatter.formatDateTimeVN(msg?.createdAt) : null,
+            updatedAt: msg?.updatedAt ? datetimeFormatter.formatDateTimeVN(msg?.updatedAt) : null
         }));
 
         // Calculate pagination links
         const hasMore = count > (skip + pageSize_num);
         const hasNewer = page_num > 1;
 
-        const linkPrev = hasMore ? 
+        const linkPrev = hasMore ?
             `/api/messages/${chatID}?page=${page_num + 1}&pagesize=${pageSize_num}` : null;
-        const linkNext = hasNewer ? 
+        const linkNext = hasNewer ?
             `/api/messages/${chatID}?page=${page_num - 1}&pagesize=${pageSize_num}` : null;
 
         // Calculate pages array
@@ -499,9 +523,9 @@ const updateMessageStatus = async (messageID, status) => {
             messageID,
             { status, updatedAt: datetimeFormatter.formatDateVN(new Date()) },
             { new: true }
-        );  
+        );
         return updatedMessage;
-        
+
     } catch (error) {
         console.error("Error updating message status:", error);
         throw error;
@@ -588,8 +612,8 @@ const getAllLinkMessagesByChatID = async (chatID) => {
 // Tìm kiếm tin nhắn trong chat theo từ khóa chỉ với tin nhắn text, tìm kiếm không phân biệt hoa thường, tìm kiếm tương đối
 const searchMessagesInChat = async (chatID, keyword) => {
     try {
-        const messages = await Message.find({ 
-            chatID, 
+        const messages = await Message.find({
+            chatID,
             type: MessageType.TEXT,
             content: { $regex: keyword, $options: 'i' }
         }).sort({ createdAt: -1 }).lean();
@@ -608,6 +632,44 @@ const searchMessagesInChat = async (chatID, keyword) => {
     }
 };
 
+// Xóa tin nhắn (soft delete)
+const deleteMessageByID = async (messageID, userID) => {
+    try {
+        // Tìm theo id
+        const message = await Message.findById(messageID);
+        if (!message) {
+            throw new Error("Message not found");
+        }
+        // Kiểm tra senderID có trùng với userID không
+        if (message.senderID !== userID) {
+            throw new Error("Không có quyền xóa tin nhắn này");
+        }
+        const deletedMessage = await Message.findByIdAndUpdate(messageID, { isDeleted: true }, { new: true });
+        return deletedMessage;
+    } catch (error) {
+        console.error("Error deleting message by ID:", error);
+        throw error;
+    }
+};
+
+//Lấy tất cả các tin nhắn đã được ghim trong chat
+const getPinnedMessagesInChat = async (chatID) => {
+    try {
+        const messages = await Message.find({ chatID, 'pinnedInfo.messageID': { $ne: null } }).lean();
+        // Format createdAt and updatedAt fields
+        messages.forEach(msg => {
+            msg.createdAt = datetimeFormatter.formatDateTimeVN(msg.createdAt);
+            msg.updatedAt = datetimeFormatter.formatDateTimeVN(msg.updatedAt);
+            msg.pinnedInfo.pinnedDate = datetimeFormatter.formatDateTimeVN(msg.pinnedInfo.pinnedDate);
+        }
+        );
+        return messages;
+    } catch (error) {
+        console.error("Error retrieving pinned messages by chatID:", error);
+        throw error;
+    }
+};
+
 module.exports = {
     createMessageText,
     createMessageFile,
@@ -622,5 +684,8 @@ module.exports = {
     getAllImageMessagesByChatID,
     getAllFileMessagesByChatID,
     getAllLinkMessagesByChatID,
-    searchMessagesInChat
+    searchMessagesInChat,
+    deleteMessageByID,
+    getPinnedMessagesInChat,
+    unPinMessage
 }

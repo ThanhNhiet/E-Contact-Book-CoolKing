@@ -25,6 +25,9 @@ router.post('/image/reply', upload.uploadd, messageController.createMessageImage
 // POST /api/messages/pinned
 router.post('/pinned', messageController.createdMessagePinned);
 
+// POST /api/messages/unpin/:messageID
+router.post('/unpin/:messageID', messageController.unPinMessage);
+
 // GET /api/messages/:chatID
 router.get('/:chatID', messageController.getMessagesByChatID);
 
@@ -45,5 +48,11 @@ router.get('/links/:chatID', messageController.getAllLinkMessagesByChatID);
 
 // GET /api/messages/search/:chatID?keyword=...
 router.get('/search/:chatID', messageController.searchMessagesInChat);
+
+// DELETE /api/messages/:messageID
+router.delete('/:messageID', messageController.deleteMessageByID);
+
+// GET /api/messages/pinned/:chatID
+router.get('/pinned/:chatID', messageController.getPinnedMessagesInChat);
 
 module.exports = router;
