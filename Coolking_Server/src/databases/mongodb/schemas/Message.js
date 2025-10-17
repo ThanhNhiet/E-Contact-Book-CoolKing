@@ -20,7 +20,15 @@ const MessageStatus = {
 const replyInfoSchema = new Schema({
   messageID: {
     type: String,
-    required: true
+    required: true,
+    ref: 'Message',  // Add reference to Message model
+    validate: {
+      validator: async function(v) {
+        const message = await mongoose.model('Message').findById(v);
+        return message != null;
+      },
+      message: 'Referenced message does not exist'
+    }
   },
   senderID: {
     type: String,
@@ -40,7 +48,15 @@ const replyInfoSchema = new Schema({
 const pinnedInfoSchema = new Schema({
   messageID: {
     type: String,
-    required: true
+    required: true,
+    ref: 'Message',  // Add reference to Message model
+    validate: {
+      validator: async function(v) {
+        const message = await mongoose.model('Message').findById(v);
+        return message != null;
+      },
+      message: 'Referenced message does not exist'
+    }
   },
   pinnedBy: {
     type: String,

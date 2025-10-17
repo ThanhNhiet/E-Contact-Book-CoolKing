@@ -4,6 +4,7 @@ const models = initModels(sequelize);
 
 const { v4: uuidv4 } = require('uuid');
 const { Message, MessageStatus, MessageType } = require('../databases/mongodb/schemas/Message');
+const { Chat, ChatType, MemberRole } = require('../databases/mongodb/schemas/Chat');
 const mongoose = require('mongoose');
 const datetimeFormatter = require("../utils/format/datetime-formatter");
 const cloudinaryService = require('../services/cloudinary.service');
@@ -187,10 +188,25 @@ const createMessageImage = async ({ chatID, senderID, images }) => {
 
 const createMessageTextReply = async ({ chatID, senderID, content, replyTo }) => {
     try {
+        // Validate content
         if (!content || content.trim() === '') {
             throw new Error('Content cannot be empty');
-            return;
         }
+
+        // Validate replyTo data
+        if (!replyTo || !replyTo.messageID) {
+            throw new Error('Reply information is required');
+        }
+
+        // Create reply info object with correct structure
+        const replyInfo = {
+            messageID: replyTo.messageID, // This should be the _id of the message being replied to
+            senderID: replyTo.senderID,
+            type: replyTo.type,
+            content: replyTo.content
+        };
+
+        // Create new message
         const newMessage = new Message({
             _id: uuidv4(),
             chatID,
@@ -199,16 +215,19 @@ const createMessageTextReply = async ({ chatID, senderID, content, replyTo }) =>
             type: MessageType.TEXT,
             status: MessageStatus.SENDING,
             filename: null,
-            replyTo,
+            replyTo: replyInfo,
             pinnedInfo: null,
         });
+
         await newMessage.save();
 
-        const lastMessage = await Message.findOne({ chatID }).sort({ createdAt: -1 });
+        // Get the saved message
+        const lastMessage = await Message.findById(newMessage._id);
         if (!lastMessage) {
-            throw new Error("No messages found for the given chatID");
-            return;
+            throw new Error("Failed to create message");
         }
+
+        // Return formatted message
         return {
             _id: lastMessage._id,
             chatID: lastMessage.chatID,
@@ -226,7 +245,7 @@ const createMessageTextReply = async ({ chatID, senderID, content, replyTo }) =>
         console.error("Error creating reply message:", error);
         throw error;
     }
-}
+};
 
 const createMessageFileReply = async ({ chatID, senderID, replyTo, files }) => {
     try {
@@ -380,10 +399,24 @@ const unPinMessage = async (messageID) => {
     }
 };
 
-const getMessagesByChatID = async (chatID, page = 1, pageSize = 10) => {
+const getMessagesByChatID = async (chatID, page, pageSize) => {
     try {
         if (!chatID) {
             throw new Error('chatID is required');
+        }
+
+        // Validate chat exists first
+        const chat = await Chat.findOne({ _id: chatID });
+        if (!chat) {
+            return {
+                total: 0,
+                page: 1,
+                pageSize: 10,
+                messages: [],
+                linkPrev: null,
+                linkNext: null,
+                pages: []
+            };
         }
 
         const page_num = parseInt(page) || 1;
@@ -391,54 +424,95 @@ const getMessagesByChatID = async (chatID, page = 1, pageSize = 10) => {
 
         // Get total count of messages
         const count = await Message.countDocuments({ chatID });
+        const members = chat.members || [];
 
         // Calculate skip from newest messages
         const skip = (page_num - 1) * pageSize_num;
 
         // Get messages with pagination
         const messages = await Message.find({ chatID })
-            .sort({ createdAt: -1 }) // Sort by newest first
+            .sort({ createdAt: -1 }) 
             .skip(skip)
-            .limit(pageSize_num).lean();
-        // .sort({ createdAt: 1 }); // Re-sort to display in chronological order
+            .limit(pageSize_num)
+            .lean();
+
+        if (messages.length === 0) {
+            return {
+                total: 0,
+                page: page_num,
+                pageSize: pageSize_num,
+                messages: [],
+                linkPrev: null,
+                linkNext: null,
+                pages: []
+            };
+        }
 
         // Format messages
-        const formattedMessages = messages.map(msg => ({
-            ...msg,
-            pinnedInfo: {
-                ...msg.pinnedInfo,
-                pinnedDate: msg.pinnedInfo?.pinnedDate ? datetimeFormatter.formatDateTimeVN(msg.pinnedInfo?.pinnedDate) : null
-            },
-            createdAt: msg?.createdAt ? datetimeFormatter.formatDateTimeVN(msg?.createdAt) : null,
-            updatedAt: msg?.updatedAt ? datetimeFormatter.formatDateTimeVN(msg?.updatedAt) : null
-        }));
+        const formattedMessages = messages.map(msg => {
+            const member = members.find(m => m.userID === msg.senderID);
+            let replyMember = null;
+            let rep = null;
 
-        // Calculate pagination links
-        const hasMore = count > (skip + pageSize_num);
-        const hasNewer = page_num > 1;
-
-        const linkPrev = hasMore ?
-            `/api/messages/${chatID}?page=${page_num + 1}&pagesize=${pageSize_num}` : null;
-        const linkNext = hasNewer ?
-            `/api/messages/${chatID}?page=${page_num - 1}&pagesize=${pageSize_num}` : null;
-
-        // Calculate pages array
-        const totalPages = Math.ceil(count / pageSize_num);
-        const pages = [];
-        for (let i = 1; i <= totalPages; i++) {
-            if (i >= page_num && i < page_num + 3) {
-                pages.push(i);
+            if (msg.replyTo) {
+                replyMember = members.find(m => m.userID === msg.replyTo.senderID);
             }
-        }
+            if (msg.pinnedInfo) {
+                rep = members.find(m => m.userID === msg.pinnedInfo.pinnedBy);
+            }
+
+            return {
+                _id: msg._id,
+                chatID: msg.chatID,
+                type: msg.type,
+                content: msg.content,
+                filename: msg.filename,
+                status: msg.status,
+                isDeleted: msg.isDeleted,
+                senderInfo: {
+                    userID: member?.userID || null,
+                    name: member?.userName || 'Unknown',
+                    avatar: member?.avatar || null,
+                    role: member?.role || null,
+                    muted: member?.muted || false,
+                    joninDate: member?.joinDate || null,
+                    lastReadAt: member?.lastReadAt || null
+                },
+                ...(msg.pinnedInfo && {
+                    pinnedInfo: {
+                        messageID: msg.pinnedInfo?.messageID || null,
+                        pinnedByinfo: rep,
+                        pinnedDate: msg.pinnedInfo?.pinnedDate ? 
+                            datetimeFormatter.formatDateTimeVN(msg.pinnedInfo?.pinnedDate) : null
+                    }
+                }),
+                ...(msg.replyTo && {
+                    replyTo: {
+                        messageID: msg.replyTo?.messageID || null,
+                        senderInfo: replyMember,
+                        content: msg.replyTo?.content || null,
+                        type: msg.replyTo?.type || null
+                    }
+                }),
+                createdAt: msg.createdAt ? datetimeFormatter.formatDateTimeVN(msg.createdAt) : null,
+                updatedAt: msg.updatedAt ? datetimeFormatter.formatDateTimeVN(msg.updatedAt) : null
+            };
+        });
+
+        // Calculate pagination
+        const totalPages = Math.ceil(count / pageSize_num);
+        const hasMore = page_num < totalPages;
+        const hasNewer = page_num > 1;
 
         return {
             total: count,
             page: page_num,
             pageSize: pageSize_num,
             messages: formattedMessages,
-            linkPrev,
-            linkNext,
-            pages
+            linkPrev: hasMore ? `/api/messages/${chatID}?page=${page_num + 1}&pagesize=${pageSize_num}` : null,
+            linkNext: hasNewer ? `/api/messages/${chatID}?page=${page_num - 1}&pagesize=${pageSize_num}` : null,
+            pages: Array.from({ length: Math.min(3, totalPages) }, (_, i) => i + page_num)
+                .filter(p => p <= totalPages)
         };
 
     } catch (error) {
