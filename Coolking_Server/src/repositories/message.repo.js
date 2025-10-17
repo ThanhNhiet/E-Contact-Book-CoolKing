@@ -19,17 +19,8 @@ const createMessageText = async ({ chatID, senderID, content }) => {
             return;
         }
 
-        // Generate unique messageID using timestamp and random string
-        const countMessages = await Message.countDocuments();
-        let messageID = '';
-        if (countMessages === 0) {
-            messageID = 'MSG00001';
-        } else {
-            const lastMessage = await Message.findOne().sort({ createdAt: -1 });
-            const lastMessageID = lastMessage.messageID;
-            const newMessageID = parseInt(lastMessageID.replace('MSG', '')) + 1;
-            messageID = 'MSG' + String(newMessageID).padStart(5, '0');
-        }
+       
+       
 
         // Kiểm tra xem nội dung có phải là link hay không
         const isLink = content.startsWith('http://') || content.startsWith('https://');
@@ -37,7 +28,6 @@ const createMessageText = async ({ chatID, senderID, content }) => {
 
         const newMessage = new Message({
             _id: uuidv4(),
-            messageID,
             chatID,
             senderID,
             content,
@@ -58,7 +48,6 @@ const createMessageText = async ({ chatID, senderID, content }) => {
 
         return {
             _id: lastMessage._id,
-            messageID: lastMessage.messageID,
             chatID: lastMessage.chatID,
             senderID: lastMessage.senderID,
             content: lastMessage.content,
@@ -83,7 +72,7 @@ const createMessageFile = async ({ chatID, senderID, files }) => {
             throw new Error('No files provided');
             return;
         }
-        const filename = files.map(file => file.originalname).join(', ');
+        const filename = files.map(file => file.originalname);
         const uploadPromises = files.map(file => {
             return cloudinaryService.upload2Cloudinary(file.buffer, folder, file.originalname);
         });
@@ -96,24 +85,12 @@ const createMessageFile = async ({ chatID, senderID, files }) => {
         }
         const links = uploadResults.map(result => result.url);
 
-        // Generate unique messageID
-        const countMessages = await Message.countDocuments();
-        let messageID = '';
-        if (countMessages === 0) {
-            messageID = 'MSG00001';
-        } else {
-            const lastMessage = await Message.findOne().sort({ createdAt: -1 });
-            const lastMessageID = lastMessage.messageID;
-            const newMessageID = parseInt(lastMessageID.replace('MSG', '')) + 1;
-            messageID = 'MSG' + String(newMessageID).padStart(5, '0');
-        }
 
         const newMessage = new Message({
             _id: uuidv4(),
-            messageID,
             chatID,
             senderID,
-            content: links.join(','), // Join multiple links with a comma
+            content: links,
             type: MessageType.FILE,
             status: MessageStatus.SENDING,
             filename,
@@ -130,7 +107,6 @@ const createMessageFile = async ({ chatID, senderID, files }) => {
         }
         return {
             _id: lastMessage._id,
-            messageID: lastMessage.messageID,
             chatID: lastMessage.chatID,
             senderID: lastMessage.senderID,
             content: lastMessage.content,
@@ -167,22 +143,13 @@ const createMessageImage = async ({ chatID, senderID, images }) => {
         }
 
         const links = uploadResults.map(result => result.url);
-        const countMessages = await Message.countDocuments();
-        let messageID = '';
-        if (countMessages === 0) {
-            messageID = 'MSG00001';
-        } else {
-            const lastMessage = await Message.findOne().sort({ createdAt: -1 });
-            const lastMessageID = lastMessage.messageID;
-            const newMessageID = parseInt(lastMessageID.replace('MSG', '')) + 1;
-            messageID = 'MSG' + String(newMessageID).padStart(5, '0');
-        }
+        
         const newMessage = new Message({
             _id: uuidv4(),
-            messageID,
+          
             chatID,
             senderID,
-            content: links.join(','), // Join multiple links with a comma
+            content: links, 
             type: MessageType.IMAGE,
             status: MessageStatus.SENDING,
             filename: null,
@@ -200,7 +167,6 @@ const createMessageImage = async ({ chatID, senderID, images }) => {
 
         return {
             _id: lastMessage._id,
-            messageID: lastMessage.messageID,
             chatID: lastMessage.chatID,
             senderID: lastMessage.senderID,
             content: lastMessage.content,
@@ -221,23 +187,12 @@ const createMessageImage = async ({ chatID, senderID, images }) => {
 
 const createMessageTextReply = async ({ chatID, senderID, content, replyTo }) => {
     try {
-        const countMessages = await Message.countDocuments();
-        let messageID = '';
-        if (countMessages === 0) {
-            messageID = 'MSG00001';
-        } else {
-            const lastMessage = await Message.findOne().sort({ createdAt: -1 });
-            const lastMessageID = lastMessage.messageID;
-            const newMessageID = parseInt(lastMessageID.replace('MSG', '')) + 1;
-            messageID = 'MSG' + String(newMessageID).padStart(5, '0');
-        }
         if (!content || content.trim() === '') {
             throw new Error('Content cannot be empty');
             return;
         }
         const newMessage = new Message({
             _id: uuidv4(),
-            messageID,
             chatID,
             senderID,
             content,
@@ -256,7 +211,6 @@ const createMessageTextReply = async ({ chatID, senderID, content, replyTo }) =>
         }
         return {
             _id: lastMessage._id,
-            messageID: lastMessage.messageID,
             chatID: lastMessage.chatID,
             senderID: lastMessage.senderID,
             content: lastMessage.content,
@@ -280,7 +234,7 @@ const createMessageFileReply = async ({ chatID, senderID, replyTo, files }) => {
             throw new Error('No files provided');
             return;
         }
-        const filename = files.map(file => file.originalname).join(', ');
+        const filename = files.map(file => file.originalname);
         const uploadPromises = files.map(file => {
             return cloudinaryService.upload2Cloudinary(file.buffer, folder, file.originalname);
         });
@@ -292,23 +246,11 @@ const createMessageFileReply = async ({ chatID, senderID, replyTo, files }) => {
             throw new Error('File upload failed');
         }
         const links = uploadResults.map(result => result.url);
-        const countMessages = await Message.countDocuments();
-        let messageID = '';
-        if (countMessages === 0) {
-            messageID = 'MSG00001';
-        } else {
-            const lastMessage = await Message.findOne().sort({ createdAt: -1 });
-            const lastMessageID = lastMessage.messageID;
-            const newMessageID = parseInt(lastMessageID.replace('MSG', '')) + 1;
-            messageID = 'MSG' + String(newMessageID).padStart(5, '0');
-        }
-
         const newMessage = new Message({
             _id: uuidv4(),
-            messageID,
             chatID,
             senderID,
-            content: null,
+            content: links,
             type: MessageType.FILE,
             status: MessageStatus.SENDING,
             filename,
@@ -324,7 +266,6 @@ const createMessageFileReply = async ({ chatID, senderID, replyTo, files }) => {
         }
         return {
             _id: lastMessage._id,
-            messageID: lastMessage.messageID,
             chatID: lastMessage.chatID,
             senderID: lastMessage.senderID,
             content: lastMessage.content,
@@ -359,22 +300,12 @@ const createMessageImageReply = async ({ chatID, senderID, replyTo, images }) =>
         }
 
         const links = uploadResults.map(result => result.url);
-        const countMessages = await Message.countDocuments();
-        let messageID = '';
-        if (countMessages === 0) {
-            messageID = 'MSG00001';
-        } else {
-            const lastMessage = await Message.findOne().sort({ createdAt: -1 });
-            const lastMessageID = lastMessage.messageID;
-            const newMessageID = parseInt(lastMessageID.replace('MSG', '')) + 1;
-            messageID = 'MSG' + String(newMessageID).padStart(5, '0');
-        }
+       
         const newMessage = new Message({
             _id: uuidv4(),
-            messageID,
             chatID,
             senderID,
-            content: links.join(','), // Join multiple links with a comma
+            content: links, 
             type: MessageType.IMAGE,
             status: MessageStatus.SENDING,
             filename: null,
@@ -392,7 +323,6 @@ const createMessageImageReply = async ({ chatID, senderID, replyTo, images }) =>
 
         return {
             _id: lastMessage._id,
-            messageID: lastMessage.messageID,
             chatID: lastMessage.chatID,
             senderID: lastMessage.senderID,
             content: lastMessage.content,
