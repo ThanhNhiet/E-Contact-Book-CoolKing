@@ -215,13 +215,9 @@ exports.createMessageImageReply = async (req, res) => {
         }
 
         const { chatID, replyTo } = req.body;
-<<<<<<< HEAD
-        const images = req.files;
-        if (!chatID || !images || images.length === 0) {
-=======
+
         const files = req.files;
         if (!chatID || !files || files.length === 0) {
->>>>>>> 0935f8ac984aec599c1cbd6cfbf83f66e5dd6419
             return res.status(400).json({
                 success: false,
                 message: 'chatID và hình ảnh là bắt buộc'
