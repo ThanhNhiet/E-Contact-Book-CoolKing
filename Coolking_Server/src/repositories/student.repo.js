@@ -4,7 +4,8 @@ const models = initModels(sequelize);
 const datetimeFormatter = require("../utils/format/datetime-formatter");
 const cloudinaryService = require("../services/cloudinary.service");
 const cloudinaryUtils = require("../utils/cloudinary.utils");
-
+const { Chat, ChatType, MemberRole } = require('../databases/mongodb/schemas/Chat');
+const mongoose = require('mongoose');
 
 /**
  *  Lấy danh sách sinh viên + điểm số bằng course_section_id - dùng cho giảng viên
@@ -243,6 +244,21 @@ const updateStudentAvatar = async (student_id, file) => {
         // Cập nhật avatar URL trong database
         student.avatar = uploadResult.url;
         await student.save();
+
+        // Find chat and update member's avatar
+        const chats = await Chat.find({ 'members.userID': student_id });
+        console.log('Chats found for avatar update:', chats.length);
+
+        if (chats && chats.length > 0) {
+            // Use Promise.all to handle all async operations
+            await Promise.all(chats.map(async (chat) => {
+                const memberIndex = chat.members.findIndex(member => member.userID === student_id);
+                if (memberIndex !== -1) {
+                    chat.members[memberIndex].avatar = uploadResult.url;
+                    await chat.save();
+                }
+            }));
+        }
 
         return {
             student_id: student.student_id,

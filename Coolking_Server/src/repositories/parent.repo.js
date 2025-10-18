@@ -5,6 +5,8 @@ const models = initModels(sequelize);
 const datetimeFormatter = require("../utils/format/datetime-formatter");
 const cloudinaryService = require("../services/cloudinary.service");
 const cloudinaryUtils = require("../utils/cloudinary.utils");
+const { Chat, ChatType, MemberRole } = require('../databases/mongodb/schemas/Chat');
+const mongoose = require('mongoose');
 
 const getParentByParent_id = async (parent_id) => {
   try {
@@ -130,6 +132,20 @@ const updateParentAvatar = async (parent_id, file) => {
         // Cập nhật avatar URL trong database
         parent.avatar = uploadResult.url;
         await parent.save();
+
+        // Find chat and update member's avatar
+        const chats = await Chat.find({ 'members.userID': parent_id });
+
+        if (chats && chats.length > 0) {
+            // Use Promise.all to handle all async operations
+            await Promise.all(chats.map(async (chat) => {
+                const memberIndex = chat.members.findIndex(member => member.userID === parent_id);
+                if (memberIndex !== -1) {
+                    chat.members[memberIndex].avatar = uploadResult.url;
+                    await chat.save();
+                }
+            }));
+        }
 
         return {
             parent_id: parent.parent_id,
