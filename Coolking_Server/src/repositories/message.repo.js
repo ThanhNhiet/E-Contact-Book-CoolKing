@@ -434,6 +434,7 @@ const getMessagesByChatID = async (chatID, page, pageSize) => {
             .sort({ createdAt: -1 }) 
             .skip(skip)
             .limit(pageSize_num)
+            .sort({ createdAt: 1 })
             .lean();
 
         if (messages.length === 0) {

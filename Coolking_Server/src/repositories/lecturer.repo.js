@@ -109,6 +109,26 @@ const uploadAvatar = async (lecturer_id, file) => {
     lecturer.avatar = uploadResult.url;
     await lecturer.save();
     
+    // Cập nhật avatar trong tất cả các chat có chứa lecturer này
+    try {
+      const { Chat } = require('../databases/mongodb/schemas/Chat');
+      
+      // Tìm tất cả chat có members chứa userID = lecturer_id
+      const updateResult = await Chat.updateMany(
+        { "members.userID": lecturer_id },
+        { 
+          $set: { 
+            "members.$.avatar": uploadResult.url,
+            updatedAt: new Date()
+          } 
+        }
+      );
+      
+    } catch (chatUpdateError) {
+      console.warn('Warning: Could not update avatar in chats:', chatUpdateError.message);
+      // Không throw error vì avatar đã được cập nhật thành công trong MariaDB
+    }
+    
     return {
       lecturer_id: lecturer.lecturer_id,
       name: lecturer.name,
