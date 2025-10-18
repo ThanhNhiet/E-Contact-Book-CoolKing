@@ -73,7 +73,7 @@ const createMessageFile = async ({ chatID, senderID, files }) => {
             throw new Error('No files provided');
             return;
         }
-        const filename = files.map(file => file.originalname);
+        const filename = files.map(file => file.originalname).join(',');
         const uploadPromises = files.map(file => {
             return cloudinaryService.upload2Cloudinary(file.buffer, folder, file.originalname);
         });
@@ -253,7 +253,7 @@ const createMessageFileReply = async ({ chatID, senderID, replyTo, files }) => {
             throw new Error('No files provided');
             return;
         }
-        const filename = files.map(file => file.originalname);
+        const filename = files.map(file => file.originalname).join(',');
         const uploadPromises = files.map(file => {
             return cloudinaryService.upload2Cloudinary(file.buffer, folder, file.originalname);
         });
