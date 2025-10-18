@@ -48,18 +48,30 @@ class MessageServices {
         }
     }
 
-    // GET /api/messages/:chatID?page=1&limit=20
+    // GET /api/messages/:chatID?page=1&pageSize=10
     async getLatestMessages(chatID: string) {
         try {
             const response = await axiosInstance.get(`/messages/${chatID}`, {
                 params: {
                     page: 1,
-                    limit: 20
+                    pageSize: 5
                 }
             });
             return response.data;
         } catch (error) {
             console.error("Error fetching latest messages:", error);
+            throw error;
+        }
+    }
+
+    // GET with linkPrev for pagination
+    async getMessagesByLinkPrev(linkPrev: string) {
+        try {
+            // linkPrev đã được clean (bỏ /api) trong useMessage
+            const response = await axiosInstance.get(linkPrev);
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching messages by linkPrev:", error);
             throw error;
         }
     }
@@ -184,11 +196,11 @@ class MessageServices {
         }
     }
 
-    // POST /api/messages/pin
+    // POST /api/messages/pinned
     // Body: { chatID, messageID, pinnedBy }
-    async pinMessage(chatID: string, messageID: string, pinnedBy: string) {
+    async pinMessage(messageID: string, pinnedBy: string) {
         try {
-            const response = await axiosInstance.post(`/messages/pin`, { chatID, messageID, pinnedBy });
+            const response = await axiosInstance.post(`/messages/pinned`, { messageID, pinnedBy });
             return response.data;
         } catch (error) {
             console.error("Error pinning message:", error);

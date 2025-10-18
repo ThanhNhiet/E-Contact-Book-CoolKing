@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { ChatMember } from '../../hooks/useChat';
 
 interface SearchMessage {
@@ -27,6 +27,23 @@ const SearchResultModal: React.FC<SearchResultModalProps> = ({
     searchKeyword,
     members = []
 }) => {
+    // Handle ESC key to close modal
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                onClose();
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('keydown', handleKeyDown);
+        }
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen, onClose]);
+
     // Hàm tìm tên người gửi từ userID
     const getSenderName = (senderID: string) => {
         const member = members.find(m => m.userID === senderID);
@@ -87,8 +104,18 @@ const SearchResultModal: React.FC<SearchResultModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg w-full max-w-3xl h-4/5 flex flex-col">
+        <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+            onClick={() => {
+                onClose();
+            }}
+        >
+            <div 
+                className="bg-white rounded-lg w-full max-w-3xl h-4/5 flex flex-col"
+                onClick={(e) => {
+                    e.stopPropagation();
+                }}
+            >
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-200">
                     <div>
@@ -101,7 +128,9 @@ const SearchResultModal: React.FC<SearchResultModalProps> = ({
                         </p>
                     </div>
                     <button
-                        onClick={onClose}
+                        onClick={() => {
+                            onClose();
+                        }}
                         className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
                     >
                         ✕
@@ -197,7 +226,9 @@ const SearchResultModal: React.FC<SearchResultModalProps> = ({
                             Kết quả được sắp xếp theo thời gian gần nhất
                         </p>
                         <button
-                            onClick={onClose}
+                            onClick={() => {
+                                onClose();
+                            }}
                             className="px-4 py-2 text-sm bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
                         >
                             Đóng

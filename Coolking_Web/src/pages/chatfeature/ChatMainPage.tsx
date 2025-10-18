@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import HeaderLeCpn from '../../components/lecturer/HeaderLeCpn';
 import ChatListCpn from '../../components/shared/chatfeaturecpn/ChatListCpn';
 import ChatInfoCpn from '../../components/shared/chatfeaturecpn/ChatInfoCpn';
@@ -36,12 +36,19 @@ const ChatMainPage: React.FC = () => {
         setShowLinksModal(true);
     };
 
-    const handleShowSearchResults = (results: any[], members: ChatMember[], keyword: string = '') => {
+    const handleShowSearchResults = useCallback((results: any[], members: ChatMember[], keyword: string = '') => {
         setSearchResults(results);
         setSearchMembers(members);
         setSearchKeyword(keyword);
         setShowSearchModal(true);
-    };
+    }, []);
+
+    const handleCloseSearchModal = useCallback(() => {
+        setShowSearchModal(false);
+        setSearchResults([]);
+        setSearchKeyword('');
+        setSearchMembers([]);
+    }, [showSearchModal]);
 
     const handleChatMembersUpdate = (members: ChatMember[]) => {
         setChatMembers(members);
@@ -105,13 +112,16 @@ const ChatMainPage: React.FC = () => {
                 </>
             )}
 
-            <SearchResultModal
-                isOpen={showSearchModal}
-                onClose={() => setShowSearchModal(false)}
-                searchResults={searchResults}
-                searchKeyword={searchKeyword}
-                members={searchMembers}
-            />
+            {showSearchModal && (
+                <SearchResultModal
+                    key={showSearchModal ? 'open' : 'closed'}
+                    isOpen={showSearchModal}
+                    onClose={handleCloseSearchModal}
+                    searchResults={searchResults}
+                    searchKeyword={searchKeyword}
+                    members={searchMembers}
+                />
+            )}
 
             {/* <FooterLeCpn /> */}
         </div>

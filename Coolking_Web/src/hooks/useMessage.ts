@@ -4,27 +4,53 @@ import { messageServices } from '../services/messageServices';
 export interface Message {
     _id: string;
     chatID: string;
-    senderID: string;
+    senderID?: string; // Backward compatibility
     type: string;
     content: string;
     filename: string | null;
     replyTo: Reply | null;
     pinnedInfo: PinnedInfo | null;
     status: string;
+    isDeleted: boolean;
+    senderInfo: {
+        userID: string;
+        name: string;
+        avatar: string | null;
+        role: string;
+        muted: boolean;
+        joninDate: string | null;
+        lastReadAt: string;
+    };
     createdAt: string;
     updatedAt: string;
 }
 
 interface Reply {
     messageID: string;
-    senderID: string;
+    senderInfo: {
+        userID: string;
+        userName: string;
+        role: string;
+        avatar: string | null;
+        joinedAt: string;
+        muted: boolean;
+        lastReadAt: string;
+    };
     type: string;
     content: string;
 }
 
 interface PinnedInfo {
     messageID: string;
-    pinnedBy: string;
+    pinnedByinfo: {
+        userID: string;
+        userName: string;
+        role: string;
+        avatar: string | null;
+        joinedAt: string;
+        muted: boolean;
+        lastReadAt: string;
+    };
     pinnedDate: string;
 }
 
@@ -36,6 +62,21 @@ export const useMessage = () => {
     const [collectionMessages, setCollectionMessages] = useState<Message[]>([]);
     const [linkPrev, setLinkPrev] = useState<string | null>(null);
     const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
+
+    // Helper function để xử lý response safely
+    const addMessagesToState = useCallback((response: any) => {
+        if (Array.isArray(response)) {
+            setMessages(prevMessages => [...prevMessages, ...response]);
+        } else if (response && typeof response === 'object') {
+            // Nếu response là object, có thể chứa message hoặc messages
+            const newMessage = response.message || response.data || response;
+            if (Array.isArray(newMessage)) {
+                setMessages(prevMessages => [...prevMessages, ...newMessage]);
+            } else if (newMessage) {
+                setMessages(prevMessages => [...prevMessages, newMessage]);
+            }
+        }
+    }, []);
 
     // Tìm kiếm tin nhắn trong một cuộc trò chuyện
     const searchMessagesInChat = useCallback(async (chatID: string, keyword: string) => {
@@ -104,8 +145,18 @@ export const useMessage = () => {
         try {
             const response = await messageServices.getLatestMessages(chatID);
             setLoading(false);
-            setMessages(response);
-            setLinkPrev(response.linkPrev || null);
+            
+            // Xử lý cấu trúc dữ liệu từ API
+            if (response && response.messages) {
+                setMessages(response.messages);
+                // Fix linkPrev - bỏ /api prefix vì axios config đã có
+                const linkPrev = response.linkPrev ? response.linkPrev.replace('/api', '') : null;
+                setLinkPrev(linkPrev);
+            } else {
+                // Fallback nếu API trả về trực tiếp array
+                setMessages(response || []);
+                setLinkPrev(null);
+            }
         } catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi lấy tin nhắn.');
             setLoading(false);
@@ -120,8 +171,11 @@ export const useMessage = () => {
         try {
             const response = await messageServices.sendTextMessage(chatID, text);
             setLoading(false);
-            messages.push(response);
-            setMessages([...messages]);
+            
+            // Thêm tin nhắn mới vào danh sách hiện tại
+            if (response) {
+                setMessages(prevMessages => [...prevMessages, response]);
+            }
         } catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi gửi tin nhắn.');
             setLoading(false);
@@ -136,14 +190,14 @@ export const useMessage = () => {
         try {
             const response = await messageServices.sendFileMessages(chatID, files);
             setLoading(false);
-            setMessages(prevMessages => [...prevMessages, ...response]);
+            addMessagesToState(response);
         }
         catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi gửi tin nhắn.');
             setLoading(false);
             throw err;
         }
-    }, []);
+    }, [addMessagesToState]);
 
     // Gửi tin nhắn hình ảnh
     const sendImageMessage = useCallback(async (chatID: string, files: File[]) => {
@@ -152,13 +206,13 @@ export const useMessage = () => {
         try {
             const response = await messageServices.sendImageMessages(chatID, files);
             setLoading(false);
-            setMessages(prevMessages => [...prevMessages, ...response]);
+            addMessagesToState(response);
         } catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi gửi tin nhắn.');
             setLoading(false);
             throw err;
         }
-    }, []);
+    }, [addMessagesToState]);
 
     // Gửi tin nhắn reply text
     const sendReplyTextMessage = useCallback(async (chatID: string, text: string, replyTo: { messageID: string; senderID: string; type: string; content: string; }) => {
@@ -167,7 +221,9 @@ export const useMessage = () => {
         try {
             const response = await messageServices.sendReplyTextMessage(chatID, text, replyTo);
             setLoading(false);
-            setMessages(prevMessages => [...prevMessages, response]);
+            if (response) {
+                setMessages(prevMessages => [...prevMessages, response]);
+            }
         }
         catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi gửi tin nhắn.');
@@ -183,13 +239,13 @@ export const useMessage = () => {
         try {
             const response = await messageServices.sendReplyFileMessage(chatID, files, replyTo);
             setLoading(false);
-            setMessages(prevMessages => [...prevMessages, ...response]);
+            addMessagesToState(response);
         } catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi gửi tin nhắn.');
             setLoading(false);
             throw err;
         }
-    }, []);
+    }, [addMessagesToState]);
 
     // Gửi tin nhắn reply image
     const sendReplyImageMessage = useCallback(async (chatID: string, files: File[], replyTo: { messageID: string; senderID: string; type: string; content: string; }) => {
@@ -198,7 +254,9 @@ export const useMessage = () => {
         try {
             const response = await messageServices.sendReplyImageMessage(chatID, files, replyTo);
             setLoading(false);
-            setMessages(prevMessages => [...prevMessages, response]);
+            if (response) {
+                setMessages(prevMessages => [...prevMessages, response]);
+            }
         } catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi gửi tin nhắn.');
             setLoading(false);
@@ -222,14 +280,18 @@ export const useMessage = () => {
     }, []);
 
     // Pin tin nhắn
-    const pinMessage = useCallback(async (chatID: string, messageID: string, pinnedBy: string) => {
+    const pinMessage = useCallback(async (messageID: string, pinnedBy: string) => {
         setLoading(true);
         setError('');
         try {
-            const response = await messageServices.pinMessage(chatID, messageID, pinnedBy);
+            const response = await messageServices.pinMessage(messageID, pinnedBy);
             setLoading(false);
-            pinnedMessages.push(response);
-            setPinnedMessages([...pinnedMessages]);
+            
+            // Thêm tin nhắn đã pin vào danh sách
+            if (response) {
+                setPinnedMessages(prevPinned => [...prevPinned, response]);
+            }
+            return response;
         } catch (err: any) {
             setError(err.message || 'Có lỗi xảy ra khi ghim tin nhắn.');
             setLoading(false);
@@ -269,6 +331,39 @@ export const useMessage = () => {
         }
     }, []);
 
+    // Clear search results
+    const clearSearchResults = useCallback(() => {
+        setSearchResults([]);
+    }, []);
+
+    // Update linkPrev (for pagination)
+    const updateLinkPrev = useCallback((newLinkPrev: string | null) => {
+        const cleanLinkPrev = newLinkPrev ? newLinkPrev.replace('/api', '') : null;
+        setLinkPrev(cleanLinkPrev);
+    }, []);
+
+    // Clear all messages and reset state (when switching chats)
+    const clearMessages = useCallback(() => {
+        setMessages([]);
+        setLinkPrev(null);
+        setPinnedMessages([]);
+    }, []);
+
+    // Get messages by linkPrev (for pagination)
+    const getMessagesByLinkPrev = useCallback(async (linkPrev: string) => {
+        setLoading(true);
+        setError('');
+        try {
+            const response = await messageServices.getMessagesByLinkPrev(linkPrev);
+            setLoading(false);
+            return response;
+        } catch (err: any) {
+            setError(err.message || 'Có lỗi xảy ra khi tải tin nhắn.');
+            setLoading(false);
+            throw err;
+        }
+    }, []);
+
     return {
         loading,
         error,
@@ -279,7 +374,11 @@ export const useMessage = () => {
         pinnedMessages,
         
         getLatestMessagesInChat,
+        getMessagesByLinkPrev,
         searchMessagesInChat,
+        clearSearchResults,
+        clearMessages,
+        updateLinkPrev,
         getAllImagesInChat,
         getAllFilesInChat,
         getAllLinksInChat,
