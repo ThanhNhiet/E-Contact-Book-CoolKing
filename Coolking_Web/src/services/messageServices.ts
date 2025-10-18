@@ -243,6 +243,17 @@ class MessageServices {
         }
     }
 
+    // PUT /api/messages/lastread/:chatID
+    async updateLastReadMessage(chatID: string) {
+        try {
+            const response = await axiosInstance.put(`/messages/lastread/${chatID}`);
+            return response.data;
+        } catch (error) {
+            console.error("Error updating last read message:", error);
+            throw error;
+        }
+    }
+
 }
 
 export const messageServices = new MessageServices();

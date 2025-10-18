@@ -1,16 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useChat } from '../../../hooks/useChat';
 
 interface ChatListCpnProps {
     onChatSelect: (chatId: string) => void;
     selectedChatId?: string;
+    onLastMessageUpdate?: (chatId: string, lastMessage: any) => void;
 }
 
-const ChatListCpn: React.FC<ChatListCpnProps> = ({ onChatSelect, selectedChatId }) => {
+const ChatListCpn = forwardRef<any, ChatListCpnProps>(({ onChatSelect, selectedChatId, onLastMessageUpdate }, ref) => {
     const [searchKeyword, setSearchKeyword] = useState('');
     const [isSearching, setIsSearching] = useState(false);
+    const [localChatItems, setLocalChatItems] = useState<any[]>([]);
     const { loading, error, currentPage, pages, chatItems,
         getChats4AllUser, searchChats4AllUser } = useChat();
+
+    // Update local chat items when chatItems changes
+    useEffect(() => {
+        if (Array.isArray(chatItems)) {
+            setLocalChatItems(chatItems);
+        }
+    }, [chatItems]);
+
+    // Handle last message update
+    useEffect(() => {
+        if (onLastMessageUpdate) {
+            // This effect will be triggered by parent component
+        }
+    }, [onLastMessageUpdate]);
+
+    const updateChatLastMessage = (chatId: string, lastMessage: any) => {
+        setLocalChatItems(prev => 
+            prev.map(chat => 
+                chat._id === chatId 
+                    ? { ...chat, lastMessage, unread: false }
+                    : chat
+            )
+        );
+    };
+
+    // Expose methods to parent component
+    useImperativeHandle(ref, () => ({
+        updateChatLastMessage
+    }));
 
     // Load danh sách chat khi component mount
     useEffect(() => {
@@ -66,6 +97,21 @@ const ChatListCpn: React.FC<ChatListCpnProps> = ({ onChatSelect, selectedChatId 
                 </div>
             </div>
 
+            {/* Reload button */}
+            <div className="p-2 border-b border-gray-200 flex-shrink-0">
+                <button
+                    onClick={() => {
+                        setSearchKeyword('');
+                        setIsSearching(false);
+                        getChats4AllUser(1, 10);
+                    }}
+                    disabled={loading}
+                    className="w-full p-2 bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white rounded-lg transition-colors"
+                >
+                    {loading ? 'Đang tải...' : 'Tải lại danh sách'}
+                </button>
+            </div>
+
             {/* Loading state */}
             {loading && (
                 <div className="flex justify-center items-center py-8">
@@ -83,7 +129,7 @@ const ChatListCpn: React.FC<ChatListCpnProps> = ({ onChatSelect, selectedChatId 
 
             {/* Chat List */}
             <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                {(!chatItems || (Array.isArray(chatItems) && chatItems.length === 0)) && !loading ? (
+                {(!localChatItems || localChatItems.length === 0) && !loading ? (
                     <div className="flex flex-col items-center justify-center py-8 text-gray-500">
                         <div className="text-4xl mb-2">💬</div>
                         <p>Không có cuộc trò chuyện nào</p>
@@ -101,10 +147,17 @@ const ChatListCpn: React.FC<ChatListCpnProps> = ({ onChatSelect, selectedChatId 
                         )}
                     </div>
                 ) : (
-                    Array.isArray(chatItems) && chatItems.map((chat: any) => (
+                    localChatItems.map((chat: any) => (
                         <div
                             key={chat._id}
-                            onClick={() => onChatSelect(chat._id)}
+                            onClick={() => {
+                                onChatSelect(chat._id);
+                                // Mark as read when selecting chat
+                                if (chat.unread) {
+                                    // Update local state immediately
+                                    updateChatLastMessage(chat._id, { ...chat.lastMessage });
+                                }
+                            }}
                             className={`flex items-center p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 transition-colors ${selectedChatId === chat._id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
                                 }`}
                         >
@@ -147,9 +200,9 @@ const ChatListCpn: React.FC<ChatListCpnProps> = ({ onChatSelect, selectedChatId 
                                     {!chat.lastMessage ? (
                                         <p className="text-xs text-gray-500 italic">Bắt đầu cuộc trò chuyện</p>
                                     ) : chat.unread ? (
-                                        <p className="text-xs text-gray-800 truncate">{chat.lastMessage.content}</p>
+                                        <p className="text-xs text-gray-800 font-semibold truncate">{chat.lastMessage.content}</p>
                                     ) : (
-                                        <p className="text-xs text-gray-500 truncate">{chat.lastMessage.content}</p>
+                                        <p className="text-xs text-gray-500 font-normal truncate">{chat.lastMessage.content}</p>
                                     )}
 
                                     {chat.unread && (
@@ -200,6 +253,6 @@ const ChatListCpn: React.FC<ChatListCpnProps> = ({ onChatSelect, selectedChatId 
             )}
         </div>
     );
-};
+});
 
 export default ChatListCpn;
