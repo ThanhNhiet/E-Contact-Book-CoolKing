@@ -7,7 +7,7 @@ type props = {
   name: string;
 };
 
-export default function TopNavigations_Chat({ navigation, name }: props) {
+export default function TopNavigations({ navigation, name }: props) {
   return (
     <View style={styles.container}>
       {/* Nút Back */}

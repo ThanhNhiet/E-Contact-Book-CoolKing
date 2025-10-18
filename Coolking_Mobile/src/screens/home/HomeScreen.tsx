@@ -15,6 +15,7 @@ import BottomNavigation from "@/src/components/navigations/BottomNavigations";
 import TopNavigations_Home from "@/src/components/navigations/TopNavigations_Home";
 import { useProfile } from "@/src/services/useapi/profile/UseProfile";
 import { useCalendar } from "@/src/services/useapi/calendar/UseCalender";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import dayjs from "dayjs";
 import {Ionicons } from "@expo/vector-icons";
 
@@ -47,6 +48,23 @@ export default function HomeScreen() {
 
   const todayStr = dayjs().format("YYYY-MM-DD");
 
+   const handleNavigate = async (screen: string) => {
+    if (screen === "AttendanceScreen") {
+      const role = await AsyncStorage.getItem("role");
+      if (!role) {
+        console.warn("Role not found in AsyncStorage");
+        return;
+      }
+      if (role === "STUDENT") {
+        navigation.navigate("AttendanceScreen");
+      } else if (role === "PARENT") {
+        navigation.navigate("AttendanceScreen_Parent");
+      }
+    } else {
+      navigation.navigate(screen);
+    }
+  };
+
   // Lấy lịch hôm nay
   const todayEvents = useMemo<TodayItem[]>(() => {
     const list = getSchedulesByDate(todayStr);
@@ -69,6 +87,8 @@ export default function HomeScreen() {
     const isPractical = !!item.location && /^TH[\s\-_]?/i.test(item.location);
     const color = isStudy ? (isPractical ? "#22C55E" : "#2E86DE") : "#E74C3C";
     const dotStyle = [styles.dot, { backgroundColor: color }];
+
+
 
     return (
       <TouchableOpacity
@@ -152,7 +172,7 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   key={feature.id}
                   style={styles.featureButton}
-                  onPress={() => navigation.navigate(feature.screen)}
+                  onPress={() => handleNavigate(feature.screen)}
                 >
                   {/* Thay thế Text bằng component Icon của bạn */}
                   <View style={styles.iconContainer}>

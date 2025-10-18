@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { getChats } from "../../api/chat/ChatApi";
-import { set } from "date-fns";
+import { useEffect, useState,useCallback } from "react";
+import { getChats , getSearchChatsByKeyword } from "../../api/chat/ChatApi";
+import { refresh } from "@react-native-community/netinfo";
 
 // Giữ nguyên các type ChatItemType, lastMessageType
 type ChatItemType = {
@@ -12,49 +12,35 @@ type ChatItemType = {
     lastMessage: lastMessageType | null;
     createdAt: string;
     updatedAt: string;
-    currentMember:{
-        userID: string;
-        userName: string;
-        role: string;
-        joninedAt: string;
-        muted: boolean;
-    }
+    unread:boolean;
 }
 type lastMessageType = {
-  
-            _id: string;
-            messageID: string;
-            chatID: string;
             senderID: string;
             content: string;
             type: string;
-            status: string;
-            filename: string;
-            replyTo: Object | null;
-            pinnedInfor : Object | null;
             createdAt: string;
-            updatedAt: string;
 }
 
 
-export const UseChat = () => {
+export const useChat = () => {
     const [chats, setChats] = useState<ChatItemType[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
     const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState<any[]>([]);
 
-    const getfetchChats = async (pageNumber: number,pageSize: number) => {
+    const getfetchChats = useCallback(async (page: number,pageSize: number) => {
         try {
            // setLoading(true);
-            const res = await getChats(pageNumber, pageSize);
+            const res = await getChats(page, pageSize);
             if (!res && !res.chats){
                 console.warn("No chats data received");
                 setChats([]);
                 return;
             }
             setChats(res.chats);
+            setTotalPages(res.pages);
             setError(null);
-            console.log("Chats data set:", res.chats);
             
         } catch (error) {
             setError(error as Error);
@@ -62,20 +48,38 @@ export const UseChat = () => {
         } finally{
             setLoading(false);
         }
-    }
+    },[page]);
     useEffect(() => {
         getfetchChats(page,10);
-    },[page]);
-    
+    },[page,getfetchChats]);
 
+    const searchChats = useCallback(async (query: string) => {
+        setLoading(true);
+        try {
+            const res = await getSearchChatsByKeyword(query);
+            if (!res || !res.success) {
+                console.warn("No search results found");
+                setChats([]);
+                return;
+            }
+            return res.chats;
+            setError(null);
+        } catch (error) {
+            setError(error as Error);
+            setChats([]);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     return {
         chats,
         loading,
         error,
-        refresh: () => {
-            setPage(1);
-            // Không cần gọi fetchChats(1) ở đây, useEffect sẽ tự làm
-        }
+        page,
+        refetch: () => getfetchChats(page,10),
+        setPage,
+        totalPages,
+        searchChats,
     };
 };
