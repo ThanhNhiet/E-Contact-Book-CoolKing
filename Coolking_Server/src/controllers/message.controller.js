@@ -176,7 +176,8 @@ exports.createMessageFileReply = async (req, res) => {
             return res.status(403).json({ message: 'Forbidden' });
         }
 
-        const { chatID, files, replyTo } = req.body;
+        const { chatID, replyTo } = req.body;
+        const files = req.files;
         if (!chatID || !files || files.length === 0) {
             return res.status(400).json({
                 success: false,
@@ -213,7 +214,8 @@ exports.createMessageImageReply = async (req, res) => {
             return res.status(403).json({ message: 'Forbidden' });
         }
 
-        const { chatID, images, replyTo } = req.body;
+        const { chatID, replyTo } = req.body;
+        const images = req.files;
         if (!chatID || !images || images.length === 0) {
             return res.status(400).json({
                 success: false,
