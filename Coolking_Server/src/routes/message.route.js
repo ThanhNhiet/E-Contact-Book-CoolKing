@@ -55,4 +55,7 @@ router.delete('/:messageID', messageController.deleteMessageByID);
 // GET /api/messages/pinned/:chatID
 router.get('/pinned/:chatID', messageController.getPinnedMessagesInChat);
 
+// PUT /api/messages/lastread/:chatID
+router.put('/lastread/:chatID', messageController.updateLastReadAt);
+
 module.exports = router;

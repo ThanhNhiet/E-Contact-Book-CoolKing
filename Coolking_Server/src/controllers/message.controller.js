@@ -548,3 +548,31 @@ exports.getPinnedMessagesInChat = async (req, res) => {
         });
     }
 };
+
+// PUT /api/messages/lastread/:chatID
+exports.updateLastReadAt = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { chatID } = req.params;
+        if (!chatID) {
+            return res.status(400).json({
+                success: false,
+                message: 'chatID là bắt buộc'
+            });
+        }
+        const updatedInfo = await messageRepo.updateLastReadAt(chatID, decoded.user_id);
+        return res.status(200).json(updatedInfo);
+    }
+    catch (error) {
+        console.error('Error in updateLastReadAt controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi cập nhật thời gian đọc cuối cùng'
+        });
+    }
+};

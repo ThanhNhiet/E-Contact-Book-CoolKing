@@ -28,7 +28,7 @@ const upload2Cloudinary = async (fileBuffer, folder, originalName = '') => {
         const extension = originalName ? originalName.split('.').pop() : '';
         const originalNameWithoutExt = originalName ? originalName.slice(0, originalName.lastIndexOf('.')) : '';
         const fileName = generateFileName();
-        const publicId = extension ? `${originalNameWithoutExt}_${fileName}` : `${originalNameWithoutExt}_${fileName}`;
+        const publicId = extension ? `${originalNameWithoutExt}_${fileName}.${extension}` : `${originalNameWithoutExt}_${fileName}`;
 
         return new Promise((resolve, reject) => {
             cloudinary.uploader.upload_stream(
