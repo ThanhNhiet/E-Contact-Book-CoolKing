@@ -434,8 +434,10 @@ const getMessagesByChatID = async (chatID, page, pageSize) => {
             .sort({ createdAt: -1 }) 
             .skip(skip)
             .limit(pageSize_num)
-            .sort({ createdAt: 1 })
             .lean();
+
+        // Sắp xếp tin nhắn trong trang hiện tại theo thứ tự thời gian tăng dần
+        messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
         if (messages.length === 0) {
             return {
@@ -510,8 +512,8 @@ const getMessagesByChatID = async (chatID, page, pageSize) => {
             page: page_num,
             pageSize: pageSize_num,
             messages: formattedMessages,
-            linkPrev: hasMore ? `/api/messages/${chatID}?page=${page_num + 1}&pagesize=${pageSize_num}` : null,
-            linkNext: hasNewer ? `/api/messages/${chatID}?page=${page_num - 1}&pagesize=${pageSize_num}` : null,
+            linkPrev: hasMore ? `/api/messages/${chatID}?page=${page_num + 1}&pageSize=${pageSize_num}` : null,
+            linkNext: hasNewer ? `/api/messages/${chatID}?page=${page_num - 1}&pageSize=${pageSize_num}` : null,
             pages: Array.from({ length: Math.min(3, totalPages) }, (_, i) => i + page_num)
                 .filter(p => p <= totalPages)
         };
