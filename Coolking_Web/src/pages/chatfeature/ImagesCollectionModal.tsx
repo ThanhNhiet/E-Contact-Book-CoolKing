@@ -86,31 +86,41 @@ const ImagesCollectionModal: React.FC<ImagesCollectionModalProps> = ({ isOpen, o
                     ) : (
                         <div className="p-4 h-full overflow-y-auto">
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                {images.map((image) => (
-                                    <div
-                                        key={image._id}
-                                        className="bg-gray-50 rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                                        onClick={() => handleImageClick(image.content)}
-                                    >
-                                        <div className="aspect-square relative">
-                                            <img
-                                                src={image.content}
-                                                alt="Chat image"
-                                                className="w-full h-full object-cover"
-                                                loading="lazy"
-                                                onError={(e) => {
-                                                    const target = e.target as HTMLImageElement;
-                                                    target.src = 'https://via.placeholder.com/200x200/6B7280/FFFFFF?text=Lỗi+ảnh';
-                                                }}
-                                            />
+                                {images.map((image) => {
+                                    // Handle multiple image URLs separated by commas
+                                    const imageUrls = image.content.split(',').map(url => url.trim()).filter(url => url);
+                                    
+                                    return imageUrls.map((imageUrl, index) => (
+                                        <div
+                                            key={`${image._id}-${index}`}
+                                            className="bg-gray-50 rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                                            onClick={() => handleImageClick(imageUrl)}
+                                        >
+                                            <div className="aspect-square relative">
+                                                <img
+                                                    src={imageUrl}
+                                                    alt="Chat image"
+                                                    className="w-full h-full object-cover"
+                                                    loading="lazy"
+                                                    onError={(e) => {
+                                                        const target = e.target as HTMLImageElement;
+                                                        target.src = 'https://via.placeholder.com/200x200/6B7280/FFFFFF?text=Lỗi+ảnh';
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="p-2">
+                                                <p className="text-xs text-gray-500 truncate">
+                                                    {image.createdAt}
+                                                </p>
+                                                {imageUrls.length > 1 && (
+                                                    <p className="text-xs text-blue-500">
+                                                        {index + 1}/{imageUrls.length}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="p-2">
-                                            <p className="text-xs text-gray-500 truncate">
-                                                {image.createdAt}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
+                                    ));
+                                })}
                             </div>
                         </div>
                     )}
