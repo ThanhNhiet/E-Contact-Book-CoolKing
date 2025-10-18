@@ -63,26 +63,26 @@ const UpdateProfileModal: React.FC<UpdateProfileModalProps> = ({ isOpen, onClose
     };
 
     // Chuyển đổi từ yyyy-MM-dd sang dd/MM/yyyy
-    const convertFromDateInput = (dateString: string): string => {
-        if (!dateString) return '';
-        const parts = dateString.split('-');
-        if (parts.length === 3) {
-            const [year, month, day] = parts;
-            return `${day}/${month}/${year}`;
-        }
-        return '';
-    };
+    // const convertFromDateInput = (dateString: string): string => {
+    //     if (!dateString) return '';
+    //     const parts = dateString.split('-');
+    //     if (parts.length === 3) {
+    //         const [year, month, day] = parts;
+    //         return `${day}/${month}/${year}`;
+    //     }
+    //     return '';
+    // };
 
     // Xử lý thay đổi date picker
-    const handleDatePickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { value } = e.target;
-        const formattedDate = convertFromDateInput(value);
-        setFormData(prev => ({
-            ...prev,
-            dob: formattedDate
-        }));
-        setError('');
-    };
+    // const handleDatePickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    //     const { value } = e.target;
+    //     const formattedDate = convertFromDateInput(value);
+    //     setFormData(prev => ({
+    //         ...prev,
+    //         dob: formattedDate
+    //     }));
+    //     setError('');
+    // };
 
     // Hàm validate ngày
     const isValidDate = (dateString: string): boolean => {
@@ -227,6 +227,14 @@ const UpdateProfileModal: React.FC<UpdateProfileModalProps> = ({ isOpen, onClose
             return;
         }
 
+        if (formData.phone.trim()) {
+            const phoneRegex = /^\d{10}$/;
+            if (!phoneRegex.test(formData.phone)) {
+                setError('Số điện thoại không hợp lệ');
+                return;
+            }
+        }
+
         try {
             let success = false;
             let lecturer_avatar_url = localStorage.getItem('lecturer_avatar_url') || '';
@@ -341,7 +349,8 @@ const UpdateProfileModal: React.FC<UpdateProfileModalProps> = ({ isOpen, onClose
                                     type="text"
                                     name="name"
                                     value={formData.name}
-                                    onChange={handleInputChange}
+                                    // onChange={handleInputChange}
+                                    readOnly
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     required
                                 />
@@ -355,7 +364,8 @@ const UpdateProfileModal: React.FC<UpdateProfileModalProps> = ({ isOpen, onClose
                                         ref={dateInputRef}
                                         type="date"
                                         value={convertToDateInput(formData.dob)}
-                                        onChange={handleDatePickerChange}
+                                        // onChange={handleDatePickerChange}
+                                        readOnly
                                         className="absolute inset-0 w-full h-full opacity-0 z-10"
                                     />
                                     {/* Visible input showing dd/MM/yyyy */}
@@ -380,7 +390,7 @@ const UpdateProfileModal: React.FC<UpdateProfileModalProps> = ({ isOpen, onClose
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Giới tính</label>
-                                <select
+                                {/* <select
                                     name="gender"
                                     value={formData.gender.toString()}
                                     onChange={handleInputChange}
@@ -388,7 +398,14 @@ const UpdateProfileModal: React.FC<UpdateProfileModalProps> = ({ isOpen, onClose
                                 >
                                     <option value="true">Nam</option>
                                     <option value="false">Nữ</option>
-                                </select>
+                                </select> */}
+                                <input
+                                    type="text"
+                                    name="gender"
+                                    value={formData.gender ? 'Nam' : 'Nữ'}
+                                    readOnly
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
                             </div>
 
                             <div>
