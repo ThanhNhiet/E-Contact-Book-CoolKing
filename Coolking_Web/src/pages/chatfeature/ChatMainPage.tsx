@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import HeaderLeCpn from '../../components/lecturer/HeaderLeCpn';
 import ChatListCpn from '../../components/shared/chatfeaturecpn/ChatListCpn';
 import ChatInfoCpn from '../../components/shared/chatfeaturecpn/ChatInfoCpn';
@@ -10,6 +10,7 @@ import SearchResultModal from './SearchResultModal';
 import type { ChatMember } from '../../hooks/useChat';
 
 const ChatMainPage: React.FC = () => {
+    const chatListRef = useRef<any>(null);
     const [selectedChatId, setSelectedChatId] = useState<string | undefined>();
     const [showImagesModal, setShowImagesModal] = useState(false);
     const [showFilesModal, setShowFilesModal] = useState(false);
@@ -22,6 +23,13 @@ const ChatMainPage: React.FC = () => {
 
     const handleChatSelect = (chatId: string) => {
         setSelectedChatId(chatId);
+    };
+
+    const handleLastMessageUpdate = (chatId: string, lastMessage: any) => {
+        // Call ChatList update method via ref
+        if (chatListRef.current?.updateChatLastMessage) {
+            chatListRef.current.updateChatLastMessage(chatId, lastMessage);
+        }
     };
 
     const handleShowImages = () => {
@@ -63,8 +71,10 @@ const ChatMainPage: React.FC = () => {
                 {/* Chat List - Left Panel */}
                 <div className="w-80 flex-shrink-0">
                     <ChatListCpn 
+                        ref={chatListRef}
                         onChatSelect={handleChatSelect}
                         selectedChatId={selectedChatId}
+                        onLastMessageUpdate={handleLastMessageUpdate}
                     />
                 </div>
 
@@ -74,6 +84,7 @@ const ChatMainPage: React.FC = () => {
                         selectedChatId={selectedChatId}
                         onShowSearchResults={(results, members) => handleShowSearchResults(results, members, 'search')}
                         members={chatMembers}
+                        onLastMessageUpdate={handleLastMessageUpdate}
                     />
                 </div>
 

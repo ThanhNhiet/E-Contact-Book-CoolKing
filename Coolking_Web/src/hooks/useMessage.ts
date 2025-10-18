@@ -364,6 +364,15 @@ export const useMessage = () => {
         }
     }, []);
 
+    // Cập nhật last read message
+    const updateLastReadMessage = useCallback(async (chatID: string) => {
+        try {
+            await messageServices.updateLastReadMessage(chatID);
+        } catch (err: any) {
+            console.error('Error updating last read message:', err);
+        }
+    }, []);
+
     return {
         loading,
         error,
@@ -392,5 +401,6 @@ export const useMessage = () => {
         deleteMessage,
         pinMessage,
         unpinMessage,
+        updateLastReadMessage
     };
 };

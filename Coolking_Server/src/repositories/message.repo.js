@@ -11,17 +11,12 @@ const cloudinaryService = require('../services/cloudinary.service');
 
 const folder = 'messages'; // Cloudinary folder for messages
 
-
-
 const createMessageText = async ({ chatID, senderID, content }) => {
     try {
         if (!content || content.trim() === '') {
             throw new Error('Content cannot be empty');
             return;
         }
-
-       
-       
 
         // Kiểm tra xem nội dung có phải là link hay không
         const isLink = content.startsWith('http://') || content.startsWith('https://');
@@ -677,6 +672,32 @@ const getPinnedMessagesInChat = async (chatID) => {
     }
 };
 
+// Cập nhật lastReadAt của member trong chat
+const updateLastReadAt = async (chatID, userID) => {
+    try {
+        const chat = await Chat.findById(chatID);
+        if (!chat) {
+            throw new Error("Chat not found");
+        }
+
+        const member = chat.members.find(m => m.userID === userID);
+        if (!member) {
+            throw new Error("Member not found in chat");
+        }
+
+        member.lastReadAt = new Date();
+        await chat.save();
+
+        return {
+            success: true,
+            message: "Đã đọc tin nhắn"
+        };
+    } catch (error) {
+        console.error("Error updating lastReadAt:", error);
+        throw error;
+    }
+};
+
 module.exports = {
     createMessageText,
     createMessageFile,
@@ -694,5 +715,6 @@ module.exports = {
     searchMessagesInChat,
     deleteMessageByID,
     getPinnedMessagesInChat,
-    unPinMessage
+    unPinMessage,
+    updateLastReadAt
 }

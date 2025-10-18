@@ -127,46 +127,62 @@ const FilesCollectionModal: React.FC<FilesCollectionModalProps> = ({ isOpen, onC
                         <div className="p-4 h-full overflow-y-auto">
                             <div className="space-y-2">
                                 {files.map((file) => {
-                                    const extension = getFileExtension(file.filename, file.content);
-                                    const icon = getFileIcon(extension);
+                                    // Handle multiple file URLs separated by commas
+                                    const fileUrls = file.content.split(',').map(url => url.trim()).filter(url => url);
+                                    // Handle multiple filenames separated by commas (if any)
+                                    const filenames = file.filename ? file.filename.split(',').map(name => name.trim()).filter(name => name) : [];
                                     
-                                    return (
-                                        <div
-                                            key={file._id}
-                                            onClick={() => handleFileClick(file.content, file.filename)}
-                                            className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
-                                        >
-                                            <div className="text-3xl mr-3">
-                                                {icon}
-                                            </div>
-                                            
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <h3 className="font-medium text-gray-900 truncate">
-                                                        {file.filename || 'Unnamed file'}
-                                                    </h3>
-                                                    <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
-                                                        {file.createdAt}
-                                                    </span>
+                                    return fileUrls.map((fileUrl, index) => {
+                                        const filename = filenames[index] || `File ${index + 1}`;
+                                        const extension = getFileExtension(filename, fileUrl);
+                                        const icon = getFileIcon(extension);
+                                        
+                                        return (
+                                            <div
+                                                key={`${file._id}-${index}`}
+                                                onClick={() => handleFileClick(fileUrl, filename)}
+                                                className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                                            >
+                                                <div className="text-3xl mr-3">
+                                                    {icon}
                                                 </div>
                                                 
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center space-x-2 text-sm text-gray-500">
-                                                        <span className="uppercase font-mono bg-gray-200 px-1 rounded text-xs">
-                                                            {extension || 'FILE'}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <h3 className="font-medium text-gray-900 truncate">
+                                                            {filename || 'Unnamed file'}
+                                                        </h3>
+                                                        <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
+                                                            {file.createdAt}
                                                         </span>
-                                                        <span>•</span>
-                                                        <span>{formatFileSize()}</span>
                                                     </div>
                                                     
-                                                    <div className="flex items-center text-blue-500 hover:text-blue-600">
-                                                        <span className="text-sm mr-1">Mở file</span>
-                                                        <span>↗</span>
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center space-x-2 text-sm text-gray-500">
+                                                            <span className="uppercase font-mono bg-gray-200 px-1 rounded text-xs">
+                                                                {extension || 'FILE'}
+                                                            </span>
+                                                            <span>•</span>
+                                                            <span>{formatFileSize()}</span>
+                                                            {fileUrls.length > 1 && (
+                                                                <>
+                                                                    <span>•</span>
+                                                                    <span className="text-blue-500">
+                                                                        {index + 1}/{fileUrls.length}
+                                                                    </span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                        
+                                                        <div className="flex items-center text-blue-500 hover:text-blue-600">
+                                                            <span className="text-sm mr-1">Mở file</span>
+                                                            <span>↗</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
+                                        );
+                                    });
                                 })}
                             </div>
                         </div>

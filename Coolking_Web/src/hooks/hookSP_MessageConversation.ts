@@ -20,7 +20,7 @@ interface FileWithPreview {
     id: string;
 }
 
-export const useMessageConversation = (selectedChatId?: string, currentUserId?: string) => {
+export const useMessageConversation = (selectedChatId?: string, currentUserId?: string, onLastMessageUpdate?: (chatId: string, lastMessage: any) => void) => {
     // States
     const [messageText, setMessageText] = useState('');
     const [selectedFiles, setSelectedFiles] = useState<FileWithPreview[]>([]);
@@ -56,7 +56,8 @@ export const useMessageConversation = (selectedChatId?: string, currentUserId?: 
         getPinnedMessagesInChat,
         pinMessage,
         unpinMessage,
-        deleteMessage
+        deleteMessage,
+        updateLastReadMessage
     } = useMessage();
 
     // Load messages when chat changes
@@ -74,19 +75,31 @@ export const useMessageConversation = (selectedChatId?: string, currentUserId?: 
 
     // Update allMessages when new messages arrive  
     useEffect(() => {
-        if (messages.length > 0 && messagesPage === 1) {
-            // First load: set messages directly (no duplicates since it's fresh)
-            setAllMessages(messages);
+        if (messages.length > 0) {
+            if (messagesPage === 1) {
+                // First load: set messages directly
+                setAllMessages(messages);
+            } else {
+                // For subsequent loads from linkPrev, we handle in loadMoreMessages directly
+                // But we still need to check if there are new messages to append
+                const existingIds = new Set(allMessages.map(msg => msg._id));
+                const newMessages = messages.filter(msg => !existingIds.has(msg._id));
+                if (newMessages.length > 0) {
+                    // Append new messages to the end (they are newer)
+                    setAllMessages(prev => [...prev, ...newMessages]);
+                }
+            }
         }
-        // For messagesPage > 1, we handle in loadMoreMessages directly to avoid duplication
     }, [messages, messagesPage]);
 
     // Auto scroll to bottom for new messages
     useEffect(() => {
-        if (messagesPage === 1) {
-            scrollToBottom();
+        // Always scroll to bottom when allMessages changes and we're on page 1
+        // or when new messages are added (not from pagination)
+        if (allMessages.length > 0 && messagesPage === 1) {
+            scrollToBottom(true); // Use smooth scroll for auto updates
         }
-    }, [allMessages]);
+    }, [allMessages, messagesPage]);
 
     // Auto load more messages when scrolling to top
     useEffect(() => {
@@ -97,7 +110,6 @@ export const useMessageConversation = (selectedChatId?: string, currentUserId?: 
             const { scrollTop } = container;
             // Khi scroll lên gần đầu (trong vòng 100px từ top) và còn linkPrev
             if (scrollTop <= 100 && linkPrev && !loading && !isAutoLoading) {
-                console.log('Auto-loading more messages due to scroll position');
                 setIsAutoLoading(true);
                 loadMoreMessages().finally(() => {
                     // Reset flag sau khi load xong (sau 1 giây để tránh spam)
@@ -133,8 +145,6 @@ export const useMessageConversation = (selectedChatId?: string, currentUserId?: 
     const loadMoreMessages = async () => {
         if (!linkPrev || loading) return;
         
-        console.log('Loading more messages with linkPrev:', linkPrev);
-        
         const currentScrollTop = messagesContainerRef.current?.scrollTop || 0;
         const currentScrollHeight = messagesContainerRef.current?.scrollHeight || 0;
         
@@ -142,14 +152,11 @@ export const useMessageConversation = (selectedChatId?: string, currentUserId?: 
             // Extract page from linkPrev for tracking
             const url = new URL(linkPrev, window.location.origin);
             const page = parseInt(url.searchParams.get('page') || '1');
-            console.log('Loading page:', page);
             setMessagesPage(page);
             
             // Use messageServices instead of direct fetch
-            console.log('Using messageServices.getMessagesByLinkPrev with:', linkPrev);
             const data = await getMessagesByLinkPrev(linkPrev);
             
-            console.log('Received older messages:', data.messages?.length, 'messages');
             if (data.messages) {
                 // Prepend older messages to the beginning of allMessages
                 // data.messages chứa tin nhắn cũ hơn, cần thêm vào đầu array
@@ -157,13 +164,11 @@ export const useMessageConversation = (selectedChatId?: string, currentUserId?: 
                     // Check for duplicates to avoid duplicate messages
                     const existingIds = new Set(prev.map(msg => msg._id));
                     const newMessages = data.messages.filter((msg: any) => !existingIds.has(msg._id));
-                    console.log('Adding', newMessages.length, 'new messages to', prev.length, 'existing messages');
                     return [...newMessages, ...prev];
                 });
                 
                 // Update linkPrev for next load
                 updateLinkPrev(data.linkPrev);
-                console.log('Updated linkPrev to:', data.linkPrev);
             }
             
             // Maintain scroll position
@@ -178,8 +183,8 @@ export const useMessageConversation = (selectedChatId?: string, currentUserId?: 
         }
     };
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const scrollToBottom = (smooth: boolean = true) => {
+        messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
     };
 
     const scrollToMessage = (messageId: string) => {
@@ -310,8 +315,50 @@ export const useMessageConversation = (selectedChatId?: string, currentUserId?: 
             setSelectedFiles([]);
             clearReply();
             
+            // Update last read message
+            await updateLastReadMessage(selectedChatId);
+            
             // Refresh messages after sending
             await getLatestMessagesInChat(selectedChatId);
+            
+            // Scroll to bottom immediately after sending message
+            setTimeout(() => {
+                scrollToBottom(false); // Scroll without animation for immediate response
+            }, 100);
+            
+            // Then scroll smoothly after a brief delay for better UX
+            setTimeout(() => {
+                scrollToBottom(true);
+            }, 300);
+            
+            // Update lastMessage in ChatList after successful send
+            if (onLastMessageUpdate) {
+                const originalMessageText = messageText;
+                const originalSelectedFiles = [...selectedFiles];
+                
+                // Wait a bit for the message to be processed
+                setTimeout(() => {
+                    let content = originalMessageText;
+                    
+                    // Format content based on message type
+                    if (originalSelectedFiles.length > 0) {
+                        const imageFiles = originalSelectedFiles.filter(f => f.file.type.startsWith('image/'));
+                        const otherFiles = originalSelectedFiles.filter(f => !f.file.type.startsWith('image/'));
+                        
+                        if (imageFiles.length > 0) {
+                            content = imageFiles.length > 1 ? `🖼️ ${imageFiles.length} hình ảnh` : '🖼️ Hình ảnh';
+                        } else if (otherFiles.length > 0) {
+                            content = otherFiles.length > 1 ? `📁 ${otherFiles.length} files` : '📁 File';
+                        }
+                    }
+                    
+                    onLastMessageUpdate(selectedChatId, {
+                        content,
+                        createdAt: new Date().toLocaleString(),
+                        unread: false
+                    });
+                }, 500);
+            }
             
             // Không hiển thị thông báo thành công
         } catch (error) {

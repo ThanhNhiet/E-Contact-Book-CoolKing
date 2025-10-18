@@ -10,12 +10,14 @@ interface MessageConversationCpnProps {
     selectedChatId?: string;
     onShowSearchResults: (results: any[], members: ChatMember[]) => void;
     members?: ChatMember[];
+    onLastMessageUpdate?: (chatId: string, lastMessage: any) => void;
 }
 
 const MessageConversationCpn: React.FC<MessageConversationCpnProps> = ({
     selectedChatId,
     onShowSearchResults,
-    members
+    members,
+    onLastMessageUpdate
 }) => {
     // User info
     const tokenData = authService.parseToken();
@@ -59,7 +61,7 @@ const MessageConversationCpn: React.FC<MessageConversationCpnProps> = ({
         showToast,
         hasSelectedFiles,
         isAutoLoading
-    } = useMessageConversation(selectedChatId, current_user_id);
+    } = useMessageConversation(selectedChatId, current_user_id, onLastMessageUpdate);
 
     // Search functionality
     const handleSearchMessages = async () => {
@@ -76,7 +78,6 @@ const MessageConversationCpn: React.FC<MessageConversationCpnProps> = ({
     // Handle search results - chỉ gọi 1 lần cho mỗi search
     useEffect(() => {
         if (searchResults && searchResults.length > 0 && !hasShownResults) {
-            console.log('MessageConversationCpn calling onShowSearchResults due to searchResults change');
             onShowSearchResults(searchResults, members || []);
             setHasShownResults(true);
         }
@@ -271,15 +272,17 @@ const MessageConversationCpn: React.FC<MessageConversationCpnProps> = ({
                 onTouchEnd={handleTouchEnd}
                 onTouchCancel={handleTouchEnd}
             >
-                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg transition-all duration-200 ${
                     isOwnMessage 
-                        ? 'bg-blue-500 text-white' 
-                        : 'bg-gray-200 text-gray-800'
-                } transition-all duration-200`}>
+                        ? 'text-black' 
+                        : 'text-black'
+                }`} style={{
+                    backgroundColor: isOwnMessage ? '#E5F1FF' : '#FFFFFF'
+                }}>
                     
                     {/* Sender name for group chats */}
                     {!isOwnMessage && (
-                        <div className="text-xs text-gray-600 mb-1 font-medium">
+                        <div className="text-xs text-gray-600 mb-1 font-normal">
                             {senderName}
                         </div>
                     )}
@@ -293,7 +296,7 @@ const MessageConversationCpn: React.FC<MessageConversationCpnProps> = ({
                     </div>
 
                     {/* Timestamp and status */}
-                    <div className={`text-xs ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'} flex items-center justify-between`}>
+                    <div className={`text-xs ${isOwnMessage ? 'text-gray-500' : 'text-gray-500'} flex items-center justify-between`}>
                         <span>{message.createdAt}</span>
                         {message.pinnedInfo && (
                             <span className="ml-2">📌</span>
@@ -385,6 +388,7 @@ const MessageConversationCpn: React.FC<MessageConversationCpnProps> = ({
             <div 
                 ref={messagesContainerRef}
                 className="flex-1 overflow-y-auto p-4 space-y-4"
+                style={{ backgroundColor: '#ebecf0' }}
             >
                 {/* Auto loading indicator at top */}
                 {isAutoLoading && (
@@ -517,11 +521,17 @@ const MessageConversationCpn: React.FC<MessageConversationCpnProps> = ({
                             onClick={handleSendMessage}
                             disabled={!messageText.trim() && !hasSelectedFiles || loading}
                             className="w-10 h-10 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg transition-colors flex items-center justify-center"
-                            title="Gửi tin nhắn (Enter)"
+                            title={loading ? "Đang gửi..." : "Gửi tin nhắn (Enter)"}
                         >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                            </svg>
+                            {loading ? (
+                                <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0V9a8 8 0 1115.356 2M15 15v4H9v-4" />
+                                </svg>
+                            ) : (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                </svg>
+                            )}
                         </button>
                     </div>
                 </div>
