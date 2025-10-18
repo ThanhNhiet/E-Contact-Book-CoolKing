@@ -57,8 +57,8 @@ const createMessageText = async ({ chatID, senderID, content }) => {
             filename: lastMessage.filename,
             replyTo: lastMessage.replyTo,
             pinnedInfo: lastMessage.pinnedInfo,
-            createdAt: datetimeFormatter.formatDateVN(lastMessage.createdAt),
-            updatedAt: datetimeFormatter.formatDateVN(lastMessage.updatedAt)
+            createdAt: datetimeFormatter.formatDateTimeVN(lastMessage.createdAt),
+            updatedAt: datetimeFormatter.formatDateTimeVN(lastMessage.updatedAt)
         };
 
     } catch (error) {
@@ -116,8 +116,8 @@ const createMessageFile = async ({ chatID, senderID, files }) => {
             filename: lastMessage.filename,
             replyTo: lastMessage.replyTo,
             pinnedInfo: lastMessage.pinnedInfo,
-            createdAt: datetimeFormatter.formatDateVN(lastMessage.createdAt),
-            updatedAt: datetimeFormatter.formatDateVN(lastMessage.updatedAt)
+            createdAt: datetimeFormatter.formatDateTimeVN(lastMessage.createdAt),
+            updatedAt: datetimeFormatter.formatDateTimeVN(lastMessage.updatedAt)
         };
 
     } catch (error) {
@@ -176,8 +176,8 @@ const createMessageImage = async ({ chatID, senderID, images }) => {
             filename: lastMessage.filename,
             replyTo: lastMessage.replyTo,
             pinnedInfo: lastMessage.pinnedInfo,
-            createdAt: datetimeFormatter.formatDateVN(lastMessage.createdAt),
-            updatedAt: datetimeFormatter.formatDateVN(lastMessage.updatedAt)
+            createdAt: datetimeFormatter.formatDateTimeVN(lastMessage.createdAt),
+            updatedAt: datetimeFormatter.formatDateTimeVN(lastMessage.updatedAt)
         };
 
     } catch (error) {
@@ -238,8 +238,8 @@ const createMessageTextReply = async ({ chatID, senderID, content, replyTo }) =>
             filename: lastMessage.filename,
             replyTo: lastMessage.replyTo,
             pinnedInfo: lastMessage.pinnedInfo,
-            createdAt: datetimeFormatter.formatDateVN(lastMessage.createdAt),
-            updatedAt: datetimeFormatter.formatDateVN(lastMessage.updatedAt)
+            createdAt: datetimeFormatter.formatDateTimeVN(lastMessage.createdAt),
+            updatedAt: datetimeFormatter.formatDateTimeVN(lastMessage.updatedAt)
         };
     } catch (error) {
         console.error("Error creating reply message:", error);
@@ -293,8 +293,8 @@ const createMessageFileReply = async ({ chatID, senderID, replyTo, files }) => {
             filename: lastMessage.filename,
             replyTo: lastMessage.replyTo,
             pinnedInfo: lastMessage.pinnedInfo,
-            createdAt: datetimeFormatter.formatDateVN(lastMessage.createdAt),
-            updatedAt: datetimeFormatter.formatDateVN(lastMessage.updatedAt)
+            createdAt: datetimeFormatter.formatDateTimeVN(lastMessage.createdAt),
+            updatedAt: datetimeFormatter.formatDateTimeVN(lastMessage.updatedAt)
         };
     } catch (error) {
         console.error("Error creating file reply message:", error);
@@ -350,8 +350,8 @@ const createMessageImageReply = async ({ chatID, senderID, replyTo, images }) =>
             filename: lastMessage.filename,
             replyTo: lastMessage.replyTo,
             pinnedInfo: lastMessage.pinnedInfo,
-            createdAt: datetimeFormatter.formatDateVN(lastMessage.createdAt),
-            updatedAt: datetimeFormatter.formatDateVN(lastMessage.updatedAt)
+            createdAt: datetimeFormatter.formatDateTimeVN(lastMessage.createdAt),
+            updatedAt: datetimeFormatter.formatDateTimeVN(lastMessage.updatedAt)
         };
 
     } catch (error) {
@@ -528,7 +528,7 @@ const updateMessageStatus = async (messageID, status) => {
     try {
         const updatedMessage = await Message.findByIdAndUpdate(
             messageID,
-            { status, updatedAt: datetimeFormatter.formatDateVN(new Date()) },
+            { status, updatedAt: datetimeFormatter.formatDateTimeVN(new Date()) },
             { new: true }
         );
         return updatedMessage;
