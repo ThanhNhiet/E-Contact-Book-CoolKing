@@ -92,9 +92,15 @@ const  getScoreStudentBySession = async (studentId) =>{
     }
 
 
-    return {
-      data: results,
-    };
+    // Parse the JSON string in subjects field
+        const formattedResults = results.map(result => ({
+            ...result,
+            subjects: JSON.parse(result.subjects)
+        }));
+
+        return {
+            data: formattedResults
+        };
         
     } catch (error) {
         console.error('Error fetching student scores:', error);
@@ -191,9 +197,15 @@ const  getScoreParentStudentBySession = async (ParentId) =>{
       };
     }
 
+    // Parse the JSON string in subjects field
+        const formattedResults = results.map(result => ({
+            ...result,
+            subjects: JSON.parse(result.subjects)
+        }));
+
 
     return {
-      data: results,
+      data: formattedResults,
     };
         
     } catch (error) {
