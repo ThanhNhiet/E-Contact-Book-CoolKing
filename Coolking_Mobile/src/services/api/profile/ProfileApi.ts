@@ -31,7 +31,6 @@ export const updateAvatar = async (fileData: any) => {
         } else if (role === 'PARENT') {
             URL = `/api/parents/upload-avatar/${userId}`;
         }
-        console.log("URL:", URL);
         const file = new FormData();
             file.append('file',{
                 uri: fileData.uri,

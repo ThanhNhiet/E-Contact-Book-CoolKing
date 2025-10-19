@@ -137,6 +137,7 @@ export default function UpdateProfileModal({
                   placeholder="Nhập họ tên"
                   value={values.name}
                   onChangeText={(t) => handleChange("name", t)}
+                  editable={false}
                 />
                 {!!errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
               </View>

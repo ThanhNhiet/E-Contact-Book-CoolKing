@@ -215,6 +215,7 @@ exports.createMessageImageReply = async (req, res) => {
         }
 
         const { chatID, replyTo } = req.body;
+
         const files = req.files;
         if (!chatID || !files || files.length === 0) {
             return res.status(400).json({

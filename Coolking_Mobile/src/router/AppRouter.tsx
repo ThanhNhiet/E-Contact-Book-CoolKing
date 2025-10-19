@@ -32,6 +32,7 @@ import ProfileChangePasswordScreen from "@/src/screens/profile/ProfileChangePass
 //import page chat
 import ChatScreen from "@/src/screens/chat/ChatScreen";
 import MessageScreen from "@/src/screens/chat/MessageScreen";
+import MessageDetailScreen from "@/src/screens/chat/MessageDetailScreen";
 
 // import score 
 import ScoreScreen from "../screens/score/ScoreScreen";
@@ -149,6 +150,15 @@ export default function AppRouter() {
                     headerShown: false,
                 }}
             />
+            <Stack.Screen
+                name="MessageDetailScreen"
+                component={MessageDetailScreen}
+                options={{
+                    headerShown: false,
+                }}
+            />
+
+            {/* Score Screen */}
             <Stack.Screen
                 name="ScoreScreen"
                 component={ScoreScreen}
