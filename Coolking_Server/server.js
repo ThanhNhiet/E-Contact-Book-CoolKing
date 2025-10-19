@@ -53,13 +53,13 @@ async function startServer() {
     // Kết nối MariaDB
     await sequelize.authenticate();
     console.log("✅ Connected to MariaDB successfully!");
-    await sequelize.sync();
-    console.log("✅ MariaDB tables synced");
-    await sequelize.sync({ alter: true }); 
-    console.log("✅ MariaDB tables updated");
+    // await sequelize.sync();
+    // console.log("✅ MariaDB tables synced");
+    // await sequelize.sync({ alter: true }); 
+    // console.log("✅ MariaDB tables updated");
     
     // Kết nối MongoDB
-    const mongoModels = await initMongoDB();
+    await initMongoDB();
     console.log("✅ Connected to MongoDB successfully!");
     
     // Khởi động server sau khi kết nối cả hai database

@@ -2,7 +2,31 @@ const Redis = require('ioredis');
 const redisConfig = require('../config/redis.conf');
 
 // Khởi tạo kết nối Redis
-const redis = new Redis(redisConfig);
+// const redis = new Redis(redisConfig);
+let redis;
+
+if (redisConfig.url) {
+  const isSecure = redisConfig.url.startsWith('rediss://');
+
+  redis = new Redis(redisConfig.url, isSecure ? {
+    tls: {
+      rejectUnauthorized: false, // Cho phép Redis Cloud có chứng chỉ tự ký
+    }
+  } : {}); // Nếu không dùng rediss:// thì KHÔNG thêm tls
+} else {
+  // fallback: host/port/password thủ công
+  const isSecure = redisConfig.port === 6380; // Redis Cloud thường dùng cổng 6380 cho SSL
+  redis = new Redis({
+    host: redisConfig.host,
+    port: redisConfig.port,
+    username: redisConfig.username,
+    password: redisConfig.password,
+    ...(isSecure ? { tls: {} } : {}),
+  });
+}
+
+redis.on('connect', () => console.log('✅ Connected to Redis successfully'));
+redis.on('error', (err) => console.error('❌ Redis connection error:', err));
 
 // Prefix cho blacklisted tokens
 const TOKEN_BLACKLIST_PREFIX = 'token:blacklist:';
