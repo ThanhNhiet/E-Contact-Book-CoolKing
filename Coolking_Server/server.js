@@ -47,7 +47,7 @@ app.use('/api', authenticateJWT, routes);
 
 const PORT = process.env.PORT || 3000;
 
-// Kết nối DB trước khi start server
+// Kết nối DB trước khi start serverrrrr
 async function startServer() {
   try {
     // Kết nối MariaDB
