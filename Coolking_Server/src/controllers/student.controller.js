@@ -243,3 +243,23 @@ exports.uploadStudentAvatar = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 }
+
+//  GET /students/warn-list?sessionId=&facultyId=&page=&pageSize=
+exports.getWarnedStudents = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || (decoded.role !== 'ADMIN')) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const sessionId = req.query.sessionId;
+        const facultyId = req.query.facultyId;
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
+        const warnedStudents = await studentRepo.getFailedStudentsBySessionAndFaculty(sessionId, facultyId, page, pageSize);
+        res.status(200).json(warnedStudents);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
