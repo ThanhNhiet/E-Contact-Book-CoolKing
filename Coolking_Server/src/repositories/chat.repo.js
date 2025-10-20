@@ -306,11 +306,11 @@ const createPrivateChat4Users = async (requestUserID, targetUserID) => {
         }
 
         if (targetUserID.startsWith('AD')) {
-            // targetUser = await models.Admin.findOne({
-            //     where: { admin_id: targetUserID },
-            //     attributes: ['admin_id', 'name', 'avatar']
-            // });
-            targetUser = { admin_id: targetUserID, name: 'Admin', avatar: null };
+            targetUser = await models.Staff.findOne({
+                where: { admin_id: targetUserID },
+                attributes: ['admin_id', 'name', 'avatar']
+            });
+            targetUser.name = "Quản trị viên - " + targetUser.name;
         }
 
         if (!requestUser || !targetUser) {
@@ -1830,7 +1830,7 @@ const getChatInfoById = async (userID, chatID) => {
             chat.name = otherMember ? otherMember.userName : 'Private Chat';
             chat.avatar = otherMember ? otherMember.avatar : null;
         }
-        
+
         const formattedChat = {
             _id: chat._id,
             type: chat.type,
@@ -1862,6 +1862,247 @@ const getChatInfoById = async (userID, chatID) => {
     }
 };
 
+/**
+ * Tìm kiếm user theo keyword tìm kiếm chính xác (dành cho admin)
+ * @param {string} keyword - Từ khóa tìm kiếm (userID, email, phone)
+ */
+const searchUserByKeyword = async (keyword) => {
+    try {
+        if (!keyword || keyword.trim() === '') {
+            return {
+                success: false,
+                message: 'Từ khóa tìm kiếm không được để trống'
+            };
+        }
+        const searchKeyword = keyword.trim();
+
+        let result = {};
+
+        // Tìm kiếm trong Staff
+        result = await models.Staff.findOne({
+            where: {
+                [Op.or]: [
+                    { admin_id: searchKeyword },
+                    { phone: searchKeyword },
+                    { email: searchKeyword }
+                ]
+            },
+            attributes: ['admin_id', 'name', 'avatar'],
+            raw: true
+        });
+        if (result) result.type = 'Quản trị viên';
+
+        if (result === null) {
+            // Tìm kiếm trong Student
+            result = await models.Student.findOne({
+                where: {
+                    [Op.or]: [
+                        { student_id: searchKeyword },
+                        { phone: searchKeyword },
+                        { email: searchKeyword }
+                    ]
+                },
+                attributes: ['student_id', 'name', 'avatar'],
+                raw: true
+            });
+            if (result) result.type = 'Sinh viên';
+        }
+
+        if (result === null) {
+            // Tìm kiếm giảng viên chính xác theo lecturer_id
+            result = await models.Lecturer.findOne({
+                where: {
+                    [Op.or]: [
+                        { lecturer_id: searchKeyword },
+                        { phone: searchKeyword },
+                        { email: searchKeyword }
+                    ]
+                },
+                attributes: ['lecturer_id', 'name', 'avatar'],
+                raw: true
+            });
+            if (result) result.type = 'Giảng viên';
+        }
+
+        return {
+            success: true,
+            result
+        };
+    } catch (error) {
+        console.error('Error searching user by keyword:', error);
+        throw new Error(`Failed to search user by keyword: ${error.message}`);
+    }
+};
+
+/**
+ * Tìm kiếm user theo keyword (dành cho parent)
+ * @param {string} keyword - Từ khóa tìm kiếm (userID, email, phone)
+ */
+const searchUserByKeyword4Parent = async (keyword) => {
+    try {
+        if (!keyword || keyword.trim() === '') {
+            return {
+                success: false,
+                message: 'Từ khóa tìm kiếm không được để trống'
+            };
+        }
+        const searchKeyword = keyword.trim();
+
+        let result = {};
+
+        // Tìm kiếm trong Staff
+        result = await models.Staff.findOne({
+            where: {
+                [Op.or]: [
+                    { admin_id: searchKeyword },
+                    { phone: searchKeyword },
+                    { email: searchKeyword }
+                ]
+            },
+            attributes: ['admin_id', 'name', 'avatar'],
+            raw: true
+        });
+        if (result) result.type = 'Quản trị viên';
+
+        if (result === null) {
+            // Tìm kiếm giảng viên
+            result = await models.Lecturer.findOne({
+                where: {
+                    [Op.or]: [
+                        { lecturer_id: searchKeyword },
+                        { phone: searchKeyword },
+                        { email: searchKeyword }
+                    ]
+                },
+                attributes: ['lecturer_id', 'name', 'avatar'],
+                raw: true
+            });
+            if (result) result.type = 'Giảng viên';
+        }
+
+        return {
+            success: true,
+            result
+        };
+    } catch (error) {
+        console.error('Error searching user by keyword:', error);
+        throw new Error(`Failed to search user by keyword: ${error.message}`);
+    }
+};
+
+/**
+ * Tìm kiếm user theo keyword (dành cho Sinh viên)
+ * @param {string} keyword - Từ khóa tìm kiếm (userID, email, phone)
+ */
+const searchUserByKeyword4Student = async (keyword) => {
+    try {
+        if (!keyword || keyword.trim() === '') {
+            return {
+                success: false,
+                message: 'Từ khóa tìm kiếm không được để trống'
+            };
+        }
+        const searchKeyword = keyword.trim();
+
+        let result = {};
+
+        // Tìm kiếm trong Staff
+        result = await models.Staff.findOne({
+            where: {
+                [Op.or]: [
+                    { admin_id: searchKeyword },
+                    { phone: searchKeyword },
+                    { email: searchKeyword }
+                ]
+            },
+            attributes: ['admin_id', 'name', 'avatar'],
+            raw: true
+        });
+        if (result) result.type = 'Quản trị viên';
+
+        if (result === null) {
+            // Tìm kiếm giảng viên
+            result = await models.Lecturer.findOne({
+                where: {
+                    [Op.or]: [
+                        { lecturer_id: searchKeyword },
+                        { phone: searchKeyword },
+                        { email: searchKeyword }
+                    ]
+                },
+                attributes: ['lecturer_id', 'name', 'avatar'],
+                raw: true
+            });
+            if (result) result.type = 'Giảng viên';
+        }
+
+        return {
+            success: true,
+            result
+        };
+    } catch (error) {
+        console.error('Error searching user by keyword:', error);
+        throw new Error(`Failed to search user by keyword: ${error.message}`);
+    }
+};
+
+/**
+ * Tìm kiếm user theo keyword (dành cho giảng viên)
+ * @param {string} keyword - Từ khóa tìm kiếm (userID, email, phone)
+ */
+const searchUserByKeyword4Lecturer = async (keyword) => {
+    try {
+        if (!keyword || keyword.trim() === '') {
+            return {
+                success: false,
+                message: 'Từ khóa tìm kiếm không được để trống'
+            };
+        }
+        const searchKeyword = keyword.trim();
+
+        let result = {};
+
+        // Tìm kiếm trong Staff
+        result = await models.Staff.findOne({
+            where: {
+                [Op.or]: [
+                    { admin_id: searchKeyword },
+                    { phone: searchKeyword },
+                    { email: searchKeyword }
+                ]
+            },
+            attributes: ['admin_id', 'name', 'avatar'],
+            raw: true
+        });
+        if (result) result.type = 'Quản trị viên';
+
+        if (result === null) {
+            // Tìm kiếm trong Student
+            result = await models.Student.findOne({
+                where: {
+                    [Op.or]: [
+                        { student_id: searchKeyword },
+                        { phone: searchKeyword },
+                        { email: searchKeyword }
+                    ]
+                },
+                attributes: ['student_id', 'name', 'avatar'],
+                raw: true
+            });
+            if (result) result.type = 'Sinh viên';
+        }
+
+        return {
+            success: true,
+            result
+        };
+    } catch (error) {
+        console.error('Error searching user by keyword:', error);
+        throw new Error(`Failed to search user by keyword: ${error.message}`);
+    }
+};
+
+
 module.exports = {
     createGroupChat4Admin,
     createPrivateChat4Users,
@@ -1880,5 +2121,10 @@ module.exports = {
     cleanupCompletedCourseSectionChats,
     createBulkGroupChatsForSession,
     getNonChatCourseSectionsBySession,
-    getChatInfoById
+    getChatInfoById,
+
+    searchUserByKeyword,
+    searchUserByKeyword4Parent,
+    searchUserByKeyword4Student,
+    searchUserByKeyword4Lecturer
 };
