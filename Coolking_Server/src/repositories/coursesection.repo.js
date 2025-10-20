@@ -1,5 +1,6 @@
 const sequelize = require("../config/mariadb.conf");
 const initModels = require("../databases/mariadb/model/init-models");
+const { where } = require("../databases/mongodb/schemas/Alert");
 const models = initModels(sequelize);
 const datetimeFormatter = require("../utils/format/datetime-formatter");
 const { Op } = require('sequelize');
@@ -30,6 +31,7 @@ const getCourseSectionsByLecturer = async (lecturerId, page, pageSize = 10) => {
                 {
                     model: models.CourseSection,
                     as: 'course_section',
+                    where: { isCompleted: false },
                     attributes: ['id', 'createdAt'],
                     include: [
                         {
@@ -73,10 +75,10 @@ const getCourseSectionsByLecturer = async (lecturerId, page, pageSize = 10) => {
             sessionName: item.course_section.session ? `${item.course_section.session.name} ${item.course_section.session.years}` : 'N/A',
             createdAt: datetimeFormatter.formatDateVN(item.course_section.createdAt)
         }));
-        
+
         const linkPrev = page_num > 1 ? `/api/coursesections/lecturer?page=${page_num - 1}&pagesize=${pageSize_num}` : null;
         const linkNext = (page_num - 1) * pageSize_num + rows.length < count ? `/api/coursesections/lecturer?page=${page_num + 1}&pagesize=${pageSize_num}` : null;
-        
+
         // Tạo danh sách 3 trang liên tiếp
         const pages = [];
         const totalPages = Math.ceil(count / pageSize_num);
@@ -86,14 +88,14 @@ const getCourseSectionsByLecturer = async (lecturerId, page, pageSize = 10) => {
             }
         }
 
-        return { 
-            total: count, 
-            page: page_num, 
-            pageSize: pageSize_num, 
-            courseSections: courseSections, 
-            linkPrev, 
-            linkNext, 
-            pages 
+        return {
+            total: count,
+            page: page_num,
+            pageSize: pageSize_num,
+            courseSections: courseSections,
+            linkPrev,
+            linkNext,
+            pages
         };
 
     } catch (error) {
@@ -139,6 +141,7 @@ const searchCourseSectionsByKeyword4Lecturer = async (lecturer_id, keyword, page
                 {
                     model: models.CourseSection,
                     as: 'course_section',
+                    where: { isCompleted: false },
                     attributes: ['id', 'createdAt'],
                     include: [
                         {
@@ -249,6 +252,7 @@ const filterCourseSections4Lecturer = async (lecturer_id, sessionId, facultyId, 
                 {
                     model: models.CourseSection,
                     as: 'course_section',
+                    where: { isCompleted: false },
                     attributes: ['id', 'createdAt'],
                     include: [
                         {
@@ -289,18 +293,18 @@ const filterCourseSections4Lecturer = async (lecturer_id, sessionId, facultyId, 
             className: item.course_section?.clazz?.name || 'N/A',
             facultyName: item.course_section?.subject?.faculty?.name || 'N/A',
             sessionName: item.course_section?.session ? `${item.course_section.session.name} ${item.course_section.session.years}` : 'N/A',
-            createdAt: item.course_section?.createdAt 
-                ? datetimeFormatter.formatDateVN(item.course_section.createdAt) 
+            createdAt: item.course_section?.createdAt
+                ? datetimeFormatter.formatDateVN(item.course_section.createdAt)
                 : 'N/A'
         }));
 
         // Tính paging meta
         const totalPages = Math.ceil(count / pageSize_num);
-        const linkPrev = page_num > 1 
-            ? `/api/coursesections/lecturer/filter?page=${page_num - 1}&pageSize=${pageSize_num}` 
+        const linkPrev = page_num > 1
+            ? `/api/coursesections/lecturer/filter?page=${page_num - 1}&pageSize=${pageSize_num}`
             : null;
-        const linkNext = page_num < totalPages 
-            ? `/api/coursesections/lecturer/filter?page=${page_num + 1}&pageSize=${pageSize_num}` 
+        const linkNext = page_num < totalPages
+            ? `/api/coursesections/lecturer/filter?page=${page_num + 1}&pageSize=${pageSize_num}`
             : null;
 
         // Danh sách 3 trang liên tiếp
@@ -358,7 +362,7 @@ const getStudentsAndParentsByCourseSection = async (course_section_id) => {
             });
             finalData.push({ student_id: student.student_id, parent_id: parent ? parent.parent_id : null });
         }
-        
+
         return {
             success: true,
             message: 'Lấy danh sách học sinh và phụ huynh thành công',
@@ -402,7 +406,7 @@ const getCourseSectionsByStudent = async (studentId, page, pageSize = 10) => {
                         {
                             model: models.Subject,
                             as: 'subject',
-                            attributes: ['name','subject_id'],
+                            attributes: ['name', 'subject_id'],
                             include: [
                                 {
                                     model: models.Faculty,
@@ -449,15 +453,15 @@ const getCourseSectionsByStudent = async (studentId, page, pageSize = 10) => {
             subjectName: item.course_section.subject?.name || 'N/A',
             className: item.course_section.clazz?.name || 'N/A',
             facultyName: item.course_section.subject?.faculty?.name || 'N/A',
-            sessionName: item.course_section.session ? 
+            sessionName: item.course_section.session ?
                 `${item.course_section.session.name} ${item.course_section.session.years}` : 'N/A',
             lecturerName: item.course_section.lecturers_course_sections?.[0]?.lecturer?.name || 'N/A',
             createdAt: datetimeFormatter.formatDateVN(item.course_section.createdAt)
         }));
 
-        const linkPrev = page_num > 1 ? 
+        const linkPrev = page_num > 1 ?
             `/api/coursesections/student/${studentId}?page=${page_num - 1}&pagesize=${pageSize_num}` : null;
-        const linkNext = (page_num - 1) * pageSize_num + rows.length < count ? 
+        const linkNext = (page_num - 1) * pageSize_num + rows.length < count ?
             `/api/coursesections/student/${studentId}?page=${page_num + 1}&pagesize=${pageSize_num}` : null;
 
         const totalPages = Math.ceil(count / pageSize_num);
