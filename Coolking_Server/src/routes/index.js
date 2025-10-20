@@ -12,6 +12,7 @@ const chatRoute = require('./chat.route');
 const messageRoute = require('./message.route');
 const parentRoute = require('./parent.route');
 const scoreRoute = require('./score.route');
+const staffRoute = require('./staff.route');
 
 const router = express.Router();
 
@@ -28,5 +29,6 @@ router.use('/chats', chatRoute);
 router.use('/messages', messageRoute);
 router.use('/parents', parentRoute);
 router.use('/scores', scoreRoute);
+router.use('/staffs', staffRoute);
 
 module.exports = router;
