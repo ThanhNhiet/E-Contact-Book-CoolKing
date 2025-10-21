@@ -49,6 +49,7 @@ const  getScoreStudentBySession = async (studentId) =>{
         student_id,
         name,
         class_name,
+        academic_year,
         semester,
         JSON_ARRAYAGG(
           JSON_OBJECT(
@@ -155,6 +156,7 @@ const  getScoreParentStudentBySession = async (ParentId) =>{
         student_id,
         name,
         class_name,
+        academic_year,
         semester,
         JSON_ARRAYAGG(
           JSON_OBJECT(
