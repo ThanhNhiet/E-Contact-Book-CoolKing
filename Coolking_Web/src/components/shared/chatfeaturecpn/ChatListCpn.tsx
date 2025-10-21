@@ -1,5 +1,6 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useChat } from '../../../hooks/useChat';
+import UserSearchResultModal from '../../../pages/chatfeature/UserSearchResultModal';
 
 interface ChatListCpnProps {
     onChatSelect: (chatId: string) => void;
@@ -12,7 +13,24 @@ const ChatListCpn = forwardRef<any, ChatListCpnProps>(({ onChatSelect, selectedC
     const [isSearching, setIsSearching] = useState(false);
     const [localChatItems, setLocalChatItems] = useState<any[]>([]);
     const { loading, error, currentPage, pages, chatItems,
-        getChats4AllUser, searchChats4AllUser } = useChat();
+        getChats4AllUser, searchChats4AllUser, searchUser, createPrivateChat } = useChat();
+    const [showUserSearchModal, setShowUserSearchModal] = useState(false);
+
+    const handleSearchUser = async (keyword: string) => {
+        return await searchUser(keyword);
+    };
+
+    const handleSelectUser = async (result: any) => {
+        try {
+            const targetId = result.student_id || result.lecturer_id;
+            if (!targetId) return;
+            await createPrivateChat(targetId);
+            await getChats4AllUser(1, 10);
+            setShowUserSearchModal(false);
+        } catch (err) {
+            console.error('Error creating private chat:', err);
+        }
+    };
 
     // Update local chat items when chatItems changes
     useEffect(() => {
@@ -76,24 +94,35 @@ const ChatListCpn = forwardRef<any, ChatListCpnProps>(({ onChatSelect, selectedC
         <div className="flex flex-col h-full bg-white border-r border-gray-200">
             {/* Header với thanh search */}
             <div className="p-4 border-b border-gray-200 flex-shrink-0">
-                <div className="flex items-center space-x-2">
-                    <div className="flex-1 relative">
-                        <input
-                            type="text"
-                            placeholder="Tên đoạn chat, SĐT, email"
-                            value={searchKeyword}
-                            onChange={(e) => setSearchKeyword(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            className="w-full pl-2 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                        />
+                <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                        <div className="flex-1 relative">
+                            <input
+                                type="text"
+                                placeholder="Tên đoạn chat, SĐT, email"
+                                value={searchKeyword}
+                                onChange={(e) => setSearchKeyword(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                className="w-full pl-2 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                            />
+                        </div>
+                        <button
+                            onClick={handleSearch}
+                            disabled={loading}
+                            className="p-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg transition-colors"
+                        >
+                            Tìm
+                        </button>
                     </div>
-                    <button
-                        onClick={handleSearch}
-                        disabled={loading}
-                        className="p-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg transition-colors"
-                    >
-                        Tìm
-                    </button>
+                    <div>
+                        <button
+                            onClick={() => setShowUserSearchModal(true)}
+                            disabled={loading}
+                            className="w-full p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors"
+                        >
+                            Tìm người dùng
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -111,6 +140,12 @@ const ChatListCpn = forwardRef<any, ChatListCpnProps>(({ onChatSelect, selectedC
                     {loading ? 'Đang tải...' : 'Tải lại danh sách'}
                 </button>
             </div>
+            <UserSearchResultModal
+                isOpen={showUserSearchModal}
+                onClose={() => setShowUserSearchModal(false)}
+                onSearch={handleSearchUser}
+                onSelect={handleSelectUser}
+            />
 
             {/* Loading state */}
             {loading && (
