@@ -476,22 +476,22 @@ const getMessagesByChatID = async (chatID, page, pageSize) => {
                     joinedAt: member?.joinedAt || null,
                     lastReadAt: member?.lastReadAt || null
                 },
-                ...(msg.pinnedInfo && {
+                ...(msg.pinnedInfo ? {
                     pinnedInfo: {
                         messageID: msg.pinnedInfo?.messageID || null,
                         pinnedByinfo: rep,
                         pinnedDate: msg.pinnedInfo?.pinnedDate ? 
                             datetimeFormatter.formatDateTimeVN(msg.pinnedInfo?.pinnedDate) : null
                     }
-                }),
-                ...(msg.replyTo && {
+                } : null),
+                ...(msg.replyTo ? {
                     replyTo: {
                         messageID: msg.replyTo?.messageID || null,
                         senderInfo: replyMember,
                         content: msg.replyTo?.content || null,
                         type: msg.replyTo?.type || null
                     }
-                }),
+                } : null),
                 createdAt: msg.createdAt ? datetimeFormatter.formatDateTimeVN(msg.createdAt) : null,
                 updatedAt: msg.updatedAt ? datetimeFormatter.formatDateTimeVN(msg.updatedAt) : null
             };
