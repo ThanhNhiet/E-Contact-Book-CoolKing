@@ -465,3 +465,46 @@ exports.getChatInfoByID = async (req, res) => {
         });
     }
 };
+
+// GET /api/chats/user-search?keyword=
+exports.searchUserByKeyword = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const { keyword } = req.query;
+        if (!keyword) {
+            return res.status(400).json({
+                success: false,
+                message: 'keyword là bắt buộc'
+            });
+        }
+        let users;
+        switch (decoded.role) {
+            case 'ADMIN':
+                users = await chatRepo.searchUserByKeyword(keyword);
+                break;
+            case 'LECTURER':
+                users = await chatRepo.searchUserByKeyword4Lecturer(keyword);
+                break;
+            case 'PARENT':
+                users = await chatRepo.searchUserByKeyword4Parent(keyword);
+                break;
+            case 'STUDENT':
+                users = await chatRepo.searchUserByKeyword4Student(keyword);
+                break;
+            default:
+                return res.status(403).json({ message: 'Forbidden' });
+        }
+        res.status(200).json(users);
+    } catch (error) {
+        console.error('Error in searchUserByKeyword controller:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Lỗi server khi tìm kiếm người dùng'
+        });
+    }
+};

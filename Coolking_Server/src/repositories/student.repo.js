@@ -907,6 +907,170 @@ const getStudentExamSchedule = async (student_id, options = {}) => {
     }
 }
 
+/**
+ * Lấy danh sách phân trang sinh viên có điểm không đạt theo session_id và faculty_id
+ * @param {string} session_id - ID của session (học kỳ)
+ * @param {string} faculty_id - ID của khoa
+ * @param {number} page - Trang hiện tại
+ * @param {number} pageSize - Số lượng bản ghi trên một trang
+ * @returns {Object} { total, page, pageSize, students, linkPrev, linkNext, pages }
+ */
+const getFailedStudentsBySessionAndFaculty = async (session_id, faculty_id, page, pageSize = 10) => {
+    try {
+        // Validate input
+        if (!session_id || !faculty_id) {
+            throw new Error('session_id and faculty_id are required');
+        }
+
+        const page_num = parseInt(page) || 1;
+        const pageSize_num = parseInt(pageSize) || 10;
+        const offset = (page_num - 1) * pageSize_num;
+
+        // Tìm tất cả course_sections theo session_id và faculty_id
+        const courseSections = await models.CourseSection.findAll({
+            where: {
+                session_id: session_id
+            },
+            include: [
+                {
+                    model: models.Subject,
+                    as: 'subject',
+                    where: {
+                        faculty_id: faculty_id
+                    },
+                    attributes: ['subject_id', 'name']
+                }
+            ],
+            attributes: ['id']
+        });
+
+        if (courseSections.length === 0) {
+            return {
+                total: 0,
+                page: page_num,
+                pageSize: pageSize_num,
+                students: [],
+                linkPrev: null,
+                linkNext: null,
+                pages: []
+            };
+        }
+
+        const courseSectionIds = courseSections.map(cs => cs.id);
+        const failedStudents = [];
+
+        // Duyệt qua từng course_section để tìm sinh viên có điểm không đạt
+        for (const courseSection of courseSections) {
+            // Lấy danh sách sinh viên trong course_section
+            const studentCourseSections = await models.StudentCourseSection.findAll({
+                where: { course_section_id: courseSection.id },
+                attributes: ['student_id']
+            });
+
+            for (const scs of studentCourseSections) {
+                // Lấy thông tin điểm của sinh viên
+                const score = await models.Score.findOne({
+                    where: {
+                        student_id: scs.student_id,
+                        course_section_id: courseSection.id
+                    },
+                    attributes: [
+                        'theo_regular1', 'theo_regular2', 'theo_regular3',
+                        'pra_regular1', 'pra_regular2', 'pra_regular3',
+                        'mid', 'final', 'avr'
+                    ]
+                });
+
+                // Kiểm tra điều kiện không đạt
+                let isNotPassed = false;
+                if (score) {
+                    // Điều kiện không đạt: final < 3 hoặc avr < 4
+                    if ((score.final !== null && score.final < 3) || (score.avr !== null && score.avr < 4)) {
+                        isNotPassed = true;
+                    }
+                }
+
+                // Nếu không đạt, thêm vào danh sách
+                if (isNotPassed) {
+                    // Lấy thông tin sinh viên
+                    const student = await models.Student.findOne({
+                        where: { student_id: scs.student_id },
+                        attributes: ['student_id', 'name']
+                    });
+
+                    // Lấy thông tin phụ huynh
+                    const parent = await models.Parent.findOne({
+                        where: { student_id: scs.student_id },
+                        attributes: ['parent_id']
+                    });
+
+                    if (student) {
+                        failedStudents.push({
+                            course_section_id: courseSection.id,
+                            subjectName: courseSection.subject.name,
+                            student_id: student.student_id,
+                            studentName: student.name,
+                            theo_regular1: score.theo_regular1,
+                            theo_regular2: score.theo_regular2,
+                            theo_regular3: score.theo_regular3,
+                            pra_regular1: score.pra_regular1,
+                            pra_regular2: score.pra_regular2,
+                            pra_regular3: score.pra_regular3,
+                            mid: score.mid,
+                            final: score.final,
+                            avr: score.avr,
+                            parent_id: parent ? parent.parent_id : null
+                        });
+                    }
+                }
+            }
+        }
+
+        // Sắp xếp theo tên sinh viên
+        failedStudents.sort((a, b) => {
+            const lastNameA = a.studentName.split(' ').pop();
+            const lastNameB = b.studentName.split(' ').pop();
+            const nameComparison = lastNameA.localeCompare(lastNameB, 'vi');
+            if (nameComparison !== 0) {
+                return nameComparison;
+            }
+            return a.studentName.localeCompare(b.studentName, 'vi');
+        });
+
+        // Tính toán phân trang
+        const total = failedStudents.length;
+        const totalPages = Math.ceil(total / pageSize_num);
+        const paginatedStudents = failedStudents.slice(offset, offset + pageSize_num);
+
+        // Tạo link phân trang
+        const linkPrev = page_num > 1 ? 
+            `/api/students/failed?session_id=${session_id}&faculty_id=${faculty_id}&page=${page_num - 1}&pageSize=${pageSize_num}` : null;
+        const linkNext = page_num < totalPages ? 
+            `/api/students/failed?session_id=${session_id}&faculty_id=${faculty_id}&page=${page_num + 1}&pageSize=${pageSize_num}` : null;
+
+        // Tạo danh sách 3 trang liên tiếp
+        const pages = [];
+        for (let i = page_num; i < page_num + 3 && i <= totalPages; i++) {
+            pages.push(i);
+        }
+
+        return {
+            total,
+            page: page_num,
+            pageSize: pageSize_num,
+            students: paginatedStudents,
+            linkPrev,
+            linkNext,
+            pages
+        };
+
+    } catch (error) {
+        console.error('Error in getFailedStudentsBySessionAndFaculty:', error);
+        throw error;
+    }
+};
+
+
 
 module.exports = {
     getStudentsScoreByCourseSectionId4Lecturer,
@@ -916,5 +1080,6 @@ module.exports = {
     getStudentScheduleWithExceptions,
     getStudentBasicSchedule,
     getStudentExamSchedule,
-    updateStudentAvatar
+    updateStudentAvatar,
+    getFailedStudentsBySessionAndFaculty
 };

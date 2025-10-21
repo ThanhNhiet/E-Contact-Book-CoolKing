@@ -1,6 +1,7 @@
 var DataTypes = require("sequelize").DataTypes;
 
 var _Account = require("./Account");
+var _Staff = require("./Staff");
 var _Attendance = require("./Attendance");
 var _AttendanceStudent = require("./Attendance_Student");
 var _Schedule = require("./Schedule");
@@ -20,6 +21,7 @@ var _StudentCourseSection = require("./Student_CourseSection");
 var _Subject = require("./Subject");
 
 function initModels(sequelize) {
+  const Staff = _Staff(sequelize, DataTypes);
   const Attendance = _Attendance(sequelize, DataTypes);
   const AttendanceStudent = _AttendanceStudent(sequelize, DataTypes);
   const Clazz = _Clazz(sequelize, DataTypes);
@@ -148,6 +150,7 @@ function initModels(sequelize) {
   Account.hasMany(RefreshToken, { as: "refresh_tokens", foreignKey: "user_id", sourceKey: "user_id" });
 
   return {
+    Staff,
     Account,
     Attendance,
     AttendanceStudent,

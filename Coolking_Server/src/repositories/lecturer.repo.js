@@ -61,12 +61,82 @@ const createLecturer = async (lecturerData) => {
 };
 
 const updateLecturer = async (lecturer_id, lecturerData) => {
+  const transaction = await sequelize.transaction();
+  
   try {
-    const lecturer = await models.Lecturer.findOne({ where: { lecturer_id } });
-    if (!lecturer) throw new Error("Leturer not found");
-    lecturerData.dob = datetimeFormatter.convertddMMyyyy2yyyyMMdd(lecturerData.dob);
-    return await lecturer.update(lecturerData);
+    // Tìm lecturer
+    const lecturer = await models.Lecturer.findOne({ 
+      where: { lecturer_id },
+      transaction 
+    });
+    if (!lecturer) throw new Error("Lecturer not found");
+
+    // Tìm account tương ứng
+    const account = await models.Account.findOne({ 
+      where: { user_id: lecturer_id },
+      transaction 
+    });
+    if (!account) throw new Error("Account not found");
+
+    // Chuẩn bị dữ liệu cho lecturer
+    const lecturerUpdateData = { ...lecturerData };
+    if (lecturerUpdateData.dob) {
+      lecturerUpdateData.dob = datetimeFormatter.convertddMMyyyy2yyyyMMdd(lecturerUpdateData.dob);
+    }
+
+    // Chuẩn bị dữ liệu cho account
+    const accountUpdateData = {};
+    if (lecturerData.email) {
+      accountUpdateData.email = lecturerData.email;
+    }
+    if (lecturerData.phone) {
+      accountUpdateData.phone_number = lecturerData.phone;
+    }
+
+    // Cập nhật lecturer
+    await lecturer.update(lecturerUpdateData, { transaction });
+
+    // Cập nhật account nếu có dữ liệu email hoặc phone
+    if (Object.keys(accountUpdateData).length > 0) {
+      await account.update(accountUpdateData, { transaction });
+    }
+
+    // Cập nhật thông tin trong MongoDB Chat nếu có thay đổi email hoặc phone
+    if (lecturerData.email || lecturerData.phone) {
+      try {
+        const { Chat } = require('../databases/mongodb/schemas/Chat');
+        
+        const updateFields = {};
+        if (lecturerData.email) {
+          updateFields["members.$.email"] = lecturerData.email;
+        }
+        if (lecturerData.phone) {
+          updateFields["members.$.phone"] = lecturerData.phone;
+        }
+        
+        if (Object.keys(updateFields).length > 0) {
+          updateFields.updatedAt = new Date();
+          
+          await Chat.updateMany(
+            { "members.userID": lecturer_id },
+            { $set: updateFields }
+          );
+        }
+      } catch (chatUpdateError) {
+        console.warn('Warning: Could not update lecturer info in chats:', chatUpdateError.message);
+        // Không throw error vì cập nhật chính đã thành công
+      }
+    }
+
+    await transaction.commit();
+    
+    return {
+      lecturer: await lecturer.reload(),
+      account: await account.reload(),
+      message: 'Lecturer updated successfully'
+    };
   } catch (error) {
+    await transaction.rollback();
     throw error;
   }
 };

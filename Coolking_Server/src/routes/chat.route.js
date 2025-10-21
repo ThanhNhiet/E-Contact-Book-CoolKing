@@ -2,6 +2,10 @@ const express = require('express');
 const chatController = require('../controllers/chat.controller');
 const router = express.Router();
 
+// Tìm kiếm user theo keyword
+// GET /api/chats/user-search?keyword=
+router.get('/user-search', chatController.searchUserByKeyword);
+
 // Tìm kiếm cuộc trò chuyện theo từ khóa dành cho người dùng
 // GET /api/chats/search?keyword=
 router.get('/search', chatController.searchChatsByKeyword);
