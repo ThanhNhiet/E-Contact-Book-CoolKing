@@ -26,7 +26,7 @@ const MessageConversationCpn: React.FC<MessageConversationCpnProps> = ({
     // Search states
     const [searchKeyword, setSearchKeyword] = useState('');
     const [hasShownResults, setHasShownResults] = useState(false);
-    const { searchMessagesInChat, loading: searchLoading, searchResults, clearSearchResults } = useMessage();
+    const { searchMessagesInChat, loading: searchLoading, searchResults} = useMessage();
 
     // Main conversation hook
     const {
@@ -364,7 +364,22 @@ const MessageConversationCpn: React.FC<MessageConversationCpnProps> = ({
                         <span className="text-yellow-600">📌</span>
                         <div className="flex-1 min-w-0">
                             <div className="text-sm text-yellow-800 truncate">
-                                <strong>{latestPinnedMessage.senderInfo?.name || 'Unknown User'}:</strong> {' '}
+                                <strong>{(() => {                                    
+                                    // Ưu tiên pinnedByinfo.userName
+                                    if (latestPinnedMessage.pinnedInfo?.pinnedByinfo?.userName) {
+                                        return latestPinnedMessage.pinnedInfo.pinnedByinfo.userName;
+                                    }
+                                    
+                                    // Fallback: tìm tên từ members array bằng pinnedBy ID
+                                    const pinnedByID = latestPinnedMessage.pinnedInfo?.pinnedBy;
+                                    if (pinnedByID && members) {
+                                        const member = members.find(m => m.userID === pinnedByID);
+                                        if (member) return member.userName;
+                                    }
+                                    
+                                    // Cuối cùng hiển thị ID hoặc Unknown User
+                                    return pinnedByID || 'Unknown User';
+                                })()}:</strong> {' '}
                                 {(() => {
                                     if (latestPinnedMessage.type === 'image') {
                                         const imageUrls = latestPinnedMessage.content.split(',').map((url: string) => url.trim()).filter((url: string) => url);

@@ -42,7 +42,8 @@ interface Reply {
 
 interface PinnedInfo {
     messageID: string;
-    pinnedByinfo: {
+    pinnedBy?: string; // ID của người pin
+    pinnedByinfo?: {
         userID: string;
         userName: string;
         role: string;

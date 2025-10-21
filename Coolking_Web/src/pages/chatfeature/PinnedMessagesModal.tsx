@@ -18,7 +18,8 @@ const PinnedMessagesModal: React.FC<PinnedMessagesModalProps> = ({
     pinnedMessages,
     onUnpinMessage,
     onNavigateToMessage,
-    getSenderName
+    getSenderName,
+    members
 }) => {
     const formatMessageContent = (message: Message) => {
         switch (message.type.toLowerCase()) {
@@ -30,17 +31,6 @@ const PinnedMessagesModal: React.FC<PinnedMessagesModalProps> = ({
                 return `🔗 ${message.content}`;
             default:
                 return message.content;
-        }
-    };
-
-    const formatReplyContent = (replyTo: any) => {
-        switch (replyTo.type.toLowerCase()) {
-            case 'image':
-                return '🖼️ Hình ảnh';
-            case 'file':
-                return '📁 File';
-            default:
-                return replyTo.content;
         }
     };
 
@@ -89,18 +79,6 @@ const PinnedMessagesModal: React.FC<PinnedMessagesModalProps> = ({
                                         key={message._id}
                                         className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
                                     >
-                                        {/* Reply Reference if exists */}
-                                        {message.replyTo && (
-                                            <div className="mb-2 pl-4 border-l-2 border-gray-300">
-                                                <div className="text-xs text-gray-500 mb-1">
-                                                    Trả lời {message.replyTo.senderInfo?.userName || 'Unknown User'}
-                                                </div>
-                                                <div className="text-sm text-gray-600 italic">
-                                                    {formatReplyContent(message.replyTo)}
-                                                </div>
-                                            </div>
-                                        )}
-
                                         {/* Message Content */}
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1 min-w-0">
@@ -125,7 +103,22 @@ const PinnedMessagesModal: React.FC<PinnedMessagesModalProps> = ({
                                                 {/* Pinned Info */}
                                                 {message.pinnedInfo && (
                                                     <div className="text-xs text-gray-500">
-                                                        Được ghim bởi {message.pinnedInfo.pinnedByinfo?.userName || 'Unknown'} • {message.pinnedInfo.pinnedDate}
+                                                        Được ghim bởi {(() => {
+                                                            // Ưu tiên pinnedByinfo.userName
+                                                            if (message.pinnedInfo.pinnedByinfo?.userName) {
+                                                                return message.pinnedInfo.pinnedByinfo.userName;
+                                                            }
+                                                            
+                                                            // Fallback: tìm từ members bằng pinnedBy ID
+                                                            const pinnedByID = message.pinnedInfo.pinnedBy;
+                                                            if (pinnedByID && members) {
+                                                                const member = members.find(m => m.userID === pinnedByID);
+                                                                if (member) return member.userName;
+                                                            }
+                                                            
+                                                            // Fallback cuối cùng
+                                                            return pinnedByID || 'Unknown';
+                                                        })()} • {message.pinnedInfo.pinnedDate}
                                                     </div>
                                                 )}
                                             </div>

@@ -397,6 +397,8 @@ export const useMessageConversation = (selectedChatId?: string, currentUserId?: 
         if (!currentUserId) return;
         try {
             await pinMessage(message._id, currentUserId);
+            // Fetch lại danh sách pinned messages
+            await loadPinnedMessages();
             // Không hiển thị thông báo thành công
             closeContextMenu();
         } catch (error) {
@@ -408,6 +410,8 @@ export const useMessageConversation = (selectedChatId?: string, currentUserId?: 
     const handleUnpinMessage = async (messageId: string) => {
         try {
             await unpinMessage(messageId);
+            // Fetch lại danh sách pinned messages
+            await loadPinnedMessages();
             // Không hiển thị thông báo thành công
         } catch (error) {
             console.error('Error unpinning message:', error);
@@ -500,6 +504,7 @@ export const useMessageConversation = (selectedChatId?: string, currentUserId?: 
         loadMoreMessages,
         getSenderName,
         showToast,
+        loadPinnedMessages,
 
         // Computed
         canLoadMore: !!linkPrev,
