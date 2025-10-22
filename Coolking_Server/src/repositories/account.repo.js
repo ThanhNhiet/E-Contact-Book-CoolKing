@@ -6,6 +6,8 @@ const datetimeFormatter = require("../utils/format/datetime-formatter");
 const emailService = require("../services/email.service");
 const smsService = require("../services/sms.service");
 const redisService = require('../services/redis.service');
+const staffRepo = require("./staff.repo");
+const { password } = require("../config/redis.conf");
 
 const login = async (username, password) => {
   try {
@@ -184,19 +186,43 @@ const getAccountByUserId = async (user_id) => {
 
 const createAccount = async (accountData) => {
   try {
+    const transaction = await sequelize.transaction();
     if (accountData.role === 'ADMIN') {
       // Tự động sinh user_id cho ADMIN, user_id có định dạng ADMINxxx
       // Đếm số lượng record có role là ADMIN
       const numberOfAdmins = await models.Account.count({ where: { role: 'ADMIN' } });
       const newAdminNumber = numberOfAdmins + 1;
       const paddedNumber = String(newAdminNumber).padStart(3, '0'); // luôn đủ 3 số
-      accountData.user_id = `ADMIN${paddedNumber}`;
+      const admin_id = `ADMIN${paddedNumber}`;
+      if (accountData.email === '') {
+        accountData.email = null;
+      }
+      if (accountData.phone_number === '') {
+        accountData.phone_number = null;
+      }
+      const formAdmin = {
+        user_id: admin_id,
+        password: accountData.password,
+        role: accountData.role,
+        status: accountData.status,
+        email: accountData.email,
+        phone_number: accountData.phone_number,
+      };
+      const newAdmin = await models.Account.create(formAdmin, { transaction });
+      await staffRepo.addAdmin_id4Staff(admin_id, accountData.user_id, accountData.position, transaction);
+      await transaction.commit();
+      return newAdmin;
     }
     if (accountData.email === '') {
       accountData.email = null;
     }
-    return await models.Account.create(accountData);
+    if (accountData.phone_number === '') {
+      accountData.phone_number = null;
+    }
+    const newAccount = await models.Account.create(accountData);
+    return newAccount;
   } catch (error) {
+    await transaction.rollback();
     throw error;
   }
 };

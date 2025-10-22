@@ -80,14 +80,14 @@ const createStaff = async (staffData) => {
   }
 };
 
-const addAdmin_id4Staff = async (admin_id, staff_id, position) => {
+const addAdmin_id4Staff = async (admin_id, staff_id, position, transaction) => {
   try {
-    const staff = await models.Staff.findOne({ where: { staff_id } });
+    const staff = await models.Staff.findOne({ where: { staff_id }, transaction });
     if (!staff) throw new Error("Staff not found");
     staff.admin_id = admin_id;
     staff.position = position;
-    await staff.save();
-    return staff;
+    await staff.save({ transaction });
+    return;
   } catch (error) {
     throw error;
   }
