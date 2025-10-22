@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLecturer } from '../../../hooks/useLecturer';
+import { useStaff } from '../../../hooks/useStaff';
 
 interface ChangePasswordModalProps {
     isOpen: boolean;
@@ -8,7 +8,7 @@ interface ChangePasswordModalProps {
 }
 
 const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClose, onSuccess }) => {
-    const { changePassword, loading } = useLecturer();
+    const { changePassword, loading } = useStaff();
     const [formData, setFormData] = useState({
         currentPassword: '',
         newPassword: '',

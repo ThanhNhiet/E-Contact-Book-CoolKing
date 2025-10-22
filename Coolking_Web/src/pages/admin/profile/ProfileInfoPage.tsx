@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import HeaderLeCpn from '../../../components/lecturer/HeaderLeCpn';
-import FooterLeCpn from '../../../components/lecturer/FooterLeCpn';
-import { useLecturer } from '../../../hooks/useLecturer';
+import HeaderAdminCpn from '../../../components/admin/HeaderAdCpn';
+import FooterAdminCpn from '../../../components/admin/FooterAdCpn';
+import { useStaff } from '../../../hooks/useStaff';
 import ChangePasswordModal from './ChangePasswordModal';
 import UpdateProfileModal from './UpdateProfileModal';
 
 const ProfileInfoPage: React.FC = () => {
-    const { lecturer, loading, getLecturerInfo } = useLecturer();
+    const { staff, loading, getStaffInfo } = useStaff();
     const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
     const [showUpdateProfileModal, setShowUpdateProfileModal] = useState(false);
     const [showSuccessNotification, setShowSuccessNotification] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
 
     useEffect(() => {
-        getLecturerInfo();
-    }, [getLecturerInfo]);
+        getStaffInfo();
+    }, [getStaffInfo]);
 
     const handleSuccess = (message: string) => {
         setSuccessMessage(message);
@@ -33,18 +33,18 @@ const ProfileInfoPage: React.FC = () => {
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col">
-                <HeaderLeCpn />
+                <HeaderAdminCpn />
                 <main className="flex-1 flex items-center justify-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                 </main>
-                <FooterLeCpn />
+                <FooterAdminCpn />
             </div>
         );
     }
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
-            <HeaderLeCpn />
+            <HeaderAdminCpn />
 
             <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 py-8 w-full">
                 <div className="bg-white rounded-lg shadow-md">
@@ -56,15 +56,15 @@ const ProfileInfoPage: React.FC = () => {
 
                     {/* Content */}
                     <div className="p-6">
-                        {lecturer && (
+                        {staff && (
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 {/* Avatar Section */}
                                 <div className="lg:col-span-1">
                                     <div className="text-center">
                                         <div className="mx-auto h-32 w-32 rounded-full overflow-hidden bg-gray-100">
-                                            {lecturer.avatar ? (
+                                            {staff.avatar ? (
                                                 <img
-                                                    src={lecturer.avatar}
+                                                    src={staff.avatar}
                                                     alt="Avatar"
                                                     className="h-full w-full object-cover"
                                                 />
@@ -76,8 +76,6 @@ const ProfileInfoPage: React.FC = () => {
                                                 </div>
                                             )}
                                         </div>
-                                        <h3 className="mt-4 text-lg font-medium text-gray-900">{lecturer.name}</h3>
-                                        <p className="text-sm text-gray-600">{lecturer.email}</p>
                                     </div>
                                 </div>
 
@@ -85,41 +83,45 @@ const ProfileInfoPage: React.FC = () => {
                                 <div className="lg:col-span-2">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                         <div>
-                                            <label className="text-sm font-medium text-gray-700">Mã giảng viên</label>
-                                            <p className="mt-1 text-sm text-gray-900">{lecturer.lecturer_id}</p>
+                                            <label className="text-sm font-medium text-gray-700">Mã nhân viên</label>
+                                            <p className="mt-1 text-sm text-gray-900">{staff.staff_id}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-700">Mã quản trị viên</label>
+                                            <p className="mt-1 text-sm text-gray-900">{staff.admin_id}</p>
                                         </div>
                                         <div>
                                             <label className="text-sm font-medium text-gray-700">Họ và tên</label>
-                                            <p className="mt-1 text-sm text-gray-900">{lecturer.name}</p>
+                                            <p className="mt-1 text-sm text-gray-900">{staff.name}</p>
                                         </div>
                                         <div>
                                             <label className="text-sm font-medium text-gray-700">Ngày sinh</label>
-                                            <p className="mt-1 text-sm text-gray-900">{lecturer.dob}</p>
+                                            <p className="mt-1 text-sm text-gray-900">{staff.dob}</p>
                                         </div>
                                         <div>
                                             <label className="text-sm font-medium text-gray-700">Giới tính</label>
-                                            <p className="mt-1 text-sm text-gray-900">{formatGender(lecturer.gender)}</p>
+                                            <p className="mt-1 text-sm text-gray-900">{formatGender(staff.gender)}</p>
                                         </div>
                                         <div>
                                             <label className="text-sm font-medium text-gray-700">Số điện thoại</label>
-                                            <p className="mt-1 text-sm text-gray-900">{lecturer.phone}</p>
+                                            <p className="mt-1 text-sm text-gray-900">{staff.phone}</p>
                                         </div>
                                         <div>
                                             <label className="text-sm font-medium text-gray-700">Email</label>
-                                            <p className="mt-1 text-sm text-gray-900">{lecturer.email}</p>
+                                            <p className="mt-1 text-sm text-gray-900">{staff.email}</p>
                                         </div>
                                         <div className="sm:col-span-2">
                                             <label className="text-sm font-medium text-gray-700">Địa chỉ</label>
-                                            <p className="mt-1 text-sm text-gray-900">{lecturer.address}</p>
+                                            <p className="mt-1 text-sm text-gray-900">{staff.address}</p>
                                         </div>
                                         <div>
-                                            <label className="text-sm font-medium text-gray-700">Khoa</label>
-                                            <p className="mt-1 text-sm text-gray-900">{lecturer.facultyName}</p>
+                                            <label className="text-sm font-medium text-gray-700">Phòng ban</label>
+                                            <p className="mt-1 text-sm text-gray-900">{staff.department}</p>
                                         </div>
-                                        {lecturer.homeroomClassName && (
+                                        {staff.position && (
                                             <div>
-                                                <label className="text-sm font-medium text-gray-700">Lớp chủ nhiệm</label>
-                                                <p className="mt-1 text-sm text-gray-900">{lecturer.homeroomClassName}</p>
+                                                <label className="text-sm font-medium text-gray-700">Chức vụ</label>
+                                                <p className="mt-1 text-sm text-gray-900">{staff.position}</p>
                                             </div>
                                         )}
                                     </div>
@@ -152,7 +154,7 @@ const ProfileInfoPage: React.FC = () => {
                 </div>
             </main>
 
-            <FooterLeCpn />
+            <FooterAdminCpn />
 
             {/* Success Notification */}
             {showSuccessNotification && (
@@ -183,9 +185,9 @@ const ProfileInfoPage: React.FC = () => {
             <UpdateProfileModal
                 isOpen={showUpdateProfileModal}
                 onClose={() => setShowUpdateProfileModal(false)}
-                lecturer={lecturer}
+                staff={staff}
                 onUpdate={() => {
-                    getLecturerInfo();
+                    getStaffInfo();
                     handleSuccess('Cập nhật thông tin thành công!');
                 }}
             />

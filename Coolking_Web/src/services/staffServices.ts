@@ -7,9 +7,9 @@ class StaffService {
         return response.data;
     }
 
-    // POST /api/staffs/admin
-    async updateStaffInfo(data: any) {
-        const response = await axiosInstance.post('/staffs/admin', data);
+    // PUT /api/staffs/admin
+    async updateStaffInfo(phone: string, email: string, address: string) {
+        const response = await axiosInstance.put('/staffs/admin', { phone, email, address });
         return response.data;
     }
 

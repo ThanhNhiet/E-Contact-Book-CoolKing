@@ -37,11 +37,11 @@ export const useStaff = () => {
     }, []);
 
     // Cập nhật thông tin nhân viên admin
-    const updateStaffInfo = useCallback(async (data: any) => {
+    const updateStaffInfo = useCallback(async (phone: string, email: string, address: string) => {
         setLoading(true);
         setError('');
         try {
-            const updatedStaff = await staffService.updateStaffInfo(data);
+            const updatedStaff = await staffService.updateStaffInfo(phone, email, address);
             return updatedStaff;
         } catch (error : any) {
             setError(error.message || 'Failed to update staff information');
@@ -84,7 +84,7 @@ export const useStaff = () => {
     }, []);
 
     // Lấy thông tin 1 nhân viên theo staff_id dành cho admin
-    const getStaff = useCallback(async (staff_id: string) => {
+    const getStaff4Admin = useCallback(async (staff_id: string) => {
         setLoading(true);
         setError('');
         try {
@@ -105,6 +105,6 @@ export const useStaff = () => {
         updateStaffInfo,
         updateStaffAvatar,
         changePassword,
-        getStaff
+        getStaff4Admin
     };
 };
