@@ -53,7 +53,6 @@ const login = async (username, password) => {
 const changePassword = async (user_id, oldPassword, newPassword) => {
   try {
     const account = await models.Account.findOne({ where: { user_id } });
-    console.log(account.user_id);
     if (!account) throw new Error("Account not found");
     const isValid = await bcrypt.compare(oldPassword, account.password);
     if (!isValid) throw new Error("Invalid old password");
