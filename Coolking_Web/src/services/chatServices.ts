@@ -169,6 +169,12 @@ class ChatServices {
         });
         return response.data;
     }
+
+    // GET /api/chats/info/:chatID
+    async getChatInfoByID4Admin(chatID: string) {
+        const response = await axiosInstance.get(`/chats/info/${chatID}`);
+        return response.data;
+    }
 }
 
 export const chatServices = new ChatServices();

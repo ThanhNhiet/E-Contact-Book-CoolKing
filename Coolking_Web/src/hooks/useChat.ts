@@ -405,6 +405,20 @@ export const useChat = () => {
         }
     }, []);
 
+    // Lấy thông tin chat theo chatID cho admin
+    const getChatInfoByID4Admin = useCallback(async (chatID: string) => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await chatServices.getChatInfoByID4Admin(chatID);
+            return data;
+        } catch (error: any) {
+            setError(error.message || 'Failed to get chat info by ID for admin');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     return {
         loading,
         error,
@@ -438,6 +452,7 @@ export const useChat = () => {
         getChats4AllUser,
         searchChats4AllUser,
         muteChat4AllUser,
-        searchUser
+        searchUser,
+        getChatInfoByID4Admin
     };
 };
