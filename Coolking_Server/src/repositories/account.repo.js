@@ -213,13 +213,22 @@ const createAccount = async (accountData) => {
       await transaction.commit();
       return newAdmin;
     }
+
     if (accountData.email === '') {
       accountData.email = null;
     }
     if (accountData.phone_number === '') {
       accountData.phone_number = null;
     }
-    const newAccount = await models.Account.create(accountData);
+    const formUser = {
+        user_id: accountData.user_id,
+        password: accountData.password,
+        role: accountData.role,
+        status: accountData.status,
+        email: accountData.email,
+        phone_number: accountData.phone_number,
+    };
+    const newAccount = await models.Account.create(formUser);
     return newAccount;
   } catch (error) {
     await transaction.rollback();
