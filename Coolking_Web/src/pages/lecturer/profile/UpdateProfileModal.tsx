@@ -45,11 +45,11 @@ const UpdateProfileModal: React.FC<UpdateProfileModalProps> = ({ isOpen, onClose
     };
 
     // Hàm chuyển đổi ngày từ DD/MM/YYYY sang DD-MM-YYYY
-    const formatDateForAPI = (dateString: string): string => {
-        if (!dateString) return '';
-        // Chuyển từ DD/MM/YYYY sang DD-MM-YYYY
-        return dateString.replace(/\//g, '-');
-    };
+    // const formatDateForAPI = (dateString: string): string => {
+    //     if (!dateString) return '';
+    //     // Chuyển từ DD/MM/YYYY sang DD-MM-YYYY
+    //     return dateString.replace(/\//g, '-');
+    // };
 
     // Chuyển đổi từ dd/MM/yyyy sang yyyy-MM-dd (cho HTML date input)
     const convertToDateInput = (dateString: string): string => {
@@ -244,9 +244,6 @@ const UpdateProfileModal: React.FC<UpdateProfileModalProps> = ({ isOpen, onClose
             const dataChanged = JSON.stringify(formData) !== JSON.stringify(originalData);
             if (dataChanged) {
                 const response = await updateLecturerInfo(
-                    formData.name,
-                    formatDateForAPI(formData.dob), // Chuyển về DD-MM-YYYY
-                    formData.gender,
                     formData.phone,
                     formData.email,
                     formData.address
