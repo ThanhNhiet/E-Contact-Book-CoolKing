@@ -83,20 +83,6 @@ export const useStaff = () => {
         }
     }, []);
 
-    // Lấy thông tin 1 nhân viên theo staff_id dành cho admin
-    const getStaff4Admin = useCallback(async (staff_id: string) => {
-        setLoading(true);
-        setError('');
-        try {
-            const data = await staffService.getStaff(staff_id);
-            setStaff(data);
-        } catch (error : any) {
-            setError(error.message || 'Failed to fetch staff information');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
     return {
         loading,
         error,
@@ -104,7 +90,6 @@ export const useStaff = () => {
         getStaffInfo,
         updateStaffInfo,
         updateStaffAvatar,
-        changePassword,
-        getStaff4Admin
+        changePassword
     };
 };
