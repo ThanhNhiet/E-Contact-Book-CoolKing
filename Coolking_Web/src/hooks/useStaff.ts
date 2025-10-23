@@ -83,6 +83,20 @@ export const useStaff = () => {
         }
     }, []);
 
+    // Lấy tất cả admin theo department
+    const getStaffsAdminByDepartment = useCallback(async (department: string) => {
+        setLoading(true);
+        setError('');
+        try {
+            const staffs = await staffService.getStaffsAdminByDepartment(department);
+            return staffs;
+        } catch (error : any) {
+            setError(error.message || 'Failed to fetch staffs by department');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     return {
         loading,
         error,
@@ -90,6 +104,7 @@ export const useStaff = () => {
         getStaffInfo,
         updateStaffInfo,
         updateStaffAvatar,
-        changePassword
+        changePassword,
+        getStaffsAdminByDepartment
     };
 };

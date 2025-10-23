@@ -32,6 +32,14 @@ class StaffService {
         const response = await axiosInstance.post('/accounts/change-password', data);
         return response.data;
     }
+
+    // GET /api/staffs/admin/all?department={department}
+    async getStaffsAdminByDepartment(department: string) {
+        const response = await axiosInstance.get('/staffs/admin/all', {
+            params: { department }
+        });
+        return response.data;
+    }
 }
 
 export const staffService = new StaffService();

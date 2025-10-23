@@ -64,6 +64,26 @@ export const useStudent = () => {
         }
     }, []);
 
+    // option: all, notWarningYet
+    const fetchStudentsWarningList = useCallback(async (params: {
+        sessionId: string;
+        facultyId: string;
+        option: string;
+        page: number;
+        pageSize: number;
+    }) => {
+        setLoading(true);
+        setError('');
+        try {
+            const data = await studentServices.getStudentsWarningList(params);
+            setStudentInfo(data);
+        } catch (err: any) {
+            setError(err.message || 'Failed to fetch student warning list');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     return {
         loading,
         error,
@@ -72,5 +92,6 @@ export const useStudent = () => {
         studentInfo,
         fetchStudentsByCourseSection,
         fetchStudentInfo,
+        fetchStudentsWarningList
     };
 };

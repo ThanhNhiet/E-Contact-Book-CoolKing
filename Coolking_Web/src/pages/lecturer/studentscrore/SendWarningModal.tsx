@@ -17,7 +17,7 @@ const SendWarningModal: React.FC<SendWarningModalProps> = ({
   studentInfo,
   courseSectionData
 }) => {
-  const defaultTitle = `Nhắc nhở học tập - ${student.name} - ${student.student_id}`;
+  const defaultTitle = `Yêu cầu Cảnh báo học vụ - Sinh viên ${student.student_id} - LHP: ${courseSectionData.course_section_id} - Môn: ${courseSectionData.subjectName}`;
   const defaultContent = `Thông báo đến sinh viên ${student.name} (MSSV: ${student.student_id}) và Quý Phụ huynh.
 
 Trong môn học ${courseSectionData.subjectName} (mã lớp học phần: ${courseSectionData.course_section_id}), thuộc lớp ${courseSectionData.className}, học kỳ ${courseSectionData.sessionName}, tôi nhận thấy rằng:
@@ -28,8 +28,7 @@ Kết quả học tập vừa qua của em đang ở mức dưới trung bình. 
 
 Nhà trường và giảng viên luôn tạo điều kiện hỗ trợ, nhưng sự nỗ lực từ chính bản thân em mới là yếu tố quyết định.
 
-Trân trọng,
-${courseSectionData.lecturerName}`;
+Trân trọng.`;
 
   const [title, setTitle] = useState(defaultTitle);
   const [content, setContent] = useState(defaultContent);
