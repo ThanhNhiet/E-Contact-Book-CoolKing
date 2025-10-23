@@ -19,7 +19,7 @@ router.get('/basic-schedule/:student_id', studentController.getStudentBasicSched
 // GET /students/exam-schedule/:student_id - Lịch thi
 router.get('/exam-schedule/:student_id', studentController.getStudentExamSchedule);
 
-// GET /students/warn-list?sessionId=&facultyId=&page=&pageSize=
+// GET /students/warn-list?sessionId=&facultyId=&option=&page=&pageSize=
 router.get('/warn-list', studentController.getWarnedStudents);
 
 // ===== ROUTES CHO STUDENT =====
