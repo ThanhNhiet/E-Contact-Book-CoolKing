@@ -15,4 +15,7 @@ router.get('/:id', staffController.getStaffById);
 // POST /api/staffs/admin/avatar
 router.post('/admin/avatar', upload.upload, staffController.uploadAvatarStaffAdmin);
 
+// GET /api/staffs/admin/all?department=...
+router.get('/admin/all', staffController.getAllStaffsAdmin);
+
 module.exports = router;

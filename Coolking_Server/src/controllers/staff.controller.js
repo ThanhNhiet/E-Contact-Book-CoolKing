@@ -106,3 +106,15 @@ exports.uploadAvatarStaffAdmin = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+// GET /api/staffs/admin/all?department=<department>
+exports.getAllStaffsAdmin = async (req, res) => {
+    try {
+        const { department } = req.query;
+        const staffs = await staffRepo.getAllStaffs(department);
+        res.status(200).json(staffs);
+    }
+    catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
