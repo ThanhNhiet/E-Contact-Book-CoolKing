@@ -32,12 +32,6 @@ class StaffService {
         const response = await axiosInstance.post('/accounts/change-password', data);
         return response.data;
     }
-
-    // GET /api/staffs/:staff_id
-    async getStaff(staff_id: string) {
-        const response = await axiosInstance.get(`/staffs/${staff_id}`);
-        return response.data;
-    }
 }
 
 export const staffService = new StaffService();
