@@ -21,6 +21,7 @@ export const useStaff = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string>('');
     const [staff, setStaff] = useState<Staff | null>(null);
+    const [staffs, setStaffs] = useState<Staff[]>([]);
 
     // Lấy thông tin bản thân nhân viên admin
     const getStaffInfo = useCallback(async () => {
@@ -88,10 +89,12 @@ export const useStaff = () => {
         setLoading(true);
         setError('');
         try {
-            const staffs = await staffService.getStaffsAdminByDepartment(department);
-            return staffs;
+            const data = await staffService.getStaffsAdminByDepartment(department);
+            setStaffs(data || []);
+            return data;
         } catch (error : any) {
             setError(error.message || 'Failed to fetch staffs by department');
+            setStaffs([]);
         } finally {
             setLoading(false);
         }
@@ -101,6 +104,7 @@ export const useStaff = () => {
         loading,
         error,
         staff,
+        staffs,
         getStaffInfo,
         updateStaffInfo,
         updateStaffAvatar,

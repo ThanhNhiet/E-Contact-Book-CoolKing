@@ -18,6 +18,7 @@ export interface StudentWithScore {
     dob: string;
     score: Score;
     initial_evaluate: string;
+    isWarningYet?: boolean;
 }
 
 export interface Score {

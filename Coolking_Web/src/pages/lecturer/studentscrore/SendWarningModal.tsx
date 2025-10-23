@@ -1,20 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { StudentWithScore, courseSectionWithStudents } from '../../../hooks/useStudent';
 import { useAlert } from '../../../hooks/useAlert';
+import { useStaff, type Staff } from '../../../hooks/useStaff';
 
 interface SendWarningModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess: () => void;
   student: StudentWithScore;
-  studentInfo: any;
   courseSectionData: courseSectionWithStudents;
 }
+
+const DEPARTMENT_PDT_QLHV = 'pdt-qlhv';
 
 const SendWarningModal: React.FC<SendWarningModalProps> = ({
   isOpen,
   onClose,
+  onSuccess,
   student,
-  studentInfo,
   courseSectionData
 }) => {
   const defaultTitle = `Yêu cầu Cảnh báo học vụ - Sinh viên ${student.student_id} - LHP: ${courseSectionData.course_section_id} - Môn: ${courseSectionData.subjectName}`;
@@ -32,6 +35,9 @@ Trân trọng.`;
 
   const [title, setTitle] = useState(defaultTitle);
   const [content, setContent] = useState(defaultContent);
+  const [selectedAdmin, setSelectedAdmin] = useState<string>('');
+  const { staffs, loading: staffsLoading, getStaffsAdminByDepartment } = useStaff(); // staffsLoading is now the correct loading state for this operation
+
   const [toast, setToast] = useState<{
     show: boolean;
     message: string;
@@ -43,6 +49,14 @@ Trân trọng.`;
   });
   const { loading, sendAlertPersonal } = useAlert();
 
+  useEffect(() => {
+    if (isOpen) {
+      // Reset state before fetching
+      setSelectedAdmin('');
+      void getStaffsAdminByDepartment(DEPARTMENT_PDT_QLHV);
+    }
+  }, [isOpen, getStaffsAdminByDepartment]);
+
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
     setTimeout(() => {
@@ -52,24 +66,20 @@ Trân trọng.`;
 
   const handleSend = async () => {
     try {
-      let receiverIDs = [];
-      if (studentInfo) {
-        receiverIDs.push(studentInfo.student_id);
-        if (studentInfo.parent) {
-          receiverIDs.push(studentInfo.parent.parent_id);
-        }
-      }
+      const receiverIDs = [selectedAdmin];
       const response = await sendAlertPersonal(title, content, receiverIDs);
       if (response.success) {
-        showToast('Gửi nhắc nhở thành công!', 'success');
-        setTimeout(() => {
-          onClose();
-        }, 1500);
+        showToast('Gửi yêu cầu cảnh báo thành công!', 'success');
+        // setTimeout(() => {
+        //   onClose();
+        // }, 1500);
+        onClose();
+        onSuccess();
       } else {
-        showToast(response.error || 'Có lỗi xảy ra khi gửi nhắc nhở', 'error');
+        showToast(response.error || 'Có lỗi xảy ra khi gửi yêu cầu', 'error');
       }
     } catch (err) {
-      showToast('Có lỗi xảy ra khi gửi nhắc nhở', 'error');
+      showToast('Có lỗi xảy ra khi gửi yêu cầu', 'error');
     }
   };
 
@@ -79,11 +89,10 @@ Trân trọng.`;
     <>
       {/* Toast Notification */}
       {toast.show && (
-        <div className={`fixed top-4 right-4 z-[60] p-4 rounded-lg shadow-lg transform transition-all duration-300 ${
-          toast.type === 'success' 
-            ? 'bg-green-500 text-white' 
+        <div className={`fixed top-4 right-4 z-[60] p-4 rounded-lg shadow-lg transform transition-all duration-300 ${toast.type === 'success'
+            ? 'bg-green-500 text-white'
             : 'bg-red-500 text-white'
-        }`}>
+          }`}>
           <div className="flex items-center">
             {toast.type === 'success' ? (
               <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -103,7 +112,7 @@ Trân trọng.`;
         <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
           {/* Header */}
           <div className="flex justify-between items-center p-6 border-b">
-            <h2 className="text-xl font-semibold text-gray-900">Gửi nhắc nhở học tập</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Gửi yêu cầu cảnh báo học vụ</h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -128,6 +137,30 @@ Trân trọng.`;
               </div>
             </div>
 
+            {/* Admin Selection */}
+            <div className="mb-6">
+              <label htmlFor="admin-select" className="block text-sm font-medium text-gray-700 mb-2">
+                Gửi đến <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="admin-select"
+                value={selectedAdmin}
+                onChange={(e) => setSelectedAdmin(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                disabled={loading || staffsLoading}
+              >
+                <option value="" disabled>
+                  {staffsLoading ? 'Đang tải danh sách...' : '-- Chọn quản trị viên --'}
+                </option>
+                {!staffsLoading && staffs.map((admin: Staff) => (
+                  <option key={admin.admin_id} value={admin.admin_id}>
+                    {admin.name} ({admin.admin_id})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+
             {/* Title Input */}
             <div className="mb-6">
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
@@ -141,6 +174,7 @@ Trân trọng.`;
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 placeholder="Nhập tiêu đề cảnh báo"
                 disabled={loading}
+                readOnly
               />
             </div>
 
@@ -172,7 +206,7 @@ Trân trọng.`;
             </button>
             <button
               onClick={handleSend}
-              disabled={loading || !title.trim() || !content.trim()}
+              disabled={loading || !title.trim() || !content.trim() || !selectedAdmin}
               className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
               {loading && (
@@ -181,7 +215,7 @@ Trân trọng.`;
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               )}
-              {loading ? 'Đang gửi...' : 'Gửi nhắc nhở'}
+              {loading ? 'Đang gửi...' : 'Gửi yêu cầu'}
             </button>
           </div>
         </div>
