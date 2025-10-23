@@ -184,9 +184,9 @@ const getAccountByUserId = async (user_id) => {
 };
 
 const createAccount = async (accountData) => {
-  try {
+  if (accountData.role === 'ADMIN') {
     const transaction = await sequelize.transaction();
-    if (accountData.role === 'ADMIN') {
+    try {
       // Tự động sinh user_id cho ADMIN, user_id có định dạng ADMINxxx
       // Đếm số lượng record có role là ADMIN
       const numberOfAdmins = await models.Account.count({ where: { role: 'ADMIN' } });
@@ -211,27 +211,31 @@ const createAccount = async (accountData) => {
       await staffRepo.addAdmin_id4Staff(admin_id, accountData.user_id, accountData.position, transaction);
       await transaction.commit();
       return newAdmin;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
     }
-
+  } else {
+    // Logic cho các role khác không cần transaction
     if (accountData.email === '') {
       accountData.email = null;
     }
     if (accountData.phone_number === '') {
       accountData.phone_number = null;
     }
-    const formUser = {
+    try {
+      const formUser = {
         user_id: accountData.user_id,
         password: accountData.password,
         role: accountData.role,
         status: accountData.status,
         email: accountData.email,
         phone_number: accountData.phone_number,
-    };
-    const newAccount = await models.Account.create(formUser);
-    return newAccount;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
+      };
+      return await models.Account.create(formUser);
+    } catch (error) {
+      throw error;
+    }
   }
 };
 
