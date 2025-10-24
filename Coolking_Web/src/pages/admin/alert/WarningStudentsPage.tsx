@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import SendWarningModal from './SendWarning4LeReqModal';
+import SendWarningModal from './SendWarningModal';
 import { useNavigate } from 'react-router-dom';
 import { useStudent } from '../../../hooks/useStudent';
 import { useStatistics } from '../../../hooks/useStatistics';
@@ -150,6 +150,7 @@ const WarningStudentsPage: React.FC = () => {
                                         }
                                     }}
                                     onFocus={() => setShowSessionDropdown(true)}
+                                    disabled={loading}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                                 />
                                 {showSessionDropdown && (
@@ -190,6 +191,7 @@ const WarningStudentsPage: React.FC = () => {
                                         }
                                     }}
                                     onFocus={() => setShowFacultyDropdown(true)}
+                                    disabled={loading}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                                 />
                                 {showFacultyDropdown && (
@@ -221,6 +223,7 @@ const WarningStudentsPage: React.FC = () => {
                             <select
                                 value={selectedOption}
                                 onChange={e => setSelectedOption(e.target.value)}
+                                disabled={loading}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none mt-7"
                             >
                                 <option value="all">Tất cả</option>
@@ -231,10 +234,15 @@ const WarningStudentsPage: React.FC = () => {
                         <div className="flex items-end">
                             <button
                                 onClick={handleFetchStudents}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
-                                disabled={!selectedSession || !selectedFaculty || !selectedOption}
+                                className="flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 disabled:bg-blue-400 disabled:cursor-not-allowed"
+                                disabled={!selectedSession || !selectedFaculty || !selectedOption || loading}
                             >
-                                Tìm kiếm
+                                {loading && !studentSearch.trim() ? (
+                                    <>
+                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                        Đang tìm...
+                                    </>
+                                ) : 'Tìm kiếm'}
                             </button>
                         </div>
                         {/* Search MSSV */}
@@ -243,11 +251,12 @@ const WarningStudentsPage: React.FC = () => {
                                 type="text"
                                 placeholder="Tìm theo MSSV..."
                                 value={studentSearch}
+                                disabled={loading}
                                 onChange={e => setStudentSearch(e.target.value)}
                                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                             />
                             <button
-                                onClick={handleSearchStudent}
+                                onClick={handleSearchStudent} disabled={loading || !studentSearch.trim()}
                                 className="px-3 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg"
                             >
                                 <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -278,7 +287,20 @@ const WarningStudentsPage: React.FC = () => {
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
+                            <tbody className="bg-white divide-y divide-gray-200 relative">
+                                {loading && (
+                                    <tr>
+                                        <td colSpan={14} className="px-4 py-6 text-center text-gray-500">
+                                            <div className="flex items-center justify-center">
+                                                <svg className="animate-spin h-5 w-5 mr-2 text-blue-500" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Đang tải dữ liệu...
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
                                 {/* Nếu có searchResult thì hiển thị riêng */}
                                 {searchResult ? (
                                     searchResult.failedSubjects && searchResult.failedSubjects.length > 0 ? (
@@ -322,12 +344,16 @@ const WarningStudentsPage: React.FC = () => {
                                         </tr>
                                     )
                                 ) : (
-                                    students.length === 0 ? (
+                                    !loading && (students.length === 0 || error) ? (
                                         <tr>
-                                            <td colSpan={14} className="px-4 py-6 text-center text-gray-500">Không có dữ liệu</td>
+                                            <td colSpan={14} className="px-4 py-6 text-center text-gray-500">
+                                                {error ? (
+                                                    <span className="text-red-500">{error}</span>
+                                                ) : 'Không có dữ liệu hoặc bạn chưa chọn Học kỳ và Khoa để tìm kiếm.'}
+                                            </td>
                                         </tr>
                                     ) : (
-                                        students.map((student, idx) => (
+                                        !loading && students.map((student, idx) => (
                                             <tr key={idx}>
                                                 <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-900">{student.course_section_id}</td>
                                                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{student.subjectName}</td>
@@ -397,25 +423,12 @@ const WarningStudentsPage: React.FC = () => {
                     {showWarningModal && selectedStudent && (
                         <SendWarningModal
                             isOpen={showWarningModal}
-                            onClose={() => setShowWarningModal(false)}
-                            onSuccess={() => {
+                            onClose={() => {
                                 setShowWarningModal(false);
                                 setSelectedStudent(null);
-                                // Làm mới lại danh sách sau khi gửi cảnh báo
-                                handleFetchStudents();
                             }}
-                            alert={{
-                                header: `Cảnh báo học vụ - Sinh viên ${selectedStudent.student_id} - LHP: ${selectedStudent.course_section_id} - Môn: ${selectedStudent.subjectName}`,
-                                body: `Sinh viên ${selectedStudent.studentName} có điểm trung bình môn ${selectedStudent.subjectName} là ${selectedStudent.avr}. Vui lòng kiểm tra lại kết quả học tập.`,
-                                senderID: '',
-                                receiverID: '',
-                                targetScope: 'person',
-                                isRead: false,
-                                isWarningYet: selectedStudent.isWarningYet,
-                                createdAt: '',
-                                updatedAt: '',
-                                _id: ''
-                            }}
+                            onSuccess={handleFetchStudents} // Refresh list on success
+                            studentData={selectedStudent}
                         />
                     )}
                 </div>
