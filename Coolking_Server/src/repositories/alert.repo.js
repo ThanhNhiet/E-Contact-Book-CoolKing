@@ -820,7 +820,7 @@ const isWarningYet4Student = async (course_section_id, student_id) => {
         // Tìm kiếm alert có header chứa "Cảnh báo", course_section_id và student_id
         const existingAlert = await Alert.findOne({
             $and: [
-                { header: { $regex: 'Cảnh báo', $options: 'i' } },
+                { header: { $regex: '^Cảnh báo', $options: 'i' } },
                 { header: { $regex: course_section_id, $options: 'i' } },
                 { header: { $regex: student_id, $options: 'i' } }
             ]

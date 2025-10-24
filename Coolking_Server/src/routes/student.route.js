@@ -22,6 +22,9 @@ router.get('/exam-schedule/:student_id', studentController.getStudentExamSchedul
 // GET /students/warn-list?sessionId=&facultyId=&option=&page=&pageSize=
 router.get('/warn-list', studentController.getWarnedStudents);
 
+// GET /students/warn-list/search?sessionId=&facultyId=&studentId=
+router.get('/warn-list/search', studentController.searchWarnedStudents);
+
 // ===== ROUTES CHO STUDENT =====
 // PUT /students/update-info - Cập nhật thông tin
 router.put('/update-info', studentController.updateStudentInfo);

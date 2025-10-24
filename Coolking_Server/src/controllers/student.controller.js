@@ -264,3 +264,22 @@ exports.getWarnedStudents = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+// GET /students/warn-list/search?sessionId=&facultyId=&studentId=
+exports.searchWarnedStudents = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const decoded = jwtUtils.verifyAccessToken(token);
+        if (!decoded || (decoded.role !== 'ADMIN')) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const sessionId = req.query.sessionId;
+        const facultyId = req.query.facultyId;
+        const studentId = req.query.studentId;
+        const student = await studentRepo.searchFailedStudentBySessionAndFacultyWithStudentId(sessionId, facultyId, studentId);
+        res.status(200).json(student);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

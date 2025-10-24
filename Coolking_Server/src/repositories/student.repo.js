@@ -281,10 +281,6 @@ const updateStudentAvatar = async (student_id, file) => {
     }
 }
 
-
-
-
-
 /**
  *  Lấy thông tin sinh viên bằng student_id - dùng cho giảng viên
  * @param {string} student_id 
@@ -973,6 +969,7 @@ const getFailedStudentsBySessionAndFaculty = async (session_id, faculty_id, opti
             where: {
                 course_section_id: { [Op.in]: courseSectionIds },
                 [Op.or]: [
+                    { mid: { [Op.lt]: 4 } },
                     { final: { [Op.lt]: 3 } },
                     { avr: { [Op.lt]: 4 } }
                 ]
@@ -1054,9 +1051,9 @@ const getFailedStudentsBySessionAndFaculty = async (session_id, faculty_id, opti
         const paginatedStudents = failedStudents.slice(offset, offset + pageSize_num);
 
         // Tạo link phân trang
-        const linkPrev = page_num > 1 ? 
+        const linkPrev = page_num > 1 ?
             `/api/students/failed?sessionId=${session_id}&facultyId=${faculty_id}&option=${option}&page=${page_num - 1}&pageSize=${pageSize_num}` : null;
-        const linkNext = page_num < totalPages ? 
+        const linkNext = page_num < totalPages ?
             `/api/students/failed?sessionId=${session_id}&facultyId=${faculty_id}&option=${option}&page=${page_num + 1}&pageSize=${pageSize_num}` : null;
 
         // Tạo danh sách 3 trang liên tiếp
@@ -1081,7 +1078,115 @@ const getFailedStudentsBySessionAndFaculty = async (session_id, faculty_id, opti
     }
 };
 
+/**
+ * Hàm search của getFailedStudentsBySessionAndFaculty (theo stuendent_id)
+ * @param {string} session_id
+ * @param {string} faculty_id
+ * @param {string} student_id
+ * @returns {Object} student info
+ */
+const searchFailedStudentBySessionAndFacultyWithStudentId = async (session_id, faculty_id, student_id) => {
+    try {
+        // Validate input
+        if (!session_id || !faculty_id || !student_id) {
+            throw new Error('session_id, faculty_id, and student_id are required');
+        }
 
+        // Tìm tất cả course_sections theo session_id và faculty_id
+        const courseSections = await models.CourseSection.findAll({
+            where: { session_id },
+            include: [{
+                model: models.Subject,
+                as: 'subject',
+                where: { faculty_id },
+                attributes: []
+            }],
+            attributes: ['id'],
+            raw: true
+        });
+
+        if (courseSections.length === 0) {
+            return {
+                success: false,
+                message: 'Không tìm thấy lớp học phần nào cho khoa và học kỳ này.',
+                student: null
+            };
+        }
+
+        const courseSectionIds = courseSections.map(cs => cs.id);
+
+        // Lấy điểm không đạt của sinh viên trong các lớp học phần đó
+        const failedScores = await models.Score.findAll({
+            where: {
+                student_id,
+                course_section_id: { [Op.in]: courseSectionIds },
+                [Op.or]: [
+                    { mid: { [Op.lt]: 4 } },
+                    { final: { [Op.lt]: 3 } },
+                    { avr: { [Op.lt]: 4 } }
+                ]
+            },
+            attributes: { exclude: ['createdAt', 'updatedAt', 'id', 'student_id'] },
+            include: [
+                { model: models.Student, as: 'student', attributes: ['student_id', 'name'], required: true },
+                {
+                    model: models.CourseSection,
+                    as: 'course_section',
+                    attributes: ['id'],
+                    include: [{ model: models.Subject, as: 'subject', attributes: ['name'] }]
+                }
+            ]
+        });
+
+        if (failedScores.length === 0) {
+            return {
+                success: true,
+                message: 'Sinh viên không có môn nào không đạt trong khoa và học kỳ này.',
+                student: null
+            };
+        }
+
+        // Lấy thông tin phụ huynh
+        const parent = await models.Parent.findOne({ where: { student_id }, attributes: ['parent_id'] });
+
+        // Xử lý và kiểm tra cảnh báo cho từng môn học không đạt
+        const failedSubjects = await Promise.all(
+            failedScores.map(async (score) => {
+                const plain = score.get({ plain: true });
+                const isWarningYet = await alertRepo.isWarningYet4Student(
+                    plain.course_section.id,
+                    student_id
+                );
+
+                return {
+                    course_section_id: plain.course_section.id,
+                    subjectName: plain.course_section.subject.name,
+                    theo_regular1: plain.theo_regular1,
+                    theo_regular2: plain.theo_regular2,
+                    theo_regular3: plain.theo_regular3,
+                    pra_regular1: plain.pra_regular1,
+                    pra_regular2: plain.pra_regular2,
+                    pra_regular3: plain.pra_regular3,
+                    mid: plain.mid,
+                    final: plain.final,
+                    avr: plain.avr,
+                    isWarningYet
+                };
+            })
+        );
+
+        return {
+            student_id: failedScores[0].student.student_id,
+            studentName: failedScores[0].student.name,
+            parent_id: parent ? parent.parent_id : null,
+            failedSubjects
+        };
+
+    } catch (error) {
+        console.error('Error in searchFailedStudentBySessionAndFacultyWithStudentId:', error);
+        throw error;
+    }
+};
 
 module.exports = {
     getStudentsScoreByCourseSectionId4Lecturer,
@@ -1092,5 +1197,6 @@ module.exports = {
     getStudentBasicSchedule,
     getStudentExamSchedule,
     updateStudentAvatar,
-    getFailedStudentsBySessionAndFaculty
+    getFailedStudentsBySessionAndFaculty,
+    searchFailedStudentBySessionAndFacultyWithStudentId
 };
