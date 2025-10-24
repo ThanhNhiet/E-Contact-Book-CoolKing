@@ -77,9 +77,27 @@ export const useStudent = () => {
         setError('');
         try {
             const data = await studentServices.getStudentsWarningList(params);
-            setStudentInfo(data);
+            return data;
         } catch (err: any) {
             setError(err.message || 'Failed to fetch student warning list');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // search student warning
+    const searchStudentWarningSubject = useCallback(async (params: {
+        sessionId: string;
+        facultyId: string;
+        studentId: string;
+    }) => {
+        setLoading(true);
+        setError('');
+        try {
+            const data = await studentServices.searchStudentWarningSubject(params);
+            return data;
+        } catch (err: any) {
+            setError(err.message || 'Failed to search student warning subject');
         } finally {
             setLoading(false);
         }
@@ -93,6 +111,7 @@ export const useStudent = () => {
         studentInfo,
         fetchStudentsByCourseSection,
         fetchStudentInfo,
-        fetchStudentsWarningList
+        fetchStudentsWarningList,
+        searchStudentWarningSubject
     };
 };

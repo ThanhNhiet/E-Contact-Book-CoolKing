@@ -20,6 +20,7 @@ import ChatMainPage from '../pages/chatfeature/ChatMainPage';
 import ChatMainPageAD from '../pages/chatfeature/ChatMainPageAD';
 import NotFoundPage from '../components/shared/NotFoundPage'
 import ProfileADInfoPage from '../pages/admin/profile/ProfileInfoPage';
+import WarningStudentsPage from '../pages/admin/alert/WarningStudentsPage';
 
 const Router: React.FC = () => {
   return (
@@ -87,6 +88,14 @@ const Router: React.FC = () => {
           element={
             <ProtectedRoute requiredRole="ADMIN">
               <ProfileADInfoPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/admin/alerts/warning-students" 
+          element={
+            <ProtectedRoute requiredRole="ADMIN">
+              <WarningStudentsPage />
             </ProtectedRoute>
           }
         />

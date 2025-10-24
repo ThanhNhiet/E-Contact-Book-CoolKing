@@ -25,6 +25,16 @@ class StudentServices {
         const response = await axiosInstance.get('/students/warn-list', { params });
         return response.data;
     }
+
+    // GET /api/students/warn-list/search?sessionId=&facultyId=&studentId=
+    async searchStudentWarningSubject(params: {
+        sessionId: string;
+        facultyId: string;
+        studentId: string;
+    }) {
+        const response = await axiosInstance.get('/students/warn-list/search', { params });
+        return response.data;
+    }
 };
 export const studentServices = new StudentServices();
 export default StudentServices;
